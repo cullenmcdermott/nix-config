@@ -40,6 +40,13 @@
           system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
           system.defaults.NSGlobalDomain.KeyRepeat = 1;
           system.stateVersion = 4;
+          homebrew = {
+            enable = true;
+            caskArgs.no_quarantine = true;
+            global.brewfile = true;
+            masApps = {};
+            casks = [ "raycast" ];
+          };
         })
 
         inputs.home-manager.darwinModules.home-manager {
@@ -56,6 +63,7 @@
                   PAGER = "less";
                   EDITOR = "nvim";
                   HOME = "/Users/cullen";
+                  TERM = "xterm";
                 };
                 programs.bat.enable = true;
                 programs.bat.config.theme = "TwoDark";
@@ -65,10 +73,31 @@
                 programs.zsh.enableCompletion = true;
                 programs.zsh.autosuggestion.enable = true;
                 programs.zsh.syntaxHighlighting.enable = true;
+                programs.zsh.initExtra = ''
+                  function squish {
+                    if [ -z "$1" ]; then
+                      BRANCH=origin/master
+                    else
+                      BRANCH=$1
+                    fi
+                    git rebase -i $(git merge-base -a HEAD $BRANCH)
+                  }
+                  bindkey '^a' autosuggest-accept
+                '';
                 programs.zsh.shellAliases = {
                   ls = "ls --color=auto -F";
                   vim = "nvim";
+                  gcma = "git checkout main";
+                  ssh = "kitty +kitten ssh";
                 };
+                programs.zsh.oh-my-zsh.enable = true;
+                programs.zsh.oh-my-zsh.plugins = [
+                  "git"
+                  "direnv"
+                ];
+                programs.direnv.enable = true;
+                programs.granted.enable = true;
+                programs.granted.enableZshIntegration = true;
                 programs.starship.enable = true;
                 programs.starship.enableZshIntegration = true;
                 programs.kitty = {
