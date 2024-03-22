@@ -39,9 +39,11 @@
           system.defaults.NSGlobalDomain.AppleShowAllExtensions = true;
           system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
           system.defaults.NSGlobalDomain.KeyRepeat = 1;
+          system.stateVersion = 4;
         })
 
         inputs.home-manager.darwinModules.home-manager {
+          users.users.cullen.home = "/Users/cullen";
           home-manager = { 
             useGlobalPkgs = true;
             useUserPackages = true;
@@ -53,6 +55,7 @@
                 home.sessionVariables = {
                   PAGER = "less";
                   EDITOR = "nvim";
+                  HOME = "/Users/cullen";
                 };
                 programs.bat.enable = true;
                 programs.bat.config.theme = "TwoDark";
