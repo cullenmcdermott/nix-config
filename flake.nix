@@ -67,6 +67,7 @@
                 programs.zsh.syntaxHighlighting.enable = true;
                 programs.zsh.shellAliases = {
                   ls = "ls --color=auto -F";
+                  vim = "nvim";
                 };
                 programs.starship.enable = true;
                 programs.starship.enableZshIntegration = true;
