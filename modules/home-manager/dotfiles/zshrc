@@ -6,5 +6,15 @@ function squish {
   fi
   git rebase -i $(git merge-base -a HEAD $BRANCH)
 }
+
+toggle-audio () {
+	if [[ "$(SwitchAudioSource -c)" == "Shure MV7" ]]
+	then
+		SwitchAudioSource -s 'CalDigit TS4 Audio - Rear'
+	else
+		SwitchAudioSource -s 'Shure MV7'
+	fi
+}
+
 bindkey '^a' autosuggest-accept
 
