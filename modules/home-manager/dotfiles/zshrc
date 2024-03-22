@@ -1,0 +1,10 @@
+function squish {
+  if [ -z "$1" ]; then
+    BRANCH=origin/master
+  else
+    BRANCH=$1
+  fi
+  git rebase -i $(git merge-base -a HEAD $BRANCH)
+}
+bindkey '^a' autosuggest-accept
+
