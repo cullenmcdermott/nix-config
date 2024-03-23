@@ -17,6 +17,7 @@
       pkgs = import nixpkgs { system = "x86_64-darwin"; };
       modules = [
         ./modules/darwin
+        ./systems/personal
 
         home-manager.darwinModules.home-manager {
           users.users.cullen.home = "/Users/cullen";

@@ -1,5 +1,4 @@
 { pkgs, ...}: {
-  # here go the darwin prefs and config
   programs.zsh.enable = true;
   environment.shells =  [ pkgs.zsh pkgs.bash ];
   environment.loginShell = pkgs.zsh;
