@@ -22,10 +22,23 @@
   programs.zsh.shellAliases = {
     ls = "ls --color=auto -F";
     vim = "nvim";
-    gcma = "git checkout main";
     ssh = "kitty +kitten ssh";
     nixswitch = "darwin-rebuild switch --flake ~/src/system-config/.#";
     nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
+    k = "kubectl";
+    ga   = "git add";
+    gb   = "git branch";
+    gbD  = "git branch -D";
+    gc   = "git commit -v";
+    gcma = "git checkout main";
+    gco  = "git checkout";
+    gcb  = "git checkout -b";
+    gd   = "git diff";
+    gl   = "git pull";
+    glola= "git log --graph --pretty='\''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'\'' --all";
+    gm   = "git merge";
+    gp   = "git push";
+    grb  = "git rebase";
   };
   programs.zsh.oh-my-zsh.enable = true;
   programs.zsh.oh-my-zsh.plugins = [
@@ -39,12 +52,36 @@
   programs.starship.enableZshIntegration = true;
   programs.kitty = {
     enable = true;
-    font.name = "JetBrainsMono Nerd Font";
+    font = {
+      name = "JetBrainsMono";
+      size = 14;
+    };
     theme = "Tokyo Night";
+    keybindings = {
+      "ctrl+shift+'" = "launch --location=vsplit";
+      "ctrl+shift+5" = "launch --location=hsplit";
+      "ctrl+shift+h" = "neighboring_window left";
+      "ctrl+shift+l" = "neighboring_window right";
+      "ctrl+shift+k" = "neighboring_window up";
+      "ctrl+shift+j" = "neighboring_window down";
+      "ctrl+shift+o" = "layout_action rotate";
+      "ctrl+alt+left" = "resize_window narrower";
+      "ctrl+alt+right" = "resize_window wider";
+      "ctrl+alt+up" = "resize_window taller";
+      "ctrl+alt+down" = "resize_window shorter 3";
+      "ctrl+shift+f" = "show_scrollback";
+      "ctrl+left"  = "no_op";
+      "ctrl+right" = "no_op";
+    };
     settings = {
     	confirm_os_window_close = -0;
     	copy_on_select = true;
     	clipboard_control = "write-clipboard read-clipboard write-primary read-primary";
+      enabled_layouts = "splits";
+      scrollback_pager_history_size = 50;
+      tab_bar_style = "powerline";
+      tab_activity_symbol = "*";
+      tab_title_template = "{activity_symbol}{title}{activity_symbol}";
     };
   };
 }

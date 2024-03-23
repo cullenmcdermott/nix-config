@@ -17,17 +17,33 @@
   services.nix-daemon.enable = true;
   system.defaults.finder.AppleShowAllExtensions = true;
   system.defaults.finder._FXShowPosixPathInTitle = true;
+  system.defaults.trackpad.TrackpadThreeFingerDrag = true;
+  system.defaults.dock.orientation = "left";
   system.defaults.dock.autohide = true;
   system.defaults.NSGlobalDomain.AppleShowAllExtensions = true;
   system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
-  system.defaults.NSGlobalDomain.KeyRepeat = 1;
+  system.defaults.NSGlobalDomain.KeyRepeat = 3;
   system.stateVersion = 4;
   homebrew = {
     enable = true;
     caskArgs.no_quarantine = true;
     global.brewfile = true;
     masApps = {};
-    casks = [ "raycast" ];
+    brews = [
+      "colima"
+      "docker"
+      "lima"
+    ];
+    casks = [ 
+      #"arc"
+      "caffeine"
+      "discord"
+      #"istat-menus"
+      "raycast"
+      "shureplus-motiv"
+      "slack"
+      "visual-studio-code"
+    ];
   };
 }
 
