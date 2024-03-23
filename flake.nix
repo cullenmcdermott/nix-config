@@ -12,6 +12,24 @@
   };
 
   outputs = inputs@{nixpkgs, home-manager, darwin, ...}: {
+    darwinConfigurations.Cullens-MacBook-Pro = darwin.lib.darwinSystem {
+      system = "x86_64-darwin";
+      pkgs = import nixpkgs { system = "x86_64-darwin"; };
+      modules = [
+        ./modules/darwin
+
+        home-manager.darwinModules.home-manager {
+          users.users.cullen.home = "/Users/cullen";
+          home-manager = { 
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            users.cullen.imports = [
+              ./modules/home-manager
+            ];
+          };
+        }
+      ];
+    };
     darwinConfigurations.cmcdermott-mbp = darwin.lib.darwinSystem {
       system = "aarch64-darwin";
       pkgs = import nixpkgs { system = "aarch64-darwin"; };
