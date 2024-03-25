@@ -25,7 +25,7 @@
     ssh = "kitty +kitten ssh";
     nixswitch = "darwin-rebuild switch --flake ~/src/system-config/.#";
     nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
-    k = "kubectl";
+    k    = "kubectl";
     ga   = "git add";
     gb   = "git branch";
     gbD  = "git branch -D";

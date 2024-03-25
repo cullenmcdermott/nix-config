@@ -16,5 +16,10 @@ toggle-audio () {
 	fi
 }
 
+# Enable kubectl autocompletion
+source <(kubectl completion zsh)
+
 bindkey '^a' autosuggest-accept
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#8ce6e6"
+
 
