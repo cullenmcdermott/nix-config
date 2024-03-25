@@ -16,13 +16,13 @@
   }) ];
   services.nix-daemon.enable = true;
   system.defaults.finder.AppleShowAllExtensions = true;
-  system.defaults.finder._FXShowPosixPathInTitle = true;
+  system.defaults.finder._FXShowPosixPathInTitle = false;
   system.defaults.trackpad.TrackpadThreeFingerDrag = true;
   system.defaults.dock.orientation = "left";
   system.defaults.dock.autohide = true;
   system.defaults.NSGlobalDomain.AppleShowAllExtensions = true;
   system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
-  system.defaults.NSGlobalDomain.KeyRepeat = 3;
+  system.defaults.NSGlobalDomain.KeyRepeat = 2;
   system.stateVersion = 4;
   homebrew = {
     enable = true;
