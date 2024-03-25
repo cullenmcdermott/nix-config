@@ -45,6 +45,7 @@
             useUserPackages = true;
             users.cullen.imports = [
               ./modules/home-manager
+              ./modules/programs/neovim
             ];
           };
         }
