@@ -39,6 +39,7 @@
       "caffeine"
       "discord"
       #"istat-menus"
+      "firefox"
       "raycast"
       "shureplus-motiv"
       "slack"
