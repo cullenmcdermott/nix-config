@@ -40,6 +40,7 @@
       "discord"
       #"istat-menus"
       "firefox"
+      "hiddenbar"
       "raycast"
       "shureplus-motiv"
       "slack"
