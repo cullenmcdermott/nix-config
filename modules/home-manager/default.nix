@@ -1,7 +1,14 @@
-{pkgs, ...}: {
+{pkgs, inputs, ...}: {
   # specify home-manager configs
   home.stateVersion = "24.05";
-  home.packages = [ pkgs.ripgrep pkgs.fd pkgs.curl pkgs.less ];
+  home.packages = with pkgs; [
+    ripgrep
+    fd
+    curl
+    less
+    lua-language-server
+    stylua
+  ];
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
@@ -83,6 +90,87 @@
       tab_activity_symbol = "*";
       tab_title_template = "{activity_symbol}{title}{activity_symbol}";
     };
+  };
+
+  programs.nixvim = {
+    enable = true;
+    keymaps = [
+      # Equivalent to nnoremap ; :
+      {
+        key = ";";
+        action = ":";
+      }
+
+      # Equivalent to nmap <silent> <buffer> <leader>gg <cmd>Man<CR>
+      {
+        key = "<leader>gg";
+        action = "<cmd>Man<CR>";
+        options = {
+          silent = true;
+          remap = false;
+        };
+      }
+      # Etc...
+    ];
+
+    # We can set the leader key:
+    globals.mapleader = ",";
+
+    # We can create maps for every mode!
+    # There is .normal, .insert, .visual, .operator, etc!
+
+    # We can also set options:
+    options = {
+      tabstop = 4;
+      shiftwidth = 4;
+      expandtab = false;
+
+      mouse = "a";
+
+      # etc...
+    };
+
+    # Of course, we can still use comfy vimscript:
+    #extraConfigVim = builtins.readFile ./init.vim;
+    ## Or lua!
+    #extraConfigLua = builtins.readFile ./init.lua;
+
+    # One of the big advantages of NixVim is how it provides modules for
+    # popular vim plugins
+    # Enabling a plugin this way skips all the boring configuration that
+    # some plugins tend to require.
+    plugins = {
+
+      lightline = {
+        enable = true;
+
+        # This is optional - it will default to your enabled colorscheme
+        colorscheme = "wombat";
+
+        # This is one of lightline's example configurations
+        active = {
+          left = [
+            ["mode" "paste"]
+            ["readonly" "filename" "modified" "helloworld"]
+          ];
+        };
+
+        component = {
+          helloworld = "Hello, world!";
+        };
+      };
+
+      # Of course, there are a lot more plugins available.
+      # You can find an up-to-date list here:
+      # https://nixvim.pta2002.com/plugins
+    };
+
+    # There is a separate namespace for colorschemes:
+    colorschemes.gruvbox.enable = true;
+
+    # What about plugins not available as a module?
+    # Use extraPlugins:
+    #extraPlugins = with pkgs.vimPlugins; [vim-toml];
   };
 }
 
