@@ -1,7 +1,16 @@
 {pkgs, ...}: {
   # specify home-manager configs
   home.stateVersion = "24.05";
-  home.packages = [ pkgs.ripgrep pkgs.fd pkgs.curl pkgs.less ];
+  home.packages = with pkgs; [ 
+    ripgrep
+    fd
+    curl
+    less 
+    terraform
+    gopls
+    terraform-ls
+    tflint
+  ];
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
