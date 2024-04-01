@@ -7,7 +7,6 @@
   '';
   environment.systemPackages = [
     pkgs.coreutils
-    pkgs.neovim
   ];
   system.keyboard.enableKeyMapping = true;
   fonts.fontDir.enable = false; # won't overwrite existing installed fonts
