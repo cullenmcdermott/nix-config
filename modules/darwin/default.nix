@@ -33,6 +33,7 @@
       "colima"
       "docker"
       "lima"
+      "chart-testing"
     ];
     casks = [ 
       #"arc"
