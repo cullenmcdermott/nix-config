@@ -87,7 +87,7 @@
     	copy_on_select = true;
     	clipboard_control = "write-clipboard read-clipboard write-primary read-primary";
       enabled_layouts = "splits";
-      scrollback_pager_history_size = 50;
+      scrollback_lines = 200000;
       tab_bar_style = "powerline";
       tab_activity_symbol = "*";
       tab_title_template = "{activity_symbol}{title}{activity_symbol}";
