@@ -18,7 +18,6 @@ let
     p.lua
     p.make
     p.markdown
-    p.nix
     p.python
     p.toml
     p.typescript
@@ -32,7 +31,6 @@ in
     fd
     fzf
     terraform-ls
-    nixd
     lua-language-server
     black
   ];
