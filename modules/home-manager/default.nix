@@ -10,6 +10,7 @@
     gopls
     terraform-ls
     tflint
+    devpod
   ];
   home.sessionVariables = {
     PAGER = "less";
@@ -34,7 +35,7 @@
     ssh = "kitty +kitten ssh";
     nixswitch = "darwin-rebuild switch --flake ~/src/system-config/.#";
     nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
-    k    = "kubectl";
+    k    = "kubecolor";
     ga   = "git add";
     gb   = "git branch";
     gbD  = "git branch -D";

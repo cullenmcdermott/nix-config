@@ -65,6 +65,15 @@ return {
         sorting_strategy = "ascending",
         winblend = 0,
       },
+
+      pickers = {
+        live_grep = {
+          hidden = true,
+        },
+        find_files = {
+          hidden = true,
+        },
+      },
     },
   },
 

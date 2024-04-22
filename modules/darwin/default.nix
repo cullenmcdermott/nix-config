@@ -36,12 +36,14 @@
       "docker"
       "lima"
       "chart-testing"
+      "kubecolor"
+      "kubectl"
     ];
     casks = [ 
-      #"arc"
+      "arc"
       "caffeine"
       "discord"
-      #"istat-menus"
+      "istat-menus"
       "firefox"
       "hiddenbar"
       "raycast"
