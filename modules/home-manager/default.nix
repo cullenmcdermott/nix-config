@@ -1,13 +1,16 @@
 {pkgs, inputs, ...}: {
   # specify home-manager configs
   home.stateVersion = "24.05";
-  home.packages = with pkgs; [
+  home.packages = with pkgs; [ 
     ripgrep
     fd
     curl
-    less
-    lua-language-server
-    stylua
+    less 
+    terraform
+    gopls
+    terraform-ls
+    tflint
+    devpod
   ];
   home.sessionVariables = {
     PAGER = "less";
@@ -36,7 +39,7 @@
     ssh = "kitty +kitten ssh";
     nixswitch = "darwin-rebuild switch --flake ~/src/system-config/.#";
     nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
-    k    = "kubectl";
+    k    = "kubecolor";
     ga   = "git add";
     gb   = "git branch";
     gbD  = "git branch -D";
@@ -89,7 +92,7 @@
     	copy_on_select = true;
     	clipboard_control = "write-clipboard read-clipboard write-primary read-primary";
       enabled_layouts = "splits";
-      scrollback_pager_history_size = 50;
+      scrollback_lines = 200000;
       tab_bar_style = "powerline";
       tab_activity_symbol = "*";
       tab_title_template = "{activity_symbol}{title}{activity_symbol}";

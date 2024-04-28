@@ -17,7 +17,7 @@
   outputs = inputs@{nixpkgs, home-manager, darwin, nixvim,...}: {
     darwinConfigurations.Cullens-MacBook-Pro = darwin.lib.darwinSystem {
       system = "x86_64-darwin";
-      pkgs = import nixpkgs { system = "x86_64-darwin"; };
+      pkgs = import nixpkgs { system = "x86_64-darwin"; config.allowUnfree = true; };
       modules = [
         ./modules/darwin
         ./systems/personal
@@ -36,7 +36,7 @@
     };
     darwinConfigurations.cmcdermott-mbp = darwin.lib.darwinSystem {
       system = "aarch64-darwin";
-      pkgs = import nixpkgs { system = "aarch64-darwin"; };
+      pkgs = import nixpkgs { system = "aarch64-darwin"; config.allowUnfree = true; };
       modules = [
         ./modules/darwin
         ./modules/programs/neovim

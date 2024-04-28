@@ -4,6 +4,8 @@
   environment.loginShell = pkgs.zsh;
   nix.extraOptions = ''
     experimental-features = nix-command flakes
+    extra-trusted-substituters = https://cache.flox.dev
+    extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=
   '';
   environment.systemPackages = [
     pkgs.coreutils
@@ -32,12 +34,15 @@
       "colima"
       "docker"
       "lima"
+      "chart-testing"
+      "kubecolor"
+      "kubectl"
     ];
     casks = [ 
-      #"arc"
+      "arc"
       "caffeine"
       "discord"
-      #"istat-menus"
+      "istat-menus"
       "firefox"
       "hiddenbar"
       "raycast"
