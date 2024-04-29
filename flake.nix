@@ -27,6 +27,7 @@
           home-manager = { 
             useGlobalPkgs = true;
             useUserPackages = true;
+            extraSpecialArgs = {inherit inputs;};
             users.cullen.imports = [
               ./modules/home-manager
             ];
@@ -40,7 +41,6 @@
       modules = [
         ./modules/darwin
         ./modules/programs/neovim
-        inputs.nixvim.nixDarwinModules.nixvim
 
         home-manager.darwinModules.home-manager {
           users.users.cullen.home = "/Users/cullen";

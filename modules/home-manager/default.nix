@@ -1,5 +1,16 @@
-{pkgs, inputs, ...}: {
+{config, pkgs, inputs, ...}:
+let
+  neovimconfig = import ../programs/neovim;
+  nvim = inputs.nixvim.legacyPackages.x86_64-linux.makeNixvimWithModule {
+    inherit pkgs;
+    module = neovimconfig;
+  };
+in
+{
   # specify home-manager configs
+  imports = [
+    inputs.nixvim.homeManagerModules.nixvim
+  ];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [ 
     ripgrep
@@ -11,6 +22,7 @@
     terraform-ls
     tflint
     devpod
+    nvim
   ];
   home.sessionVariables = {
     PAGER = "less";
@@ -97,6 +109,7 @@
       tab_activity_symbol = "*";
       tab_title_template = "{activity_symbol}{title}{activity_symbol}";
     };
+
   };
 
   #programs.nixvim = {
