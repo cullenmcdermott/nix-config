@@ -3,7 +3,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixpkgs-2311.url = "github:nixos/nixpkgs/nixos-23.11";
- 
+
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -14,17 +14,27 @@
     nixvim.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{nixpkgs, home-manager, darwin, nixvim,...}: {
+  outputs = inputs @ {
+    nixpkgs,
+    home-manager,
+    darwin,
+    nixvim,
+    ...
+  }: {
     darwinConfigurations.Cullens-MacBook-Pro = darwin.lib.darwinSystem {
       system = "x86_64-darwin";
-      pkgs = import nixpkgs { system = "x86_64-darwin"; config.allowUnfree = true; };
+      pkgs = import nixpkgs {
+        system = "x86_64-darwin";
+        config.allowUnfree = true;
+      };
       modules = [
         ./modules/darwin
         ./systems/personal
 
-        home-manager.darwinModules.home-manager {
+        home-manager.darwinModules.home-manager
+        {
           users.users.cullen.home = "/Users/cullen";
-          home-manager = { 
+          home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
             extraSpecialArgs = {inherit inputs;};
@@ -37,14 +47,18 @@
     };
     darwinConfigurations.cmcdermott-mbp = darwin.lib.darwinSystem {
       system = "aarch64-darwin";
-      pkgs = import nixpkgs { system = "aarch64-darwin"; config.allowUnfree = true; };
+      pkgs = import nixpkgs {
+        system = "aarch64-darwin";
+        config.allowUnfree = true;
+      };
       modules = [
         ./modules/darwin
         ./modules/programs/neovim
 
-        home-manager.darwinModules.home-manager {
+        home-manager.darwinModules.home-manager
+        {
           users.users.cullen.home = "/Users/cullen";
-          home-manager = { 
+          home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
             users.cullen.imports = [
