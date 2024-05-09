@@ -2,20 +2,21 @@
   # specify home-manager configs
   home.stateVersion = "24.05";
   home.packages = with pkgs; [ 
-    ripgrep
-    fd
     curl
-    less 
-    terraform
+    chart-testing
+    devpod
+    docker
+    fd
     gopls
+    k9s
+    kubecolor
+    kubectl
+    less 
+    lima
+    ripgrep
+    terraform
     terraform-ls
     tflint
-    devpod
-    kubectl
-    lima
-    docker
-    kubecolor
-    chart-testing
   ];
   home.sessionVariables = {
     PAGER = "less";

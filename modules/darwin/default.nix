@@ -32,20 +32,15 @@
     global.brewfile = true;
     masApps = {};
     brews = [
-      "colima"
-      "docker"
-      "lima"
-      "chart-testing"
-      "kubecolor"
-      "kubectl"
+      "devcontainer"
     ];
     casks = [ 
       "arc"
       "caffeine"
       "discord"
-      "istat-menus"
       "firefox"
       "hiddenbar"
+      "istat-menus"
       "raycast"
       "shureplus-motiv"
       "slack"
