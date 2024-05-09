@@ -11,6 +11,11 @@
     terraform-ls
     tflint
     devpod
+    kubectl
+    lima
+    docker
+    kubecolor
+    chart-testing
   ];
   home.sessionVariables = {
     PAGER = "less";
