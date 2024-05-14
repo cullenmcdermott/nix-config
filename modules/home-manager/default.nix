@@ -15,6 +15,7 @@
     lima
     ripgrep
     terraform
+    packer
     terraform-ls
     tflint
   ];
