@@ -1,7 +1,14 @@
-{pkgs, ...}: {
+{pkgs, ...}: 
+let
+  gdk = pkgs.google-cloud-sdk.withExtraComponents( with pkgs.google-cloud-sdk.components; [
+    gke-gcloud-auth-plugin
+  ]);
+in
+{
   # specify home-manager configs
   home.stateVersion = "24.05";
   home.packages = with pkgs; [ 
+    gdk
     curl
     chart-testing
     devpod
