@@ -267,46 +267,46 @@
           lua = ["stylua"];
           nix = ["alejandra"];
           markdown = [["prettierd" "prettier"]];
-          yaml = ["yamllint" "yamlfmt"];
+          #yaml = ["yamllint" "yamlfmt"];
         };
       };
-      none-ls = {
-        enable = true;
-        enableLspFormat = true;
-        updateInInsert = false;
-        sources = {
-          code_actions = {
-            gitsigns.enable = true;
-            statix.enable = true;
-          };
-          diagnostics = {
-            statix.enable = true;
-            yamllint.enable = true;
-          };
-          formatting = {
-            alejandra.enable = true;
-            black = {
-              enable = true;
-              withArgs = ''
-                {
-                  extra_args = { "--fast" },
-                }
-              '';
-            };
-            prettier = {
-              enable = true;
-              disableTsServerFormatter = true;
-              withArgs = ''
-                {
-                  extra_args = { "--no-semi", "--single-quote" },
-                }
-              '';
-            };
-            stylua.enable = true;
-            yamlfmt.enable = true;
-          };
-        };
-      };
+      #none-ls = {
+      #  enable = true;
+      #  enableLspFormat = true;
+      #  updateInInsert = false;
+      #  sources = {
+      #    code_actions = {
+      #      gitsigns.enable = true;
+      #      statix.enable = true;
+      #    };
+      #    diagnostics = {
+      #      statix.enable = true;
+      #      yamllint.enable = false;
+      #    };
+      #    formatting = {
+      #      alejandra.enable = true;
+      #      black = {
+      #        enable = true;
+      #        withArgs = ''
+      #          {
+      #            extra_args = { "--fast" },
+      #          }
+      #        '';
+      #      };
+      #      prettier = {
+      #        enable = true;
+      #        disableTsServerFormatter = true;
+      #        withArgs = ''
+      #          {
+      #            extra_args = { "--no-semi", "--single-quote" },
+      #          }
+      #        '';
+      #      };
+      #      stylua.enable = true;
+      #      #yamlfmt.enable = true;
+      #    };
+      #  };
+      #};
       cmp = {
         enable = true;
         settings = {
@@ -618,7 +618,7 @@
           pyright = {enable = true;};
           nil_ls = {enable = true;};
           terraformls = {enable = true;};
-          yamlls = {enable = true;};
+          yamlls = {enable = false;};
         };
         capabilities = ''
           workspace = { didChangeWatchedFiles = { dynamicRegistration = true }}
