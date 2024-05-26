@@ -1,12 +1,6 @@
-{
-  pkgs,
-  lib,
-  ...
-}: {
+{ pkgs, lib, ... }: {
   config = {
-    globals = {
-      mapleader = " ";
-    };
+    globals = { mapleader = " "; };
 
     keymaps = [
       {
@@ -74,8 +68,8 @@
         styles = {
           comments.italic = true;
           keywords.italic = true;
-          functions = {};
-          variables = {};
+          functions = { };
+          variables = { };
           sidebars = "dark";
           floats = "dark";
         };
@@ -169,89 +163,6 @@
          border = _border
        }
     '';
-    opts = {
-      number = true;
-      colorcolumn = "80";
-      relativenumber = false;
-      tabstop = 2;
-      softtabstop = 2;
-      showtabline = 2;
-      expandtab = true;
-
-      # Enable auto indenting and set it to spaces
-      smartindent = true;
-      shiftwidth = 2;
-
-      # Enable smart indenting (see https://stackoverflow.com/questions/1204149/smart-wrap-in-vim)
-      breakindent = true;
-
-      # Enable incremental searching
-      hlsearch = true;
-      incsearch = true;
-
-      # Enable text wrap
-      wrap = true;
-
-      # Better splitting
-      splitbelow = true;
-      splitright = true;
-
-      # Enable mouse mode
-      mouse = "a"; # Mouse
-
-      # Enable ignorecase + smartcase for better searching
-      ignorecase = true;
-      smartcase = true; # Don't ignore case with capitals
-      grepprg = "rg --vimgrep";
-      grepformat = "%f:%l:%c:%m";
-
-      # Decrease updatetime
-      updatetime = 50; # faster completion (4000ms default)
-
-      # Set completeopt to have a better completion experience
-      completeopt = ["menuone" "noselect" "noinsert"]; # mostly just for cmp
-
-      # Enable persistent undo history
-      swapfile = false;
-      backup = false;
-      undofile = true;
-
-      # Enable 24-bit colors
-      termguicolors = true;
-
-      # Enable the sign column to prevent the screen from jumping
-      # signcolumn = "yes";
-
-      # Enable cursor line highlight
-      cursorline = true; # Highlight the line where the cursor is located
-
-      # Set fold settings
-      # These options were reccommended by nvim-ufo
-      # See: https://github.com/kevinhwang91/nvim-ufo#minimal-configuration
-      foldcolumn = "0";
-      foldlevel = 99;
-      foldlevelstart = 99;
-      foldenable = true;
-
-      # Always keep 8 lines above/below cursor unless at start/end of file
-      scrolloff = 8;
-
-      # Place a column line
-      # colorcolumn = "80";
-
-      # Reduce which-key timeout to 10ms
-      timeoutlen = 10;
-
-      # Set encoding type
-      encoding = "utf-8";
-      fileencoding = "utf-8";
-
-      # More space in the neovim command line for displaying messages
-      cmdheight = 0;
-
-      # We don't need to see things like INSERT anymore
-      showmode = false;
-    };
 
     plugins = {
       conform-nvim = {
@@ -262,11 +173,11 @@
         };
         notifyOnError = true;
         formattersByFt = {
-          go = ["gofmt"];
-          python = ["black"];
-          lua = ["stylua"];
-          nix = ["alejandra"];
-          markdown = [["prettierd" "prettier"]];
+          go = [ "gofmt" ];
+          python = [ "black" ];
+          lua = [ "stylua" ];
+          nix = [ "alejandra" ];
+          markdown = [[ "prettierd" "prettier" ]];
           #yaml = ["yamllint" "yamlfmt"];
         };
       };
@@ -311,23 +222,23 @@
         enable = true;
         settings = {
           autoEnableSources = true;
-          experimental = {ghost_text = true;};
+          experimental = { ghost_text = true; };
           performance = {
             debounce = 60;
             fetchingTimeout = 200;
             maxViewEntries = 30;
           };
-          snippet = {expand = "luasnip";};
-          formatting = {fields = ["kind" "abbr" "menu"];};
+          snippet = { expand = "luasnip"; };
+          formatting = { fields = [ "kind" "abbr" "menu" ]; };
           sources = [
-            {name = "nvim_lsp";}
-            {name = "emoji";}
+            { name = "nvim_lsp"; }
+            { name = "emoji"; }
             {
               name = "buffer"; # text within current buffer
               option.get_bufnrs.__raw = "vim.api.nvim_list_bufs";
               keywordLength = 3;
             }
-            {name = "copilot";}
+            { name = "copilot"; }
             {
               name = "path"; # file system paths
               keywordLength = 3;
@@ -339,8 +250,8 @@
           ];
 
           window = {
-            completion = {border = "solid";};
-            documentation = {border = "solid";};
+            completion = { border = "solid"; };
+            documentation = { border = "solid"; };
           };
 
           mapping = {
@@ -352,225 +263,164 @@
             "<C-f>" = "cmp.mapping.scroll_docs(4)";
             "<C-Space>" = "cmp.mapping.complete()";
             "<CR>" = "cmp.mapping.confirm({ select = true })";
-            "<S-CR>" = "cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Replace, select = true })";
+            "<S-CR>" =
+              "cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Replace, select = true })";
           };
         };
       };
-      cmp-buffer = {enable = true;};
-      cmp-path = {enable = true;};
-      cmp-nvim-lsp = {enable = true;};
-      cmp_luasnip = {enable = true;};
-      cmp-cmdline = {enable = true;};
-      copilot-cmp = {enable = true;};
+      cmp-buffer = { enable = true; };
+      cmp-path = { enable = true; };
+      cmp-nvim-lsp = { enable = true; };
+      cmp_luasnip = { enable = true; };
+      cmp-cmdline = { enable = true; };
+      copilot-cmp = { enable = true; };
       copilot-lua = {
         enable = true;
-        suggestion = {enabled = false;};
-        panel = {enabled = false;};
+        suggestion = { enabled = false; };
+        panel = { enabled = false; };
       };
 
-      flash = {enable = true;};
+      flash = { enable = true; };
       gitsigns = {
         enable = true;
-        settings = {
-          trouble = true;
-        };
+        settings = { trouble = true; };
       };
       illuminate = {
         enable = true;
         delay = 200;
         largeFileCutoff = 2000;
-        largeFileOverrides = {
-          providers = ["lsp"];
-        };
+        largeFileOverrides = { providers = [ "lsp" ]; };
       };
-      lint = {enable = true;};
+      lint = { enable = true; };
       luasnip = {
         enable = true;
         extraConfig = {
           enable_autosnippets = true;
           store_selection_keys = "<Tab>";
         };
-        fromVscode = [
-          {
-            lazyLoad = true;
-            paths = "${pkgs.vimPlugins.friendly-snippets}";
-          }
-        ];
+        fromVscode = [{
+          lazyLoad = true;
+          paths = "${pkgs.vimPlugins.friendly-snippets}";
+        }];
       };
-      friendly-snippets = {enable = true;};
-      nvim-autopairs = {enable = true;};
+      friendly-snippets = { enable = true; };
+      nvim-autopairs = { enable = true; };
       telescope = {
         enable = true;
         extensions = {
-          file-browser = {
-            enable = true;
-          };
-          fzf-native = {
-            enable = true;
-          };
+          file-browser = { enable = true; };
+          fzf-native = { enable = true; };
         };
         settings = {
           defaults = {
-            layout_config = {
-              horizontal = {
-                prompt_position = "top";
-              };
-            };
+            layout_config = { horizontal = { prompt_position = "top"; }; };
             sorting_strategy = "ascending";
           };
         };
         keymaps = {
           "<leader>/" = {
             action = "live_grep";
-            options = {
-              desc = "Grep (root dir)";
-            };
+            options = { desc = "Grep (root dir)"; };
           };
           "<leader>:" = {
             action = "command_history, {}";
-            options = {
-              desc = "Command History";
-            };
+            options = { desc = "Command History"; };
           };
           "<leader>b" = {
             action = "buffers, {}";
-            options = {
-              desc = "+buffer";
-            };
+            options = { desc = "+buffer"; };
           };
           "<leader>ff" = {
             action = "find_files, {}";
-            options = {
-              desc = "Find project files";
-            };
+            options = { desc = "Find project files"; };
           };
           "<leader>fr" = {
             action = "live_grep, {}";
-            options = {
-              desc = "Find text";
-            };
+            options = { desc = "Find text"; };
           };
           "<leader>fR" = {
             action = "resume, {}";
-            options = {
-              desc = "Resume";
-            };
+            options = { desc = "Resume"; };
           };
           "<leader>fg" = {
             action = "oldfiles, {}";
-            options = {
-              desc = "Recent";
-            };
+            options = { desc = "Recent"; };
           };
           "<leader>fb" = {
             action = "buffers, {}";
-            options = {
-              desc = "Buffers";
-            };
+            options = { desc = "Buffers"; };
           };
           "<C-p>" = {
             action = "git_files, {}";
-            options = {
-              desc = "Search git files";
-            };
+            options = { desc = "Search git files"; };
           };
           "<leader>gc" = {
             action = "git_commits, {}";
-            options = {
-              desc = "Commits";
-            };
+            options = { desc = "Commits"; };
           };
           "<leader>gs" = {
             action = "git_status, {}";
-            options = {
-              desc = "Status";
-            };
+            options = { desc = "Status"; };
           };
           "<leader>sa" = {
             action = "autocommands, {}";
-            options = {
-              desc = "Auto Commands";
-            };
+            options = { desc = "Auto Commands"; };
           };
           "<leader>sb" = {
             action = "current_buffer_fuzzy_find, {}";
-            options = {
-              desc = "Buffer";
-            };
+            options = { desc = "Buffer"; };
           };
           "<leader>sc" = {
             action = "command_history, {}";
-            options = {
-              desc = "Command History";
-            };
+            options = { desc = "Command History"; };
           };
           "<leader>sC" = {
             action = "commands, {}";
-            options = {
-              desc = "Commands";
-            };
+            options = { desc = "Commands"; };
           };
           "<leader>sD" = {
             action = "diagnostics, {}";
-            options = {
-              desc = "Workspace diagnostics";
-            };
+            options = { desc = "Workspace diagnostics"; };
           };
           "<leader>sh" = {
             action = "help_tags, {}";
-            options = {
-              desc = "Help pages";
-            };
+            options = { desc = "Help pages"; };
           };
           "<leader>sH" = {
             action = "highlights, {}";
-            options = {
-              desc = "Search Highlight Groups";
-            };
+            options = { desc = "Search Highlight Groups"; };
           };
           "<leader>sk" = {
             action = "keymaps, {}";
-            options = {
-              desc = "Keymaps";
-            };
+            options = { desc = "Keymaps"; };
           };
           "<leader>sM" = {
             action = "man_pages, {}";
-            options = {
-              desc = "Man pages";
-            };
+            options = { desc = "Man pages"; };
           };
           "<leader>sm" = {
             action = "marks, {}";
-            options = {
-              desc = "Jump to Mark";
-            };
+            options = { desc = "Jump to Mark"; };
           };
           "<leader>so" = {
             action = "vim_options, {}";
-            options = {
-              desc = "Options";
-            };
+            options = { desc = "Options"; };
           };
           "<leader>sR" = {
             action = "resume, {}";
-            options = {
-              desc = "Resume";
-            };
+            options = { desc = "Resume"; };
           };
           "<leader>uC" = {
             action = "colorscheme, {}";
-            options = {
-              desc = "Colorscheme preview";
-            };
+            options = { desc = "Colorscheme preview"; };
           };
         };
       };
-      ts-context-commentstring = {enable = true;};
-      ts-autotag = {enable = true;};
-      treesitter = {enable = true;};
-      treesitter-textobjects = {enable = true;};
-      treesitter-context = {enable = true;};
+      ts-context-commentstring = { enable = true; };
+      ts-autotag = { enable = true; };
+      treesitter = { enable = true; };
+      treesitter-textobjects = { enable = true; };
+      treesitter-context = { enable = true; };
       trouble = {
         enable = true;
         settings = {
@@ -578,30 +428,24 @@
           use_lsp_diagnostic_signs = true;
         };
       };
-      todo-comments = {enable = true;};
-      which-key = {enable = true;};
+      todo-comments = { enable = true; };
+      which-key = { enable = true; };
 
       neo-tree = {
         enable = true;
         filesystem = {
           bindToCwd = false;
-          followCurrentFile = {
-            enabled = true;
-          };
+          followCurrentFile = { enabled = true; };
         };
       };
       noice = {
         enable = true;
-        presets = {
-          bottom_search = true;
-        };
+        presets = { bottom_search = true; };
       };
-      lsp-format = {enable = true;};
+      lsp-format = { enable = true; };
       lspkind = {
         enable = true;
-        symbolMap = {
-          Copilot = "";
-        };
+        symbolMap = { Copilot = ""; };
         extraOptions = {
           maxwidth = 50;
           ellipsis_char = "...";
@@ -611,14 +455,14 @@
       lsp = {
         enable = true;
         servers = {
-          ansiblels = {enable = true;};
-          bashls = {enable = true;};
-          gopls = {enable = true;};
-          lua-ls = {enable = true;};
-          pyright = {enable = true;};
-          nil_ls = {enable = true;};
-          terraformls = {enable = true;};
-          yamlls = {enable = false;};
+          ansiblels = { enable = true; };
+          bashls = { enable = true; };
+          gopls = { enable = true; };
+          lua-ls = { enable = true; };
+          pyright = { enable = true; };
+          nil_ls = { enable = true; };
+          terraformls = { enable = true; };
+          yamlls = { enable = false; };
         };
         capabilities = ''
           workspace = { didChangeWatchedFiles = { dynamicRegistration = true }}
@@ -675,13 +519,13 @@
           };
         };
       };
-      notify = {enable = true;};
-      dressing = {enable = true;};
+      notify = { enable = true; };
+      dressing = { enable = true; };
 
-      bufferline = {enable = true;};
-      lualine = {enable = true;};
-      indent-blankline = {enable = true;};
-      persistence = {enable = true;};
+      bufferline = { enable = true; };
+      lualine = { enable = true; };
+      indent-blankline = { enable = true; };
+      persistence = { enable = true; };
     };
   };
 }

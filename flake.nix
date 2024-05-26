@@ -14,13 +14,7 @@
     nixvim.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs @ {
-    nixpkgs,
-    home-manager,
-    darwin,
-    nixvim,
-    ...
-  }: {
+  outputs = inputs@{ nixpkgs, home-manager, darwin, nixvim, ... }: {
     darwinConfigurations.Cullens-MacBook-Pro = darwin.lib.darwinSystem {
       system = "x86_64-darwin";
       pkgs = import nixpkgs {
@@ -37,10 +31,8 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-            extraSpecialArgs = {inherit inputs;};
-            users.cullen.imports = [
-              ./modules/home-manager
-            ];
+            extraSpecialArgs = { inherit inputs; };
+            users.cullen.imports = [ ./modules/home-manager ];
           };
         }
       ];
@@ -53,7 +45,7 @@
       };
       modules = [
         ./modules/darwin
-        ./modules/programs/neovim
+        ./systems/work
 
         home-manager.darwinModules.home-manager
         {
@@ -61,10 +53,8 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-            users.cullen.imports = [
-              ./modules/home-manager
-              inputs.nixvim.homeManagerModules.nixvim
-            ];
+            extraSpecialArgs = { inherit inputs; };
+            users.cullen.imports = [ ./modules/home-manager ];
           };
         }
       ];
