@@ -8,9 +8,12 @@
 
     darwin.url = "github:lnl7/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
+
+    dagger.url = "github:dagger/nix";
+    dagger.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{nixpkgs, home-manager, darwin, ...}: {
+  outputs = inputs@{nixpkgs, home-manager, darwin, dagger, ...}: {
     darwinConfigurations.Cullens-MacBook-Pro = darwin.lib.darwinSystem {
       system = "x86_64-darwin";
       pkgs = import nixpkgs { system = "x86_64-darwin"; config.allowUnfree = true; };
