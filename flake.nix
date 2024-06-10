@@ -37,15 +37,8 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-<<<<<<< HEAD
             extraSpecialArgs = {inherit inputs;};
             users.cullen.imports = [./modules/home-manager];
-=======
-            users.cullen.imports = [
-              ./modules/home-manager
-              # ./modules/programs/neovim
-            ];
->>>>>>> main
           };
         }
       ];
@@ -66,15 +59,8 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-<<<<<<< HEAD
             extraSpecialArgs = {inherit inputs;};
             users.cullen.imports = [./modules/home-manager];
-=======
-            users.cullen.imports = [
-              ./modules/home-manager
-              #./modules/programs/neovim
-            ];
->>>>>>> main
           };
         }
       ];
