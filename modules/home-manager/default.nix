@@ -1,22 +1,37 @@
-{ config, pkgs, inputs, ... }:
-let
+{
+  config,
+  pkgs,
+  inputs,
+  ...
+}: let
   neovimconfig = import ./nixvim;
   nvim = inputs.nixvim.legacyPackages.x86_64-linux.makeNixvimWithModule {
     inherit pkgs;
     module = neovimconfig;
   };
+  gdk = pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [
+    gke-gcloud-auth-plugin
+  ]);
 in {
   # specify home-manager configs
-  imports = [ inputs.nixvim.homeManagerModules.nixvim ];
+  imports = [inputs.nixvim.homeManagerModules.nixvim];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
-    alejandra
-    ripgrep
-    fd
+    gdk
     curl
-    less
-    terraform
+    chart-testing
+    devpod
+    docker
+    fd
     gopls
+    k9s
+    kubecolor
+    kubectl
+    less
+    lima
+    ripgrep
+    terraform
+    packer
     terraform-ls
     tflint
     devpod
@@ -60,14 +75,13 @@ in {
     gcb = "git checkout -b";
     gd = "git diff";
     gl = "git pull";
-    glola =
-      "git log --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --all";
+    glola = "git log --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --all";
     gm = "git merge";
     gp = "git push";
     grb = "git rebase";
   };
   programs.zsh.oh-my-zsh.enable = true;
-  programs.zsh.oh-my-zsh.plugins = [ "git" "direnv" ];
+  programs.zsh.oh-my-zsh.plugins = ["git" "direnv"];
   programs.direnv.enable = true;
   programs.granted.enable = true;
   programs.granted.enableZshIntegration = true;
@@ -99,8 +113,7 @@ in {
     settings = {
       confirm_os_window_close = -0;
       copy_on_select = true;
-      clipboard_control =
-        "write-clipboard read-clipboard write-primary read-primary";
+      clipboard_control = "write-clipboard read-clipboard write-primary read-primary";
       enabled_layouts = "splits";
       scrollback_lines = 200000;
       tab_bar_style = "powerline";
@@ -109,4 +122,3 @@ in {
     };
   };
 }
-
