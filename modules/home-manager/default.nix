@@ -37,6 +37,8 @@ in {
     devpod
     nvim
     nixfmt-rfc-style
+    kubie
+    jqp
   ];
   home.sessionVariables = {
     PAGER = "less";
