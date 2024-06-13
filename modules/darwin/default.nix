@@ -36,7 +36,6 @@
       "hiddenbar"
       "istat-menus"
       "raycast"
-      "shureplus-motiv"
       "slack"
       "visual-studio-code"
     ];
