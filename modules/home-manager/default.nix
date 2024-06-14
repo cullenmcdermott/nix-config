@@ -38,7 +38,7 @@ in {
     nvim
     nixfmt-rfc-style
     kubie
-    jqp
+    jless
   ];
   home.sessionVariables = {
     PAGER = "less";
