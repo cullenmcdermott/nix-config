@@ -9,8 +9,7 @@
   '';
   environment.systemPackages = [pkgs.coreutils];
   system.keyboard.enableKeyMapping = true;
-  fonts.fontDir.enable = false; # won't overwrite existing installed fonts
-  fonts.fonts = [(pkgs.nerdfonts.override {fonts = ["JetBrainsMono"];})];
+  fonts.packages = [(pkgs.nerdfonts.override {fonts = ["JetBrainsMono"];})];
   services.nix-daemon.enable = true;
   system.defaults.finder.AppleShowAllExtensions = true;
   system.defaults.finder._FXShowPosixPathInTitle = false;

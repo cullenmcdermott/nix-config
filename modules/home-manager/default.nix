@@ -45,6 +45,7 @@ in {
     EDITOR = "nvim";
     HOME = "/Users/cullen";
     TERM = "xterm";
+    GOPRIVATE="github.com/octoml";
   };
   # home.file."./.config/nvim/" = {
   #   source = ../programs/neovim/nvim;

@@ -106,6 +106,11 @@
   keymaps = [
     {
       mode = "n";
+      key = "<leader>xx";
+      action = "<cmd>Trouble diagnostics toggle<cr>";
+    }
+    {
+      mode = "n";
       key = "<leader>f";
       action = "+find/file";
     }
