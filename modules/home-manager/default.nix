@@ -39,6 +39,7 @@ in {
     nixfmt-rfc-style
     kubie
     jless
+    krew
   ];
   home.sessionVariables = {
     PAGER = "less";
