@@ -4,17 +4,12 @@
   inputs,
   ...
 }: let
-  neovimconfig = import ./nixvim;
-  nvim = inputs.nixvim.legacyPackages.x86_64-linux.makeNixvimWithModule {
-    inherit pkgs;
-    module = neovimconfig;
-  };
   gdk = pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [
     gke-gcloud-auth-plugin
   ]);
 in {
   # specify home-manager configs
-  imports = [inputs.nixvim.homeManagerModules.nixvim];
+  imports = [./nvim];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
     gdk
@@ -35,12 +30,20 @@ in {
     terraform-ls
     tflint
     devpod
-    nvim
     nixfmt-rfc-style
     kubie
     jless
     krew
+    xdg-utils # provides cli tools such as `xdg-mime` `xdg-open`
+    xdg-user-dirs
   ];
+  xdg = {
+    enable = true;
+
+    cacheHome = "${config.home.homeDirectory}/.cache";
+    configHome = "${config.home.homeDirectory}/.config";
+  };
+  home.homeDirectory = "/Users/cullen";
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
