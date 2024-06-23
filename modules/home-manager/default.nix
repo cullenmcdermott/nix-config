@@ -12,28 +12,27 @@ in {
   imports = [./nvim];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
-    gdk
     curl
     chart-testing
     devpod
     docker
     fd
+    gdk
     gopls
     k9s
+    krew
     kubecolor
     kubectl
+    kubie
     less
+    luajitPackages.lua-lsp
     lima
+    nixfmt-rfc-style
+    packer
     ripgrep
     terraform
-    packer
     terraform-ls
     tflint
-    devpod
-    nixfmt-rfc-style
-    kubie
-    jless
-    krew
     xdg-utils # provides cli tools such as `xdg-mime` `xdg-open`
     xdg-user-dirs
   ];
