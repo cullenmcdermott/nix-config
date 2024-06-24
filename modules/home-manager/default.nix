@@ -25,6 +25,7 @@ in {
     krew
     kubecolor
     kubectl
+    kubevirt
     kubie
     less
     luajitPackages.lua-lsp
