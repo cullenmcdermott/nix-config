@@ -12,8 +12,10 @@ in {
   imports = [./nvim];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
+    alejandra
     curl
     chart-testing
+    deadnix
     devpod
     docker
     fd
@@ -30,6 +32,7 @@ in {
     nixfmt-rfc-style
     packer
     ripgrep
+    statix
     terraform
     terraform-ls
     tflint
