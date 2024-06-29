@@ -13,6 +13,7 @@ in {
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
     alejandra
+    cargo
     curl
     chart-testing
     deadnix
