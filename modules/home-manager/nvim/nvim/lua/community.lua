@@ -12,5 +12,5 @@ return {
   { import = "astrocommunity.pack.terraform" },
   { import = "astrocommunity.utility.noice-nvim" },
   { import = "astrocommunity.diagnostics.trouble-nvim" },
-  -- import/override with your plugins folder
+  { import = "astrocommunity.completion.copilot-lua-cmp" },
 }
