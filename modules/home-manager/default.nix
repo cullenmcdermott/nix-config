@@ -33,7 +33,9 @@ in {
     lima
     nixfmt-rfc-style
     packer
+    renovate
     ripgrep
+    skopeo
     statix
     terraform
     terraform-ls
