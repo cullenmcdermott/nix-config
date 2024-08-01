@@ -28,7 +28,7 @@
       configuration = { pkgs, ... }: {
       environment.systemPackages =
         [
-          inputs.flox.packages.aarch64-darwin.default
+          inputs.flox.packages.${pkgs.system}.default
         ];
 
       nix.settings = {
