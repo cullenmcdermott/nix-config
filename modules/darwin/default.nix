@@ -27,7 +27,18 @@
     caskArgs.no_quarantine = true;
     global.brewfile = true;
     masApps = {};
-    brews = ["colima" "docker" "lima" "chart-testing" "kubecolor" "kubectl"];
+    taps = [
+      "depot/tap"
+    ];
+    brews = [
+    "chart-testing"
+    "colima"
+    "depot"
+    "docker"
+    "kubecolor"
+    "kubectl"
+    "lima"
+    ];
     casks = [
       "arc"
       "caffeine"

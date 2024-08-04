@@ -13,6 +13,9 @@
     nixvim.inputs.nixpkgs.follows = "nixpkgs";
 
     flox.url = "github:flox/flox";
+
+    dagger.url = "github:dagger/nix";
+    dagger.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs @ {
@@ -22,6 +25,7 @@
     darwin,
     nixvim,
     flox,
+    dagger,
     ...
   }: 
   let
@@ -29,6 +33,7 @@
       environment.systemPackages =
         [
           inputs.flox.packages.${pkgs.system}.default
+          dagger.packages.${pkgs.system}.dagger
         ];
 
       nix.settings = {
