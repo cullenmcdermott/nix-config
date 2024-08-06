@@ -7,7 +7,9 @@
     extra-trusted-substituters = https://cache.flox.dev
     extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=
   '';
-  environment.systemPackages = [pkgs.coreutils];
+  environment.systemPackages = [
+    pkgs.coreutils
+  ];
   system.keyboard.enableKeyMapping = true;
   fonts.packages = [(pkgs.nerdfonts.override {fonts = ["JetBrainsMono"];})];
   services.nix-daemon.enable = true;
@@ -25,7 +27,18 @@
     caskArgs.no_quarantine = true;
     global.brewfile = true;
     masApps = {};
-    brews = ["colima" "docker" "lima" "chart-testing" "kubecolor" "kubectl"];
+    taps = [
+      "depot/tap"
+    ];
+    brews = [
+    "chart-testing"
+    "colima"
+    "depot"
+    "docker"
+    "kubecolor"
+    "kubectl"
+    "lima"
+    ];
     casks = [
       "arc"
       "caffeine"
