@@ -42,6 +42,7 @@ in {
     tflint
     xdg-utils # provides cli tools such as `xdg-mime` `xdg-open`
     xdg-user-dirs
+    pipx
   ];
   xdg = {
     enable = true;
