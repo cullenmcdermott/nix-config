@@ -33,6 +33,7 @@ in {
     lima
     nixfmt-rfc-style
     packer
+    pipx
     renovate
     ripgrep
     skopeo
@@ -44,6 +45,11 @@ in {
     xdg-user-dirs
     pipx
   ];
+  home.activation = {
+    installAiderChat = config.lib.dag.entryAfter ["writeBoundary"] ''
+      $DRY_RUN_CMD ${pkgs.pipx}/bin/pipx install aider-chat
+    '';
+  };
   xdg = {
     enable = true;
     cacheHome = "${config.home.homeDirectory}/.cache";
