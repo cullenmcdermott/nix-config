@@ -5,40 +5,74 @@ return {
   opts = function()
     local anthropic_api_key = vim.fn.system("op read op://Personal/Anthropic API Key/credential"):gsub("\n", "")
     return {
+      provider = "anthropic",
       providers = {
         anthropic = {
-          api_key = anthropic_api_key,
+          api_key_name = "cmd:op read op://Personal/Anthropic API Key/credential",
         },
+      },
+      mappings = {
+        ask = "<leader>aa",
+        edit = "<leader>ae",
+        refresh = "<leader>ar",
       },
     }
   end,
-  build = ":AvanteBuild", -- This is optional, recommended tho. Also note that this will block the startup for a bit since we are compiling bindings in Rust.
+  build = ":AvanteBuild",
+  keys = function(_, keys)
+    local opts = require("lazy.core.plugin").values(require("lazy.core.config").spec.plugins["avante.nvim"], "opts", false)
+    local mappings = {
+      {
+        opts.mappings.ask,
+        function() require("avante.api").ask() end,
+        desc = "avante: ask",
+        mode = { "n", "v" },
+      },
+      {
+        opts.mappings.refresh,
+        function() require("avante.api").refresh() end,
+        desc = "avante: refresh",
+        mode = "v",
+      },
+      {
+        opts.mappings.edit,
+        function() require("avante.api").edit() end,
+        desc = "avante: edit",
+        mode = { "n", "v" },
+      },
+      {
+        "<leader>ip",
+        function()
+          return vim.bo.filetype == "AvanteInput" and require("avante.clipboard").paste_image()
+            or require("img-clip").paste_image()
+        end,
+        desc = "clip: paste image",
+      },
+    }
+    mappings = vim.tbl_filter(function(m) return m[1] and #m[1] > 0 end, mappings)
+    return vim.list_extend(mappings, keys)
+  end,
   dependencies = {
     "stevearc/dressing.nvim",
     "nvim-lua/plenary.nvim",
     "MunifTanjim/nui.nvim",
-    --- The below dependencies are optional,
-    "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
-    "zbirenbaum/copilot.lua", -- for providers='copilot'
+    "nvim-tree/nvim-web-devicons",
+    "zbirenbaum/copilot.lua",
     {
-      -- support for image pasting
       "HakonHarnes/img-clip.nvim",
       event = "VeryLazy",
       opts = {
-        -- recommended settings
         default = {
           embed_image_as_base64 = false,
           prompt_for_file_name = false,
           drag_and_drop = {
             insert_mode = true,
           },
-          -- required for Windows users
           use_absolute_path = true,
         },
       },
     },
     {
-      -- Make sure to setup it properly if you have lazy=true
       "MeanderingProgrammer/render-markdown.nvim",
       opts = {
         file_types = { "markdown", "Avante" },
