@@ -11,6 +11,36 @@ return {
       },
       vendors = {
         ["octoai"] = {
+          endpoint = "https://text.octoai.run/v1/chat/completions",
+          model = "meta-llama-3.1-8b-instruct",
+          api_key_name = "cmd:op read op://Private/OctoAIKey/credential",
+          parse_curl_args = function(opts, code_opts)
+            return {
+              url = opts.endpoint,
+              headers = {
+                ["Accept"] = "application/json",
+                ["Content-Type"] = "application/json",
+                ["Authorization"] = "Bearer " .. os.getenv(opts.api_key_name),
+              },
+              body = {
+                model = opts.model,
+                messages = {
+                  { role = "system", content = code_opts.system_prompt },
+                  { role = "user", content = require("avante.providers.openai").get_user_message(code_opts) },
+                },
+                temperature = 0,
+                max_tokens = 4096,
+                stream = true,
+              },
+            }
+          end,
+          parse_response_data = function(data_stream, event_state, opts)
+            require("avante.providers").openai.parse_response(data_stream, event_state, opts)
+          end,
+        },
+      },
+      vendors = {
+        ["octoai"] = {
           endpoint = "https://text.octoai.run/v1",
           model = "meta-llama-3.1-8b-instruct", -- The model name to use with this provider
           api_key_name = "cmd:op read op://Private/OctoAIKey/credential",
