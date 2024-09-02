@@ -36,10 +36,28 @@ return {
         adapter = "openai",
       },
       inline = {
-        adapter = "openai",
+        adapter = "anthropic",
       },
       agent = {
         adapter = "openai",
+      },
+    },
+    default_prompts = {
+      ["Explain Code"] = {
+        strategy = "chat",
+        description = "Explain the selected code",
+        opts = {
+          modes = { "v" },
+          mapping = "<LocalLeader>ce",
+        },
+      },
+      ["Generate Tests"] = {
+        strategy = "chat",
+        description = "Generate unit tests for the selected code",
+        opts = {
+          modes = { "v" },
+          mapping = "<LocalLeader>ct",
+        },
       },
     },
   },
