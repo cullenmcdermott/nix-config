@@ -3,12 +3,17 @@ return {
   event = "VeryLazy",
   lazy = false,
   opts = function()
-    local anthropic_api_key = vim.fn.system("op read op://Personal/Anthropic API Key/credential"):gsub("\n", "")
     return {
-      provider = "anthropic",
-      providers = {
-        anthropic = {
-          api_key_name = "cmd:op read op://Personal/Anthropic API Key/credential",
+      debug = true,
+      provider = "octoai",
+      claude = {
+        api_key_name = "cmd:op read op://Private/AnthropicAPIKey/credential",
+      },
+      vendors = {
+        ["octoai"] = {
+          endpoint = "https://text.octoai.run/v1",
+          model = "meta-llama-3.1-8b-instruct", -- The model name to use with this provider
+          api_key_name = "cmd:op read op://Private/OctoAIKey/credential",
         },
       },
       mappings = {
@@ -20,7 +25,8 @@ return {
   end,
   build = ":AvanteBuild",
   keys = function(_, keys)
-    local opts = require("lazy.core.plugin").values(require("lazy.core.config").spec.plugins["avante.nvim"], "opts", false)
+    local opts =
+      require("lazy.core.plugin").values(require("lazy.core.config").spec.plugins["avante.nvim"], "opts", false)
     local mappings = {
       {
         opts.mappings.ask,
