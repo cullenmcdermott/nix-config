@@ -13,7 +13,9 @@
     nixvim.inputs.nixpkgs.follows = "nixpkgs";
 
     flox.url = "github:flox/flox";
-    flox.inputs.nixpkgs.follows = "nixpkgs";
+
+    dagger.url = "github:dagger/nix";
+    dagger.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs @ {
@@ -23,13 +25,29 @@
     darwin,
     nixvim,
     flox,
+    dagger,
     ...
   }: 
   let
+      configuration = { pkgs, ... }: {
+      environment.systemPackages =
+        [
+          inputs.flox.packages.${pkgs.system}.default
+          dagger.packages.${pkgs.system}.dagger
+        ];
+
+      nix.settings = {
+        experimental-features = "nix-command flakes";
+        substituters = [
+          "https://cache.flox.dev"
+        ];
+        trusted-public-keys = [
+          "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
+        ];
+      };
+    };
   in
   {
-    packages.aarch64-darwin.flox = flox.packages.aarch64-darwin.flox;
-    packages.aarch64-darwin.default = self.packages.aarch64-darwin.flox;
     darwinConfigurations.Cullens-MacBook-Pro = darwin.lib.darwinSystem {
       system = "x86_64-darwin";
       pkgs = import nixpkgs {
@@ -39,6 +57,7 @@
       modules = [
         ./modules/darwin
         ./systems/personal
+        configuration
 
         home-manager.darwinModules.home-manager
         {
@@ -61,6 +80,7 @@
       modules = [
         ./modules/darwin
         ./systems/work
+        configuration
 
         home-manager.darwinModules.home-manager
         {

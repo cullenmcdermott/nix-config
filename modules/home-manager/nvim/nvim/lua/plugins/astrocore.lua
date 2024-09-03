@@ -65,6 +65,12 @@ return {
         -- setting a mapping to false will disable it
         -- ["<C-S>"] = false,
       },
+      t = {
+        ["<C-H>"] = { "<Cmd>wincmd h<CR>", desc = "Terminal left window navigation" },
+        ["<C-J>"] = { "<Cmd>wincmd j<CR>", desc = "Terminal down window navigation" },
+        ["<C-K>"] = { "<Cmd>wincmd k<CR>", desc = "Terminal up window navigation" },
+        ["<C-L>"] = { "<Cmd>wincmd l<CR>", desc = "Terminal right window navigation" },
+      },
     },
   },
 }
