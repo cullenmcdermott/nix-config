@@ -12,6 +12,7 @@ in {
   imports = [./nvim];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
+    _1password
     alejandra
     cargo
     curl
@@ -61,7 +62,7 @@ in {
     EDITOR = "nvim";
     HOME = "/Users/cullen";
     TERM = "xterm";
-    GOPRIVATE="github.com/octoml";
+    GOPRIVATE = "github.com/octoml";
   };
   # home.file."./.config/nvim/" = {
   #   source = ../programs/neovim/nvim;
