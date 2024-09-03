@@ -11,6 +11,7 @@ in {
   imports = [./nvim];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
+    _1password
     alejandra
     cargo
     curl
@@ -32,6 +33,7 @@ in {
     lima
     nixfmt-rfc-style
     packer
+    pipx
     renovate
     ripgrep
     skopeo
@@ -41,7 +43,13 @@ in {
     tflint
     xdg-utils # provides cli tools such as `xdg-mime` `xdg-open`
     xdg-user-dirs
+    pipx
   ];
+  home.activation = {
+    installAiderChat = config.lib.dag.entryAfter ["writeBoundary"] ''
+      $DRY_RUN_CMD ${pkgs.pipx}/bin/pipx install aider-chat
+    '';
+  };
   xdg = {
     enable = true;
     cacheHome = "${config.home.homeDirectory}/.cache";
@@ -53,7 +61,7 @@ in {
     EDITOR = "nvim";
     HOME = "/Users/cullen";
     TERM = "xterm";
-    GOPRIVATE="github.com/octoml";
+    GOPRIVATE = "github.com/octoml";
   };
   # home.file."./.config/nvim/" = {
   #   source = ../programs/neovim/nvim;
