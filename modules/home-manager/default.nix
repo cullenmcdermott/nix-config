@@ -21,6 +21,7 @@ in {
     fd
     gdk
     gopls
+    just
     k9s
     krew
     kubecolor
@@ -32,6 +33,7 @@ in {
     lima
     nixfmt-rfc-style
     packer
+    pyright
     renovate
     ripgrep
     skopeo
