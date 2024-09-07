@@ -18,7 +18,7 @@ return {
       anthropic = function()
         return require("codecompanion.adapters").extend("anthropic", {
           env = {
-            api_key = "cmd:op read op://Private/AnthropicAPIKey/credential",
+            api_key = "cmd:op read op://Private/AnthropicAPIKey/credential --account erinandcullen.1password.com",
           },
         })
       end,
@@ -27,11 +27,11 @@ return {
           name = "octoai",
           url = "https://text.octoai.run/v1/chat/completions",
           env = {
-            api_key = "cmd:op read op://Private/OctoAIKey/credential",
+            api_key = "cmd:op read op://Private/OctoAIKey/credential --account erinandcullen.1password.com",
           },
           schema = {
             model = {
-              default = "meta-llama-3.1-8b-instruct",
+              default = "meta-llama-3.1-70b-instruct",
             },
           },
         })
@@ -39,16 +39,16 @@ return {
     },
     strategies = {
       default = {
-        adapter = "octoai",
+        adapter = "copilot",
       },
       chat = {
-        adapter = "octoai",
+        adapter = "copilot",
       },
       inline = {
-        adapter = "octoai",
+        adapter = "copilot",
       },
       agent = {
-        adapter = "octoai",
+        adapter = "copilot",
       },
     },
   },

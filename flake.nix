@@ -27,14 +27,12 @@
     flox,
     dagger,
     ...
-  }: 
-  let
-      configuration = { pkgs, ... }: {
-      environment.systemPackages =
-        [
-          inputs.flox.packages.${pkgs.system}.default
-          dagger.packages.${pkgs.system}.dagger
-        ];
+  }: let
+    configuration = {pkgs, ...}: {
+      environment.systemPackages = [
+        inputs.flox.packages.${pkgs.system}.default
+        dagger.packages.${pkgs.system}.dagger
+      ];
 
       nix.settings = {
         experimental-features = "nix-command flakes";
@@ -46,53 +44,39 @@
         ];
       };
     };
-  in
-  {
-    darwinConfigurations.Cullens-MacBook-Pro = darwin.lib.darwinSystem {
-      system = "x86_64-darwin";
-      pkgs = import nixpkgs {
-        system = "x86_64-darwin";
-        config.allowUnfree = true;
-      };
-      modules = [
-        ./modules/darwin
-        ./systems/personal
-        configuration
 
-        home-manager.darwinModules.home-manager
-        {
-          users.users.cullen.home = "/Users/cullen";
-          home-manager = {
-            useGlobalPkgs = true;
-            useUserPackages = true;
-            extraSpecialArgs = {inherit inputs;};
-            users.cullen.imports = [./modules/home-manager];
-          };
-        }
-      ];
-    };
-    darwinConfigurations.cmcdermott-mbp = darwin.lib.darwinSystem {
-      system = "aarch64-darwin";
-      pkgs = import nixpkgs {
-        system = "aarch64-darwin";
-        config.allowUnfree = true;
+    commonDarwinConfig = system: modules:
+      darwin.lib.darwinSystem {
+        inherit system;
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
+        modules =
+          modules
+          ++ [
+            configuration
+            home-manager.darwinModules.home-manager
+            {
+              users.users.cullen.home = "/Users/cullen";
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                extraSpecialArgs = {inherit inputs;};
+                users.cullen.imports = [./modules/home-manager];
+              };
+            }
+          ];
       };
-      modules = [
-        ./modules/darwin
-        ./systems/work
-        configuration
+  in {
+    darwinConfigurations.Cullens-MacBook-Pro = commonDarwinConfig "x86_64-darwin" [
+      ./modules/darwin
+      ./systems/personal
+    ];
 
-        home-manager.darwinModules.home-manager
-        {
-          users.users.cullen.home = "/Users/cullen";
-          home-manager = {
-            useGlobalPkgs = true;
-            useUserPackages = true;
-            extraSpecialArgs = {inherit inputs;};
-            users.cullen.imports = [./modules/home-manager];
-          };
-        }
-      ];
-    };
+    darwinConfigurations.cmcdermott-mbp = commonDarwinConfig "aarch64-darwin" [
+      ./modules/darwin
+      ./systems/work
+    ];
   };
 }
