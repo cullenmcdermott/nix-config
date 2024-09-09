@@ -22,7 +22,6 @@ return {
             "User",
             pattern = "CodeCompanionRequest*",
             callback = function(self, args)
-              print(vim.inspect(args))
               if args.match == "CodeCompanionRequestStarted" then
                 self.processing = true
               elseif args.match == "CodeCompanionRequestFinished" then
