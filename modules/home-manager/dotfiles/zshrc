@@ -22,6 +22,7 @@ compdef kubecolor=kubectl
 
 bindkey '^a' autosuggest-accept
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#8ce6e6"
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
 #compdef dagger
 compdef _dagger dagger
