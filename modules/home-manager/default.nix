@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }: let
   gdk = pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [
@@ -57,7 +58,7 @@ in {
     cacheHome = "${config.home.homeDirectory}/.cache";
     configHome = "${config.home.homeDirectory}/.config";
   };
-  home.homeDirectory = "/Users/cullen";
+  home.homeDirectory = lib.mkForce "/Users/cullen";
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
@@ -114,7 +115,7 @@ in {
       name = "JetBrainsMono";
       size = 14;
     };
-    theme = "Tokyo Night";
+    themeFile = "tokyo_night_storm";
     keybindings = {
       "ctrl+shift+'" = "launch --location=vsplit";
       "ctrl+shift+5" = "launch --location=hsplit";

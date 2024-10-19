@@ -22,33 +22,19 @@ return {
           },
         })
       end,
-      octoai = function()
-        return require("codecompanion.adapters").extend("openai", {
-          name = "octoai",
-          url = "https://text.octoai.run/v1/chat/completions",
-          env = {
-            api_key = "cmd:op read op://Private/OctoAIKey/credential --account erinandcullen.1password.com",
-          },
-          schema = {
-            model = {
-              default = "meta-llama-3.1-70b-instruct",
-            },
-          },
-        })
-      end,
     },
     strategies = {
       default = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
       chat = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
       inline = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
       agent = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
     },
   },
