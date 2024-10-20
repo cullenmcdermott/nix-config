@@ -30,8 +30,8 @@
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     mkDarwinConfig = {
       system,
-      username ? "cullen",
-      hostname ? "Cullens-MacBook-Pro",
+      username,
+      hostname,
       extraModules ? [],
       extraHomeManagerModules ? [],
     }: let
@@ -76,6 +76,7 @@
   in {
     darwinConfigurations = {
       "Cullens-MacBook-Pro" = mkDarwinConfig {
+        username = "cullen";
         system = "x86_64-darwin";
         hostname = "Cullens-MacBook-Pro";
       };
