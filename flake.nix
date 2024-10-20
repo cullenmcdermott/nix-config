@@ -26,11 +26,11 @@
     dagger,
     ...
   }: let
+    hostname = "Cullens-MacBook-Pro";
     mkDarwinConfig = {
-      system,
-      username,
-      hostname,
-      email,
+      system ? "x86_64-darwin",
+      username ? "cullen",
+      hostname ? hostname,
       extraModules ? [],
       extraHomeManagerModules ? [],
     }: let
@@ -55,7 +55,7 @@
         home-manager = {
           useGlobalPkgs = true;
           useUserPackages = true;
-          extraSpecialArgs = {inherit inputs username email;};
+          extraSpecialArgs = {inherit inputs username;};
           users.${username}.imports =
             [
               ./modules/home-manager
@@ -80,14 +80,6 @@
           ++ extraModules;
       };
   in {
-    darwinConfigurations = {
-      "Cullens-MacBook-Pro" = mkDarwinConfig {
-        system = "x86_64-darwin";
-        username = "cullen";
-        hostname = "Cullens-MacBook-Pro";
-        email = "cullen@example.com";
-        extraModules = [./systems/personal];
-      };
-    };
+    darwinConfigurations.${hostname} = mkDarwinConfig {};
   };
 }
