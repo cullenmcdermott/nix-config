@@ -73,12 +73,8 @@
         };
         modules = [baseConfiguration homeManagerConfiguration home-manager.darwinModules.home-manager ./modules/darwin] ++ extraModules;
       };
-    defaultConfig = mkDarwinConfig {
-      system = "x86_64-darwin";
-    };
   in {
     darwinConfigurations = {
-      default = defaultConfig;
       "Cullens-MacBook-Pro" = mkDarwinConfig {
         system = "x86_64-darwin";
         hostname = "Cullens-MacBook-Pro";
