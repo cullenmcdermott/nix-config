@@ -26,11 +26,12 @@
     dagger,
     ...
   }: let
-    hostname = "Cullens-MacBook-Pro";
+    supportedSystems = ["x86_64-darwin" "aarch64-darwin"];
+    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     mkDarwinConfig = {
-      system ? "x86_64-darwin",
+      system,
       username ? "cullen",
-      hostname ? hostname,
+      hostname ? "Cullens-MacBook-Pro",
       extraModules ? [],
       extraHomeManagerModules ? [],
     }: let
@@ -70,16 +71,20 @@
           inherit system;
           config.allowUnfree = true;
         };
-        modules =
-          [
-            baseConfiguration
-            homeManagerConfiguration
-            home-manager.darwinModules.home-manager
-            ./modules/darwin
-          ]
-          ++ extraModules;
+        modules = [baseConfiguration homeManagerConfiguration home-manager.darwinModules.home-manager ./modules/darwin] ++ extraModules;
       };
+    defaultConfig = mkDarwinConfig {
+      system = "x86_64-darwin";
+    };
   in {
-    darwinConfigurations.${hostname} = mkDarwinConfig {};
+    darwinConfigurations = {
+      default = defaultConfig;
+      "Cullens-MacBook-Pro" = mkDarwinConfig {
+        system = "x86_64-darwin";
+        hostname = "Cullens-MacBook-Pro";
+      };
+    };
+
+    lib = {inherit mkDarwinConfig;};
   };
 }
