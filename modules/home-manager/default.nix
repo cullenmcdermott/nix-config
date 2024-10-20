@@ -34,6 +34,7 @@ in {
     less
     luajitPackages.lua-lsp
     lima
+    nixd
     nixfmt-rfc-style
     packer
     pyright
