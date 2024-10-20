@@ -63,9 +63,8 @@ in {
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
-    HOME = "/Users/cullen";
+    HOME = "/Users/${username}";
     TERM = "xterm";
-    GOPRIVATE = "github.com/octoml";
   };
   # home.file."./.config/nvim/" = {
   #   source = ../programs/neovim/nvim;
