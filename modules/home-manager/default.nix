@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  username,
   ...
 }: let
   gdk = pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [
@@ -58,7 +59,7 @@ in {
     cacheHome = "${config.home.homeDirectory}/.cache";
     configHome = "${config.home.homeDirectory}/.config";
   };
-  home.homeDirectory = lib.mkForce "/Users/cullen";
+  home.homeDirectory = lib.mkForce "/Users/${username}";
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
