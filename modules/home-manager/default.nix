@@ -24,6 +24,9 @@ in {
     fd
     gdk
     gopls
+    go
+    jq
+    jq-zsh-plugin
     just
     k9s
     krew
@@ -46,9 +49,10 @@ in {
     terraform
     terraform-ls
     tflint
+    unzip
+    wget
     xdg-utils # provides cli tools such as `xdg-mime` `xdg-open`
     xdg-user-dirs
-    pipx
   ];
   home.activation = {
     installAiderChat = config.lib.dag.entryAfter ["writeBoundary"] ''
@@ -67,10 +71,6 @@ in {
     HOME = "/Users/${username}";
     TERM = "xterm";
   };
-  # home.file."./.config/nvim/" = {
-  #   source = ../programs/neovim/nvim;
-  #   recursive = true;
-  # };
   programs.bat.enable = true;
   programs.bat.config.theme = "TwoDark";
   programs.fzf.enable = true;
@@ -103,8 +103,21 @@ in {
     gp = "git push";
     grb = "git rebase";
   };
+
+  programs.zsh.plugins = [
+    {
+      name = "jq";
+      file = "jq.plugin.zsh";
+      src = pkgs.fetchFromGitHub {
+        owner = "reegnz";
+        repo = "jq-zsh-plugin";
+        rev = "v0.6.1";
+        sha256 = "sha256-q/xQZ850kifmd8rCMW+aAEhuA43vB9ZAW22sss9e4SE=";
+      };
+    }
+  ];
   programs.zsh.oh-my-zsh.enable = true;
-  programs.zsh.oh-my-zsh.plugins = ["git" "direnv"];
+  programs.zsh.oh-my-zsh.plugins = ["git" "direnv" "jq"];
   programs.direnv.enable = true;
   programs.granted.enable = true;
   programs.granted.enableZshIntegration = true;
