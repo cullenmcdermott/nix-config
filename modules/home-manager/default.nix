@@ -117,7 +117,7 @@ in {
     }
   ];
   programs.zsh.oh-my-zsh.enable = true;
-  programs.zsh.oh-my-zsh.plugins = ["git" "direnv" "jq"];
+  programs.zsh.oh-my-zsh.plugins = ["git" "direnv"];
   programs.direnv.enable = true;
   programs.granted.enable = true;
   programs.granted.enableZshIntegration = true;
