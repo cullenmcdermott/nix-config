@@ -31,13 +31,12 @@
       "depot/tap"
     ];
     brews = [
-    "chart-testing"
-    "colima"
-    "depot"
-    "docker"
-    "kubecolor"
-    "kubectl"
-    "lima"
+      "chart-testing"
+      "colima"
+      "depot"
+      "docker"
+      "kubecolor"
+      "lima"
     ];
     casks = [
       "arc"
