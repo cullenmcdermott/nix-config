@@ -4,16 +4,21 @@
   lib,
   username,
   ...
-}: let
-  gdk = pkgs.google-cloud-sdk.withExtraComponents (with pkgs.google-cloud-sdk.components; [
-    gke-gcloud-auth-plugin
-  ]);
-in {
+}:
+let
+  gdk = pkgs.google-cloud-sdk.withExtraComponents (
+    with pkgs.google-cloud-sdk.components;
+    [
+      gke-gcloud-auth-plugin
+    ]
+  );
+in
+{
   # specify home-manager configs
-  imports = [./nvim];
+  imports = [ ./nvim ];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
-    _1password
+    _1password-cli
     alejandra
     cargo
     curl
@@ -55,7 +60,7 @@ in {
     xdg-user-dirs
   ];
   home.activation = {
-    installAiderChat = config.lib.dag.entryAfter ["writeBoundary"] ''
+    installAiderChat = config.lib.dag.entryAfter [ "writeBoundary" ] ''
       $DRY_RUN_CMD ${pkgs.pipx}/bin/pipx install aider-chat
     '';
   };
@@ -117,7 +122,10 @@ in {
     }
   ];
   programs.zsh.oh-my-zsh.enable = true;
-  programs.zsh.oh-my-zsh.plugins = ["git" "direnv"];
+  programs.zsh.oh-my-zsh.plugins = [
+    "git"
+    "direnv"
+  ];
   programs.direnv.enable = true;
   programs.granted.enable = true;
   programs.granted.enableZshIntegration = true;
