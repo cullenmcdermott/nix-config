@@ -1,11 +1,9 @@
-{ pkgs, ... }:
-{
+{pkgs, ...}: {
   programs.zsh.enable = true;
   environment.shells = [
     pkgs.zsh
     pkgs.bash
   ];
-  environment.loginShell = pkgs.zsh;
   nix.extraOptions = ''
     experimental-features = nix-command flakes
     extra-trusted-substituters = https://cache.flox.dev
@@ -15,7 +13,7 @@
     pkgs.coreutils
   ];
   system.keyboard.enableKeyMapping = true;
-  fonts.packages = [ (pkgs.nerdfonts.override { fonts = [ "JetBrainsMono" ]; }) ];
+  fonts.packages = [(pkgs.nerdfonts.override {fonts = ["JetBrainsMono"];})];
   services.nix-daemon.enable = true;
   system.defaults.finder.AppleShowAllExtensions = true;
   system.defaults.finder._FXShowPosixPathInTitle = false;
@@ -30,7 +28,7 @@
     enable = true;
     caskArgs.no_quarantine = true;
     global.brewfile = true;
-    masApps = { };
+    masApps = {};
     taps = [
       "depot/tap"
     ];
