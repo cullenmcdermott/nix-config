@@ -22,19 +22,28 @@ return {
           },
         })
       end,
+      copilot = function()
+        return require("codecompanion.adapters").extend("copilot", {
+          schema = {
+            model = {
+              default = "claude-3.5-sonnet",
+            },
+          },
+        })
+      end,
     },
     strategies = {
       default = {
-        adapter = "anthropic",
+        adapter = "copilot",
       },
       chat = {
-        adapter = "anthropic",
+        adapter = "copilot",
       },
       inline = {
-        adapter = "anthropic",
+        adapter = "copilot",
       },
       agent = {
-        adapter = "anthropic",
+        adapter = "copilot",
       },
     },
   },
