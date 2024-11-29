@@ -3,7 +3,6 @@
   pkgs,
   lib,
   username,
-  system,
   ...
 }:
 let
@@ -13,11 +12,6 @@ let
       gke-gcloud-auth-plugin
     ]
   );
-  apps = pkgs.buildEnv {
-    name = "home-manager-applications";
-    paths = config.home.packages;
-    pathsToLink = "/Applications";
-  };
 in
 {
   # specify home-manager configs
@@ -29,6 +23,7 @@ in
     cargo
     curl
     chart-testing
+    colima
     deadnix
     devpod
     docker
@@ -45,6 +40,7 @@ in
     kubectl
     kubevirt
     kubie
+    kubelogin-oidc
     less
     luajitPackages.lua-lsp
     lima
@@ -66,33 +62,6 @@ in
     xdg-utils # provides cli tools such as `xdg-mime` `xdg-open`
     xdg-user-dirs
   ];
-  home.activation = {
-    installAiderChat = config.lib.dag.entryAfter [ "writeBoundary" ] ''
-      $DRY_RUN_CMD ${pkgs.pipx}/bin/pipx install aider-chat
-    '';
-    addApplications = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      echo "setting up ~/Applications/Home Manager Apps..." >&2
-      nix_apps="$HOME/Applications/Home Manager Apps"
-      # Delete the directory to remove old links
-      $DRY_RUN_CMD rm -rf "$nix_apps"
-      $DRY_RUN_CMD mkdir -p "$nix_apps"
-      $DRY_RUN_CMD find ${apps}/Applications -maxdepth 1 -type l -exec readlink '{}' + |
-          while read -r src; do
-              # Spotlight does not recognize symlinks, it will ignore directory we link to the applications folder.
-              # It does understand MacOS aliases though, a unique filesystem feature. Sadly they cannot be created
-              # from bash (as far as I know), so we use the oh-so-great Apple Script instead.
-              /usr/bin/osascript -e "
-                  set fileToAlias to POSIX file \"$src\"
-                  set applicationsFolder to POSIX file \"$nix_apps\"
-                  tell application \"Finder\"
-                      make alias file to fileToAlias at applicationsFolder
-                      # This renames the alias; 'mpv.app alias' -> 'mpv.app'
-                      set name of result to \"$(/usr/bin/rev <<< "$src" | cut -d'/' -f1 | /usr/bin/rev)\"
-                  end tell
-              " 1>/dev/null
-          done
-    '';
-  };
   xdg = {
     enable = true;
     cacheHome = "${config.home.homeDirectory}/.cache";
