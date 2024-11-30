@@ -18,6 +18,9 @@
     dagger.inputs.nixpkgs.follows = "nixpkgs";
 
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
+
+    # Handles making nix installed apps visibile in spotlight
+    mac-app-util.url = "github:hraban/mac-app-util";
   };
 
   outputs =
@@ -28,6 +31,7 @@
       flox,
       dagger,
       nix-homebrew,
+      mac-app-util,
       ...
     }:
     let
@@ -55,10 +59,12 @@
 
               nix.settings = {
                 experimental-features = "nix-command flakes";
-                substituters = [
+                trusted-substituters = [
                   "https://cache.flox.dev"
+                  "https://attic.cullen.rocks"
                 ];
                 trusted-public-keys = [
+                  "cullen:gtI9d0t7nPTU36OnGU6YpEP5wEndvbmna9+7jpCgWPg= "
                   "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
                 ];
               };
@@ -73,6 +79,7 @@
               };
               users.${username}.imports = [
                 ./modules/home-manager
+                mac-app-util.homeManagerModules.default
               ] ++ extraHomeManagerModules;
             };
           };
@@ -91,6 +98,7 @@
             homeManagerConfiguration
             home-manager.darwinModules.home-manager
             nix-homebrew.darwinModules.nix-homebrew
+            mac-app-util.darwinModules.default
             {
               nix-homebrew = {
                 enable = true;
@@ -106,7 +114,7 @@
     {
       darwinConfigurations = {
         "Cullens-MacBook-Pro" = mkDarwinConfig {
-          username = "cullen";
+          username = "erin";
           system = "x86_64-darwin";
           hostname = "Cullens-MacBook-Pro";
         };

@@ -13,24 +13,22 @@ in
     pkgs.zsh
     pkgs.bash
   ];
-  nix.extraOptions = ''
-    experimental-features = nix-command flakes
-    extra-trusted-substituters = https://cache.flox.dev
-    extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=
-  '';
   environment.systemPackages = [
     pkgs.coreutils
   ];
   system.activationScripts.postUserActivation.text = ''
     apps_source="${config.system.build.applications}/Applications"
+    echo "apps source is $apps_source"
     moniker="Nix Trampolines"
     app_target_base="$HOME/Applications"
     app_target="$app_target_base/$moniker"
     mkdir -p "$app_target"
-    ${pkgs.rsync}/bin/rsync --archive --checksum --chmod=-w --copy-unsafe-links --delete "$apps_source/" "$app_target"
+    ${pkgs.rsync}/bin/rsync --verbose --archive --checksum --chmod=-w --copy-unsafe-links --delete "$apps_source/" "$app_target"
   '';
   system.keyboard.enableKeyMapping = true;
-  fonts.packages = [ (pkgs.nerdfonts.override { fonts = [ "JetBrainsMono" ]; }) ];
+  fonts.packages = [
+    pkgs.nerd-fonts.jetbrains-mono
+  ];
   services.nix-daemon.enable = true;
   system.defaults.finder.AppleShowAllExtensions = true;
   system.defaults.finder._FXShowPosixPathInTitle = false;

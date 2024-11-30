@@ -14,7 +14,7 @@ return {
   { import = "astrocommunity.pack.terraform" },
   { import = "astrocommunity.utility.noice-nvim" },
   { import = "astrocommunity.diagnostics.trouble-nvim" },
-  { import = "astrocommunity.completion.copilot-lua-cmp" },
+  --{ import = "astrocommunity.completion.copilot-lua-cmp" },
   { import = "astrocommunity.recipes.astrolsp-no-insert-inlay-hints" },
   { import = "astrocommunity.recipes.vscode" },
 }

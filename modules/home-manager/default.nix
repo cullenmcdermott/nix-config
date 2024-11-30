@@ -20,6 +20,7 @@ in
   home.packages = with pkgs; [
     _1password-cli
     alejandra
+    attic-client
     cargo
     curl
     chart-testing
@@ -52,6 +53,7 @@ in
     pipx
     renovate
     ripgrep
+    silver-searcher
     skopeo
     statix
     terraform
