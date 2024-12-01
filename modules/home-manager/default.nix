@@ -15,7 +15,9 @@ let
 in
 {
   # specify home-manager configs
-  imports = [ ./nvim ];
+  imports = [
+    ./nvim
+  ];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
     _1password-cli
@@ -30,6 +32,7 @@ in
     docker
     fd
     gdk
+    gh
     gopls
     go
     jq
@@ -68,6 +71,22 @@ in
     enable = true;
     cacheHome = "${config.home.homeDirectory}/.cache";
     configHome = "${config.home.homeDirectory}/.config";
+    configFile."ghostty/config" = {
+      text = ''
+        theme = tokyonight-storm
+        font-family = JetBrainsMono Nerd Font
+        font-style = medium
+        font-size = 14
+        macos-titlebar-style = tabs
+        background-opacity = 0.90
+        background-blur-radius = 10
+        window-padding-x = 10
+        window-padding-y = 10
+        keybind = super+shift+h=previous_tab
+        keybind = super+shift+l=next_tab
+        keybind = super+shift+r=reload_config
+      '';
+    };
   };
   home.homeDirectory = lib.mkForce "/Users/${username}";
   home.sessionVariables = {
@@ -88,9 +107,9 @@ in
     ${builtins.readFile ./dotfiles/zshrc}
   '';
   programs.zsh.shellAliases = {
+    brew = "op plugin run -- brew";
     ls = "ls --color=auto -F";
     vim = "nvim";
-    ssh = "kitty +kitten ssh";
     nixswitch = "darwin-rebuild switch --flake ~/src/system-config/.#";
     nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
     k = "kubecolor";
