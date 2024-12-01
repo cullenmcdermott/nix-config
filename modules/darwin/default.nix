@@ -35,6 +35,8 @@ in
   system.defaults.trackpad.TrackpadThreeFingerDrag = true;
   system.defaults.dock.orientation = "left";
   system.defaults.dock.autohide = true;
+  system.defaults.dock.wvous-br-corner = 5;
+  system.defaults.screensaver.askForPassword = true;
   system.defaults.NSGlobalDomain.AppleShowAllExtensions = true;
   system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
   system.defaults.NSGlobalDomain.KeyRepeat = 2;
