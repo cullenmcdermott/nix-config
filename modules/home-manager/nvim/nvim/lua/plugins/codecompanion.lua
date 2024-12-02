@@ -25,16 +25,16 @@ return {
     },
     strategies = {
       default = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
       chat = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
       inline = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
       agent = {
-        adapter = "copilot",
+        adapter = "anthropic",
       },
     },
   },
