@@ -21,6 +21,7 @@ in
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
     _1password-cli
+    aider-chat
     alejandra
     attic-client
     cargo
@@ -59,6 +60,7 @@ in
     silver-searcher
     skopeo
     statix
+    tailscale
     terraform
     terraform-ls
     tflint

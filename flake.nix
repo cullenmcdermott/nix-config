@@ -115,15 +115,11 @@
     in
     {
       darwinConfigurations = {
-        "Cullens-MacBook-Pro" = mkDarwinConfig {
-          username = "erin";
-          system = "x86_64-darwin";
-          hostname = "Cullens-MacBook-Pro";
-        };
         "cullens-MacBook-Pro" = mkDarwinConfig {
           username = "cullen";
           system = "aarch64-darwin";
           hostname = "cullens-MacBook-Pro";
+          extraModules = [ ./systems/personal/default.nix ];
         };
       };
 
