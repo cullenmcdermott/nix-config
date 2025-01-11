@@ -21,6 +21,7 @@ in
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
     _1password-cli
+    aerospace
     aider-chat
     alejandra
     attic-client
@@ -37,7 +38,6 @@ in
     gopls
     go
     jq
-    jq-zsh-plugin
     just
     k9s
     krew
@@ -52,6 +52,7 @@ in
     nixd
     nixfmt-rfc-style
     nodejs_23
+    omnictl
     packer
     pyright
     pipx
@@ -66,7 +67,7 @@ in
     tflint
     unzip
     wget
-    xdg-utils # provides cli tools such as `xdg-mime` `xdg-open`
+    xdg-utils
     xdg-user-dirs
   ];
   xdg = {
@@ -104,6 +105,14 @@ in
   programs.zsh.enable = true;
   programs.zsh.enableCompletion = true;
   programs.zsh.autosuggestion.enable = true;
+  programs.zsh.history = {
+    size = 10000000;
+    save = 10000000;
+    path = "${config.xdg.dataHome}/zsh/history";
+    extended = true;
+    share = true;
+    append = true;
+  };
   programs.zsh.syntaxHighlighting.enable = true;
   programs.zsh.initExtra = ''
     ${builtins.readFile ./dotfiles/zshrc}
@@ -130,18 +139,7 @@ in
     grb = "git rebase";
   };
 
-  programs.zsh.plugins = [
-    {
-      name = "jq";
-      file = "jq.plugin.zsh";
-      src = pkgs.fetchFromGitHub {
-        owner = "reegnz";
-        repo = "jq-zsh-plugin";
-        rev = "v0.6.1";
-        sha256 = "sha256-q/xQZ850kifmd8rCMW+aAEhuA43vB9ZAW22sss9e4SE=";
-      };
-    }
-  ];
+  programs.zsh.plugins = [ ];
   programs.zsh.oh-my-zsh.enable = true;
   programs.zsh.oh-my-zsh.plugins = [
     "git"
@@ -152,38 +150,38 @@ in
   programs.granted.enableZshIntegration = true;
   programs.starship.enable = true;
   programs.starship.enableZshIntegration = true;
-  programs.kitty = {
-    enable = true;
-    font = {
-      name = "JetBrainsMono";
-      size = 14;
-    };
-    themeFile = "tokyo_night_storm";
-    keybindings = {
-      "ctrl+shift+'" = "launch --location=vsplit";
-      "ctrl+shift+5" = "launch --location=hsplit";
-      "ctrl+shift+h" = "neighboring_window left";
-      "ctrl+shift+l" = "neighboring_window right";
-      "ctrl+shift+k" = "neighboring_window up";
-      "ctrl+shift+j" = "neighboring_window down";
-      "ctrl+shift+o" = "layout_action rotate";
-      "ctrl+alt+left" = "resize_window narrower";
-      "ctrl+alt+right" = "resize_window wider";
-      "ctrl+alt+up" = "resize_window taller";
-      "ctrl+alt+down" = "resize_window shorter 3";
-      "ctrl+shift+f" = "show_scrollback";
-      "ctrl+left" = "no_op";
-      "ctrl+right" = "no_op";
-    };
-    settings = {
-      confirm_os_window_close = -0;
-      copy_on_select = true;
-      clipboard_control = "write-clipboard read-clipboard write-primary read-primary";
-      enabled_layouts = "splits";
-      scrollback_lines = 200000;
-      tab_bar_style = "powerline";
-      tab_activity_symbol = "*";
-      tab_title_template = "{activity_symbol}{title}{activity_symbol}";
-    };
-  };
+  #programs.kitty = {
+  #  enable = true;
+  #  font = {
+  #    name = "JetBrainsMono";
+  #    size = 14;
+  #  };
+  #  themeFile = "tokyo_night_storm";
+  #  keybindings = {
+  #    "ctrl+shift+'" = "launch --location=vsplit";
+  #    "ctrl+shift+5" = "launch --location=hsplit";
+  #    "ctrl+shift+h" = "neighboring_window left";
+  #    "ctrl+shift+l" = "neighboring_window right";
+  #    "ctrl+shift+k" = "neighboring_window up";
+  #    "ctrl+shift+j" = "neighboring_window down";
+  #    "ctrl+shift+o" = "layout_action rotate";
+  #    "ctrl+alt+left" = "resize_window narrower";
+  #    "ctrl+alt+right" = "resize_window wider";
+  #    "ctrl+alt+up" = "resize_window taller";
+  #    "ctrl+alt+down" = "resize_window shorter 3";
+  #    "ctrl+shift+f" = "show_scrollback";
+  #    "ctrl+left" = "no_op";
+  #    "ctrl+right" = "no_op";
+  #  };
+  #  settings = {
+  #    confirm_os_window_close = -0;
+  #    copy_on_select = true;
+  #    clipboard_control = "write-clipboard read-clipboard write-primary read-primary";
+  #    enabled_layouts = "splits";
+  #    scrollback_lines = 200000;
+  #    tab_bar_style = "powerline";
+  #    tab_activity_symbol = "*";
+  #    tab_title_template = "{activity_symbol}{title}{activity_symbol}";
+  #  };
+  #};
 }

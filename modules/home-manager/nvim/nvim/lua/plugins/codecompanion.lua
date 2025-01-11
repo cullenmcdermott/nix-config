@@ -11,9 +11,8 @@ return {
   },
   opts = {
     opts = {
-      log_level = "TRACE",
+      log_level = "DEBUG",
     },
-    log_level = "TRACE",
     adapters = {
       anthropic = function()
         return require("codecompanion.adapters").extend("anthropic", {
