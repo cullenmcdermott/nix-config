@@ -25,6 +25,7 @@ in
     aider-chat
     alejandra
     attic-client
+    argc
     cargo
     curl
     chart-testing
@@ -43,6 +44,7 @@ in
     krew
     kubecolor
     kubectl
+    kubernetes-helm
     kubevirt
     kubie
     kubelogin-oidc
