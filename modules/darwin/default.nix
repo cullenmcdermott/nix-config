@@ -29,7 +29,6 @@ in
   fonts.packages = [
     pkgs.nerd-fonts.jetbrains-mono
   ];
-  services.nix-daemon.enable = true;
   system.defaults.finder.AppleShowAllExtensions = true;
   system.defaults.finder._FXShowPosixPathInTitle = false;
   system.defaults.trackpad.TrackpadThreeFingerDrag = true;
@@ -40,7 +39,7 @@ in
   system.defaults.NSGlobalDomain.AppleShowAllExtensions = true;
   system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
   system.defaults.NSGlobalDomain.KeyRepeat = 2;
-  system.stateVersion = 4;
+  system.stateVersion = 6;
   homebrew = {
     enable = true;
     caskArgs.no_quarantine = true;
