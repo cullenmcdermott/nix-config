@@ -58,15 +58,18 @@ in
     packer
     pyright
     pipx
+    qemu
     renovate
     ripgrep
     silver-searcher
     skopeo
     statix
     tailscale
+    talosctl
     terraform
     terraform-ls
     tflint
+    unixtools.watch
     unzip
     wget
     xdg-utils
