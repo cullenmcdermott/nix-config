@@ -19,6 +19,11 @@ return {
           env = {
             api_key = "cmd:op read op://Private/AnthropicAPIKey/credential --account erinandcullen.1password.com",
           },
+          schema = {
+            model = {
+              default = "claude-3-7-sonnet",
+            },
+          },
         })
       end,
     },
