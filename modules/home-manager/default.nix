@@ -12,6 +12,14 @@ let
       gke-gcloud-auth-plugin
     ]
   );
+
+  aiderWithPlaywright = pkgs.python3.withPackages (
+    ps: with ps; [
+      aider-chat
+      playwright
+      python-playwright
+    ]
+  );
 in
 {
   # specify home-manager configs
@@ -22,7 +30,7 @@ in
   home.packages = with pkgs; [
     _1password-cli
     aerospace
-    aider-chat
+    aiderWithPlaywright
     alejandra
     attic-client
     argc
@@ -56,8 +64,9 @@ in
     nodejs_23
     omnictl
     packer
-    pyright
     pipx
+    playwright-driver
+    pyright
     qemu
     renovate
     ripgrep
@@ -102,6 +111,7 @@ in
     EDITOR = "nvim";
     HOME = "/Users/${username}";
     TERM = "xterm";
+    PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
   };
   programs.bat.enable = true;
   programs.bat.config.theme = "TwoDark";
