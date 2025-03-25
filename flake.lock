@@ -210,11 +210,11 @@
         "t3-src": "t3-src"
       },
       "locked": {
-        "lastModified": 1742848431,
-        "narHash": "sha256-MMH8rgrA8B74YBqqW7u2IoLrrpfXjpuNDSoCt/VY8oM=",
+        "lastModified": 1742906318,
+        "narHash": "sha256-rFJiAGhc1w/5rwP3RLblT5b2ByZyohXJDvDLDGiNRvU=",
         "owner": "flox",
         "repo": "flox",
-        "rev": "2be81c337b69788db4b18f77f13e2532d655abe6",
+        "rev": "7464e242840ba7539c67bdc2ae4a6fad2ff03e5a",
         "type": "github"
       },
       "original": {
@@ -439,11 +439,11 @@
         "nuschtosSearch": "nuschtosSearch"
       },
       "locked": {
-        "lastModified": 1742862631,
-        "narHash": "sha256-TGeFlONiQxKbgt39pKPnh5gD0NQ/DD8v6FRisD7q+MI=",
+        "lastModified": 1742904918,
+        "narHash": "sha256-gJO9PRBDfLDmEWCbcnySfMpa79FM5MBuQgtozYeyEgw=",
         "owner": "nix-community",
         "repo": "nixvim",
-        "rev": "ec92a1816e7deb33d03ff0ab7692fa504e3d1910",
+        "rev": "3cc58f0c7412813244ea7f613223b762fc1cb332",
         "type": "github"
       },
       "original": {

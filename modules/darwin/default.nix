@@ -45,12 +45,6 @@ in
     caskArgs.no_quarantine = true;
     global.brewfile = true;
     masApps = { };
-    taps = [
-      "depot/tap"
-    ];
-    brews = [
-      "colima"
-    ];
     casks = [
       # install via homebrew
       # https://github.com/NixOS/nixpkgs/issues/254944
