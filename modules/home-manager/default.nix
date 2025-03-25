@@ -17,7 +17,6 @@ let
     ps: with ps; [
       aider-chat
       playwright
-      python-playwright
     ]
   );
 in
