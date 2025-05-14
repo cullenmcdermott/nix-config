@@ -61,7 +61,7 @@ in
     lima
     nixd
     nixfmt-rfc-style
-    nodejs_23
+    nodejs
     omnictl
     packer
     pipx
