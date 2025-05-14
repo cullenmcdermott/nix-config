@@ -47,6 +47,7 @@ in
     go
     jq
     just
+    k3d
     k9s
     krew
     kubecolor
@@ -101,6 +102,7 @@ in
         keybind = super+shift+h=previous_tab
         keybind = super+shift+l=next_tab
         keybind = super+shift+r=reload_config
+        scrollback-limit = 2147483648
       '';
     };
   };
