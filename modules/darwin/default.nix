@@ -8,7 +8,7 @@
 let
 in
 {
-  programs.zsh.enable = true;
+  system.primaryUser = username;
   environment.shells = [
     pkgs.zsh
     pkgs.bash
@@ -16,7 +16,7 @@ in
   environment.systemPackages = [
     pkgs.coreutils
   ];
-  system.activationScripts.postUserActivation.text = ''
+  system.activationScripts.extraActivation.text = ''
     apps_source="${config.system.build.applications}/Applications"
     echo "apps source is $apps_source"
     moniker="Nix Trampolines"

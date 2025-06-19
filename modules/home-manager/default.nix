@@ -130,14 +130,14 @@ in
     append = true;
   };
   programs.zsh.syntaxHighlighting.enable = true;
-  programs.zsh.initExtra = ''
+  programs.zsh.initContent = ''
     ${builtins.readFile ./dotfiles/zshrc}
   '';
   programs.zsh.shellAliases = {
     brew = "op plugin run -- brew";
     ls = "ls --color=auto -F";
     vim = "nvim";
-    nixswitch = "darwin-rebuild switch --flake ~/src/system-config/.#";
+    nixswitch = "sudo darwin-rebuild switch --flake ~/src/system-config/.#";
     nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
     k = "kubecolor";
     ga = "git add";

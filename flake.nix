@@ -1,5 +1,9 @@
 {
   description = "cullen's mbp flake";
+  nixConfig = {
+    extra-trusted-substituters = [ "https://cache.flox.dev" ];
+    extra-trusted-public-keys = [ "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=" ];
+  };
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
@@ -13,7 +17,7 @@
     nixvim.url = "github:nix-community/nixvim";
     nixvim.inputs.nixpkgs.follows = "nixpkgs";
 
-    flox.url = "github:flox/flox";
+    flox.url = "github:flox/flox/v1.3.17";
 
     dagger.url = "github:dagger/nix";
     dagger.inputs.nixpkgs.follows = "nixpkgs";
@@ -62,7 +66,6 @@
                 experimental-features = "nix-command flakes";
                 trusted-substituters = [
                   "https://cache.flox.dev"
-                  "https://attic.cullen.rocks"
                 ];
                 trusted-public-keys = [
                   "cullen:gtI9d0t7nPTU36OnGU6YpEP5wEndvbmna9+7jpCgWPg= "
