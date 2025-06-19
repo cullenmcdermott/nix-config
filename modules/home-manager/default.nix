@@ -34,9 +34,10 @@ in
     attic-client
     argc
     cargo
-    curl
     chart-testing
+    claude-code
     colima
+    curl
     deadnix
     devpod
     docker
