@@ -13,12 +13,6 @@ let
     ]
   );
 
-  aiderWithPlaywright = pkgs.python3.withPackages (
-    ps: with ps; [
-      aider-chat
-      playwright
-    ]
-  );
 in
 {
   # specify home-manager configs
@@ -29,7 +23,6 @@ in
   home.packages = with pkgs; [
     _1password-cli
     aerospace
-    aiderWithPlaywright
     alejandra
     attic-client
     argc
@@ -41,6 +34,7 @@ in
     deadnix
     devpod
     docker
+    docker-compose
     fd
     gdk
     gh
