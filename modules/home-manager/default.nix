@@ -97,6 +97,7 @@ in
         keybind = super+shift+h=previous_tab
         keybind = super+shift+l=next_tab
         keybind = super+shift+r=reload_config
+        keybind = shift+enter=text:\x1b\r
         scrollback-limit = 2147483648
       '';
     };
