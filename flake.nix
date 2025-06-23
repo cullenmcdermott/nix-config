@@ -26,6 +26,7 @@
 
     # Handles making nix installed apps visibile in spotlight
     mac-app-util.url = "github:hraban/mac-app-util";
+
   };
 
   outputs =
@@ -43,6 +44,8 @@
       supportedSystems = [
         "x86_64-darwin"
         "aarch64-darwin"
+        "x86_64-linux"
+        "aarch64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       mkDarwinConfig =
@@ -57,21 +60,8 @@
           baseConfiguration =
             { pkgs, ... }:
             {
-              environment.systemPackages = [
-                inputs.flox.packages.${pkgs.system}.default
-                dagger.packages.${pkgs.system}.dagger
-              ];
+              imports = [ ./modules/common ];
 
-              nix.settings = {
-                experimental-features = "nix-command flakes";
-                trusted-substituters = [
-                  "https://cache.flox.dev"
-                ];
-                trusted-public-keys = [
-                  "cullen:gtI9d0t7nPTU36OnGU6YpEP5wEndvbmna9+7jpCgWPg= "
-                  "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
-                ];
-              };
             };
 
           homeManagerConfiguration = {
@@ -91,7 +81,7 @@
         in
         darwin.lib.darwinSystem {
           specialArgs = {
-            inherit username;
+            inherit username inputs;
           };
           inherit system;
           pkgs = import nixpkgs {
@@ -115,6 +105,48 @@
             ./modules/darwin
           ] ++ extraModules;
         };
+
+      mkNixOSConfig =
+        {
+          system,
+          username,
+          hostname,
+          extraModules ? [ ],
+          extraHomeManagerModules ? [ ],
+        }:
+        let
+          baseConfiguration = { pkgs, ... }: {
+            imports = [ ./modules/common ];
+            
+            # NixOS-specific base config
+            networking.hostName = hostname;
+            time.timeZone = "America/New_York";
+          };
+          
+          homeManagerConfiguration = {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              backupFileExtension = "back";
+              extraSpecialArgs = { inherit inputs username; };
+              users.${username}.imports = [
+                ./modules/home-manager
+              ] ++ extraHomeManagerModules;
+            };
+          };
+        in
+        nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit username inputs; };
+          inherit system;
+          modules = [
+            baseConfiguration
+            homeManagerConfiguration
+            home-manager.nixosModules.home-manager
+            ./modules/nixos/default.nix
+            # Add VM support for building VMs
+            "${nixpkgs}/nixos/modules/virtualisation/qemu-vm.nix"
+          ] ++ extraModules;
+        };
     in
     {
       darwinConfigurations = {
@@ -126,8 +158,30 @@
         };
       };
 
+      nixosConfigurations = {
+        "desktop" = mkNixOSConfig {
+          username = "cullen";
+          system = "x86_64-linux";
+          hostname = "desktop";
+          extraModules = [ ./systems/nixos/desktop.nix ];
+        };
+        
+        "test-vm" = mkNixOSConfig {
+          username = "cullen";
+          system = "x86_64-linux";
+          hostname = "test-vm";
+          extraModules = [ 
+            ./systems/nixos/test-vm.nix
+            # Enable VM-specific settings
+            { virtualisation.memorySize = 4096; }
+            { virtualisation.cores = 2; }
+            { virtualisation.diskSize = 8192; }
+          ];
+        };
+      };
+
       lib = {
-        inherit mkDarwinConfig;
+        inherit mkDarwinConfig mkNixOSConfig;
       };
     };
 }

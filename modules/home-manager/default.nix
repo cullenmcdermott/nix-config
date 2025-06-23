@@ -13,29 +13,26 @@ let
     ]
   );
 
+  # Platform detection - enables cross-platform compatibility
+  homeDirectory = if pkgs.stdenv.isDarwin 
+    then "/Users/${username}"    # macOS - same as before
+    else "/home/${username}";    # Linux - for future NixOS support
 
 in
 {
   # specify home-manager configs
   imports = [
     ./nvim
+    ./packages
   ];
   home.stateVersion = "24.05";
   home.packages = with pkgs; [
-    _1password-cli
-    aerospace
+    # Core packages available on all platforms
     alejandra
-    attic-client
     argc
     cargo
-    chart-testing
-    claude-code
-    colima
     curl
     deadnix
-    devpod
-    docker
-    docker-compose
     fd
     gdk
     gh
@@ -43,48 +40,67 @@ in
     go
     jq
     just
-    k3d
     k9s
-    krew
     kubecolor
     kubectl
     kubernetes-helm
-    kubevirt
-    kubie
-    kubelogin-oidc
     less
     luajitPackages.lua-lsp
-    lima
     nixd
     nixfmt-rfc-style
     nodejs
-    omnictl
-    packer
     pipx
     playwright-driver
     pyright
-    qemu
     renovate
     ripgrep
     silver-searcher
-    skopeo
     statix
     tailscale
-    talosctl
     terraform
     terraform-ls
     tflint
-    unixtools.watch
     unzip
     uv
     wget
     xdg-utils
     xdg-user-dirs
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    # macOS-specific packages
+    _1password-cli
+    aerospace
+    colima
+    docker
+    docker-compose
+    lima
+  ] ++ lib.optionals pkgs.stdenv.isLinux [
+    # Linux-specific packages
+    docker
+    docker-compose
+    ghostty
+    # Add other Linux-specific tools here
+  ] ++ lib.optionals pkgs.stdenv.isLinux [
+    # Kubernetes tools that might have platform differences
+    attic-client
+    chart-testing
+    claude-code
+    devpod
+    k3d
+    krew
+    kubevirt
+    kubie
+    kubelogin-oidc
+    omnictl
+    packer
+    qemu
+    skopeo
+    talosctl
+    unixtools.watch
   ];
   xdg = {
     enable = true;
-    cacheHome = "${config.home.homeDirectory}/.cache";
-    configHome = "${config.home.homeDirectory}/.config";
+    cacheHome = "${homeDirectory}/.cache";
+    configHome = "${homeDirectory}/.config";
     configFile."ghostty/config" = {
       text = ''
         theme = tokyonight-storm
@@ -104,11 +120,11 @@ in
       '';
     };
   };
-  home.homeDirectory = lib.mkForce "/Users/${username}";
+  home.homeDirectory = lib.mkForce homeDirectory;
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
-    HOME = "/Users/${username}";
+    HOME = homeDirectory;
     TERM = "xterm";
     PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
   };
@@ -163,14 +179,6 @@ in
     "git"
     "direnv"
   ];
-  
-  # Install claude-monitor and ccusage
-  home.activation.installClaudeTools = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    export PATH="${pkgs.uv}/bin:${pkgs.nodejs}/bin:$PATH"
-    $DRY_RUN_CMD ${pkgs.uv}/bin/uv tool install claude-monitor --force
-    # Install ccusage to user's home directory
-    $DRY_RUN_CMD ${pkgs.nodejs}/bin/npm install --prefix ~/.local ccusage
-  '';
   programs.direnv.enable = true;
   programs.granted.enable = true;
   programs.granted.enableZshIntegration = true;
