@@ -13,6 +13,7 @@ let
     ]
   );
 
+
 in
 {
   # specify home-manager configs
@@ -75,6 +76,7 @@ in
     tflint
     unixtools.watch
     unzip
+    uv
     wget
     xdg-utils
     xdg-user-dirs
@@ -110,6 +112,10 @@ in
     TERM = "xterm";
     PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
   };
+  home.sessionPath = [
+    "$HOME/.local/bin"
+    "$HOME/.local/node_modules/.bin"
+  ];
   programs.bat.enable = true;
   programs.bat.config.theme = "TwoDark";
   programs.fzf.enable = true;
@@ -157,6 +163,14 @@ in
     "git"
     "direnv"
   ];
+  
+  # Install claude-monitor and ccusage
+  home.activation.installClaudeTools = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    export PATH="${pkgs.uv}/bin:${pkgs.nodejs}/bin:$PATH"
+    $DRY_RUN_CMD ${pkgs.uv}/bin/uv tool install claude-monitor --force
+    # Install ccusage to user's home directory
+    $DRY_RUN_CMD ${pkgs.nodejs}/bin/npm install --prefix ~/.local ccusage
+  '';
   programs.direnv.enable = true;
   programs.granted.enable = true;
   programs.granted.enableZshIntegration = true;
