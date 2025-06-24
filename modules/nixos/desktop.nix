@@ -37,8 +37,8 @@
   # Gaming and productivity applications
   environment.systemPackages = with pkgs; [
     # Browsers
-    zen-browser # Custom overlay for Zen browser
-
+    #zen-browser # Custom overlay for Zen browser
+    firefox
     # Communication
     discord
 
