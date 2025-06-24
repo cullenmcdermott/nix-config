@@ -14,9 +14,11 @@ let
   );
 
   # Platform detection - enables cross-platform compatibility
-  homeDirectory = if pkgs.stdenv.isDarwin 
-    then "/Users/${username}"    # macOS - same as before
-    else "/home/${username}";    # Linux - for future NixOS support
+  homeDirectory =
+    if pkgs.stdenv.isDarwin then
+      "/Users/${username}" # macOS - same as before
+    else
+      "/home/${username}"; # Linux - for future NixOS support
 
 in
 {
@@ -26,77 +28,82 @@ in
     ./packages
   ];
   home.stateVersion = "24.05";
-  home.packages = with pkgs; [
-    # Core packages available on all platforms
-    alejandra
-    argc
-    cargo
-    curl
-    deadnix
-    fd
-    gdk
-    gh
-    gopls
-    go
-    jq
-    just
-    k9s
-    kubecolor
-    kubectl
-    kubernetes-helm
-    less
-    luajitPackages.lua-lsp
-    nixd
-    nixfmt-rfc-style
-    nodejs
-    pipx
-    playwright-driver
-    pyright
-    renovate
-    ripgrep
-    silver-searcher
-    statix
-    tailscale
-    terraform
-    terraform-ls
-    tflint
-    unzip
-    uv
-    wget
-    xdg-utils
-    xdg-user-dirs
-  ] ++ lib.optionals pkgs.stdenv.isDarwin [
-    # macOS-specific packages
-    _1password-cli
-    aerospace
-    colima
-    docker
-    docker-compose
-    lima
-  ] ++ lib.optionals pkgs.stdenv.isLinux [
-    # Linux-specific packages
-    docker
-    docker-compose
-    ghostty
-    # Add other Linux-specific tools here
-  ] ++ lib.optionals pkgs.stdenv.isLinux [
-    # Kubernetes tools that might have platform differences
-    attic-client
-    chart-testing
-    claude-code
-    devpod
-    k3d
-    krew
-    kubevirt
-    kubie
-    kubelogin-oidc
-    omnictl
-    packer
-    qemu
-    skopeo
-    talosctl
-    unixtools.watch
-  ];
+  home.packages =
+    with pkgs;
+    [
+      # Core packages available on all platforms
+      alejandra
+      argc
+      cargo
+      curl
+      deadnix
+      fd
+      gdk
+      gh
+      gopls
+      go
+      jq
+      just
+      k9s
+      kubecolor
+      kubectl
+      kubernetes-helm
+      less
+      luajitPackages.lua-lsp
+      nixd
+      nixfmt-rfc-style
+      nodejs
+      pipx
+      #playwright-driver
+      pyright
+      renovate
+      ripgrep
+      silver-searcher
+      statix
+      tailscale
+      terraform
+      terraform-ls
+      tflint
+      unzip
+      uv
+      wget
+      xdg-utils
+      xdg-user-dirs
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      # macOS-specific packages
+      _1password-cli
+      aerospace
+      colima
+      docker
+      docker-compose
+      lima
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      # Linux-specific packages
+      docker
+      docker-compose
+      ghostty
+      # Add other Linux-specific tools here
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      # Kubernetes tools that might have platform differences
+      attic-client
+      chart-testing
+      claude-code
+      devpod
+      k3d
+      krew
+      kubevirt
+      kubie
+      kubelogin-oidc
+      omnictl
+      packer
+      qemu
+      skopeo
+      talosctl
+      unixtools.watch
+    ];
   xdg = {
     enable = true;
     cacheHome = "${homeDirectory}/.cache";
@@ -126,7 +133,7 @@ in
     EDITOR = "nvim";
     HOME = homeDirectory;
     TERM = "xterm";
-    PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+    #PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
   };
   home.sessionPath = [
     "$HOME/.local/bin"
