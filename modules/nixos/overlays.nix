@@ -13,7 +13,7 @@
 
         src = prev.fetchurl {
           url = "https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz";
-          sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; # Will need to update this
+          sha256 = "sha256-GOD/qZsdCIgldRsOR/Hxo+mBOK7iutKt9XYUj9+6Tgc=";
         };
 
         nativeBuildInputs = with prev; [
