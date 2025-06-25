@@ -35,8 +35,13 @@ in
       alejandra
       argc
       cargo
+      chart-testing
+      claude-code
       curl
       deadnix
+      devpod
+      docker
+      docker-compose
       fd
       gdk
       gh
@@ -45,27 +50,36 @@ in
       jq
       just
       k9s
+      kubie
       kubecolor
       kubectl
+      kubelogin-oidc
       kubernetes-helm
+      krew
       less
       luajitPackages.lua-lsp
       nixd
       nixfmt-rfc-style
       nodejs
+      omnictl
+      packer
       pipx
       #playwright-driver
       pyright
+      qemu
       renovate
       ripgrep
       silver-searcher
+      skopeo
       statix
+      talosctl
       tailscale
       terraform
       terraform-ls
       tflint
       unzip
       uv
+      unixtools.watch
       wget
       xdg-utils
       xdg-user-dirs
@@ -75,34 +89,17 @@ in
       _1password-cli
       aerospace
       colima
-      docker
       docker-compose
       lima
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       # Linux-specific packages
-      docker
-      docker-compose
       ghostty
       # Add other Linux-specific tools here
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       # Kubernetes tools that might have platform differences
-      attic-client
-      chart-testing
-      claude-code
-      devpod
       k3d
-      krew
-      kubevirt
-      kubie
-      kubelogin-oidc
-      omnictl
-      packer
-      qemu
-      skopeo
-      talosctl
-      unixtools.watch
     ];
   xdg = {
     enable = true;
