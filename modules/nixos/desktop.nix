@@ -34,24 +34,17 @@
   # Audio with low-latency for gaming
   security.rtkit.enable = true;
 
-  # Gaming and productivity applications
+  # Essential desktop applications for immediate use
   environment.systemPackages = with pkgs; [
-    # Browsers
-    #zen-browser # Custom overlay for Zen browser
+    # Essential apps
     firefox
-    # Communication
     discord
-
-    # Media and streaming
-    obs-studio
-    vlc
-
-    # Gaming utilities
-    openrgb # RGB lighting control for X470 Taichi
-
-    # System monitoring
+    steam  # Move back for immediate gaming
+    ghostty  # Terminal
+    
+    # System monitoring  
     htop
-    nvtopPackages.nvidia # NVIDIA GPU monitoring
+    nvtopPackages.nvidia
   ];
 
   # Font configuration (just JetBrains Mono as requested)

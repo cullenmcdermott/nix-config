@@ -21,32 +21,11 @@
     "amd_pstate=active"
   ];
   
-  # Gaming packages
+  # Essential gaming system packages only
   environment.systemPackages = with pkgs; [
-    # Steam and gaming
-    steam
-    steamcmd
-    steam-run
-    
-    # Game launchers and managers
-    lutris              # Wine game manager (Epic, GOG, etc.)
-    heroic              # Epic Games & GOG launcher
-    
-    # Gaming utilities
-    gamemode
-    gamescope
-    mangohud
-    
-    # Wine for Windows games
-    wineWowPackages.stable
-    winetricks
-    
-    # Emulation
-    retroarch
-    
-    # Performance monitoring
+    # System-level gaming utilities
+    gamemode  # Must be system-level for proper permissions
     htop
-    nvtopPackages.full
   ];
   
   # Gamemode for performance optimization

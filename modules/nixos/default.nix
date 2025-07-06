@@ -14,10 +14,17 @@
   ];
 
   # Basic NixOS system configuration
-  system.stateVersion = "24.05";
+  system.stateVersion = "25.05";
   
   # Allow unfree packages (needed for NVIDIA drivers, Steam, etc.)
   nixpkgs.config.allowUnfree = true;
+  
+  # Make user trusted for Nix daemon
+  nix.settings.trusted-users = [ username "@wheel" ];
+  
+  # Standard filesystem support  
+  boot.supportedFilesystems = [ "ext4" ];
+  
   
   # User configuration
   users.users.${username} = {
@@ -25,13 +32,24 @@
     home = "/home/${username}";
     extraGroups = [ "wheel" "networkmanager" "audio" "video" "input" "storage" ];
     shell = pkgs.zsh;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEGjcXZICP2oHyzA97OmPRCKReZdLDahAwDZK7eV8ild"
+    ];
   };
   
   # Enable zsh system-wide
   programs.zsh.enable = true;
   
-  # Basic system services
-  services.openssh.enable = true;
+  # SSH configuration for nixos-anywhere
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "no";
+    };
+  };
+  
   networking.networkmanager.enable = true;
   
   # Enable sound

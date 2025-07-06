@@ -3,11 +3,18 @@
   pkgs,
   lib,
   username,
+  inputs,
   ...
 }:
 let
-  gdk = pkgs.google-cloud-sdk.withExtraComponents (
-    with pkgs.google-cloud-sdk.components;
+  # Use unstable packages for latest versions
+  unstable = import inputs.nixpkgs-unstable { 
+    inherit (pkgs) system; 
+    config.allowUnfree = true; 
+  };
+  
+  gdk = unstable.google-cloud-sdk.withExtraComponents (
+    with unstable.google-cloud-sdk.components;
     [
       gke-gcloud-auth-plugin
     ]
@@ -29,7 +36,7 @@ in
   ];
   home.stateVersion = "24.05";
   home.packages =
-    with pkgs;
+    with unstable;  # Use unstable packages
     [
       # Core packages available on all platforms
       alejandra
@@ -93,9 +100,19 @@ in
       lima
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
-      # Linux-specific packages
-      ghostty
-      # Add other Linux-specific tools here
+      # Additional gaming packages (Steam is in system for immediate use)
+      steamcmd
+      steam-run
+      lutris              # Wine game manager (Epic, GOG, etc.)
+      heroic              # Epic Games & GOG launcher
+      gamescope
+      mangohud
+      wineWowPackages.stable
+      winetricks
+      retroarch
+      obs-studio
+      vlc
+      openrgb  # RGB lighting control
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       # Kubernetes tools that might have platform differences
