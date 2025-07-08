@@ -8,6 +8,9 @@
 let
 in
 {
+  # Allow unsupported packages temporarily
+  nixpkgs.config.allowUnsupportedSystem = true;
+  
   system.primaryUser = username;
   
   # Make user trusted for Nix daemon

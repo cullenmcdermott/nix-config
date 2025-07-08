@@ -25,15 +25,14 @@
     ];
   };
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05"; # Current stable base system
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable"; # For packages
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     home-manager.url = "github:nix-community/home-manager/release-25.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
-    darwin.url = "github:lnl7/nix-darwin";
-
-    darwin.inputs.nixpkgs.follows = "nixpkgs-unstable";
+    darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.05";
+    darwin.inputs.nixpkgs.follows = "nixpkgs";
 
     nixvim.url = "github:nix-community/nixvim";
     nixvim.inputs.nixpkgs.follows = "nixpkgs";

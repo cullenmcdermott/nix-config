@@ -8,11 +8,11 @@
 }:
 let
   # Use unstable packages for latest versions
-  unstable = import inputs.nixpkgs-unstable { 
-    inherit (pkgs) system; 
-    config.allowUnfree = true; 
+  unstable = import inputs.nixpkgs-unstable {
+    inherit (pkgs) system;
+    config.allowUnfree = true;
   };
-  
+
   gdk = unstable.google-cloud-sdk.withExtraComponents (
     with unstable.google-cloud-sdk.components;
     [
@@ -36,7 +36,7 @@ in
   ];
   home.stateVersion = "24.05";
   home.packages =
-    with unstable;  # Use unstable packages
+    with unstable; # Use unstable packages
     [
       # Core packages available on all platforms
       alejandra
@@ -88,8 +88,6 @@ in
       uv
       unixtools.watch
       wget
-      xdg-utils
-      xdg-user-dirs
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       # macOS-specific packages
@@ -103,8 +101,8 @@ in
       # Additional gaming packages (Steam is in system for immediate use)
       steamcmd
       steam-run
-      lutris              # Wine game manager (Epic, GOG, etc.)
-      heroic              # Epic Games & GOG launcher
+      lutris # Wine game manager (Epic, GOG, etc.)
+      heroic # Epic Games & GOG launcher
       gamescope
       mangohud
       wineWowPackages.stable
@@ -112,7 +110,7 @@ in
       retroarch
       obs-studio
       vlc
-      openrgb  # RGB lighting control
+      openrgb # RGB lighting control
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       # Kubernetes tools that might have platform differences
