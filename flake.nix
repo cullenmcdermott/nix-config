@@ -202,5 +202,32 @@
       lib = {
         inherit mkDarwinConfig mkNixOSConfig;
       };
+
+      # Home Manager for Distrobox containers
+      homeConfigurations = {
+        "cullen@distrobox" = home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            system = "x86_64-linux";
+            config.allowUnfree = true;
+          };
+          extraSpecialArgs = {
+            inherit inputs;
+            username = "cullen";
+          };
+          modules = [
+            ./modules/home-manager
+            {
+              # Just override the shell aliases for container-specific commands
+              programs.zsh.shellAliases = lib.mkMerge [
+                {
+                  nixswitch = "home-manager switch --flake ~/src/system-config/.#cullen@distrobox";
+                  nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
+                  host-cmd = "distrobox-host-exec";
+                }
+              ];
+            }
+          ];
+        };
+      };
     };
 }
