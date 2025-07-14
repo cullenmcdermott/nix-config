@@ -1,5 +1,5 @@
 {
-  description = "cullen's mbp flake";
+  description = "cullen's multi-platform nix configuration";
   nixConfig = {
     extra-substituters = [
       "https://cache.nixos.org"
@@ -49,9 +49,6 @@
     mac-app-util.url = "github:hraban/mac-app-util";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
 
-    # Disk partitioning for nixos-anywhere
-    disko.url = "github:nix-community/disko";
-    disko.inputs.nixpkgs.follows = "nixpkgs";
 
   };
 
@@ -65,7 +62,6 @@
       dagger,
       nix-homebrew,
       mac-app-util,
-      disko,
       ...
     }:
     let
@@ -134,50 +130,34 @@
           ] ++ extraModules;
         };
 
-      mkNixOSConfig =
+      mkDistroboxEnvConfig =
         {
           system,
-          username,
-          hostname,
-          extraModules ? [ ],
-          extraHomeManagerModules ? [ ],
+          username, 
+          homeDirectory,
+          flakeRef,
+          extraModules ? [],
+          extraPackages ? []
         }:
-        let
-          baseConfiguration =
-            { pkgs, ... }:
-            {
-              imports = [ ./modules/common ];
-
-              # NixOS-specific base config
-              networking.hostName = hostname;
-              time.timeZone = "America/New_York";
-            };
-
-          homeManagerConfiguration = {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              backupFileExtension = "back";
-              extraSpecialArgs = { inherit inputs username; };
-              users.${username}.imports = [
-                ./modules/home-manager
-              ] ++ extraHomeManagerModules;
-            };
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
           };
-        in
-        nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit username inputs; };
-          inherit system;
+          extraSpecialArgs = {
+            inherit inputs username flakeRef;
+          };
           modules = [
-            baseConfiguration
-            homeManagerConfiguration
-            home-manager.nixosModules.home-manager
-            disko.nixosModules.disko
-            ./modules/nixos/default.nix
-            # Add VM support for building VMs
-            "${nixpkgs}/nixos/modules/virtualisation/qemu-vm.nix"
+            ./modules/home-manager
+            ./modules/home-manager/distrobox.nix
+            {
+              home.username = username;
+              home.homeDirectory = homeDirectory;
+              home.packages = extraPackages;
+            }
           ] ++ extraModules;
         };
+
     in
     {
       darwinConfigurations = {
@@ -189,44 +169,17 @@
         };
       };
 
-      nixosConfigurations = {
-        "desktop" = mkNixOSConfig {
-          username = "cullen";
-          system = "x86_64-linux";
-          hostname = "desktop";
-          extraModules = [ ./systems/nixos/desktop.nix ];
-        };
-
-      };
 
       lib = {
-        inherit mkDarwinConfig mkNixOSConfig;
+        inherit mkDarwinConfig mkDistroboxEnvConfig;
       };
 
-      # Home Manager for Distrobox containers
       homeConfigurations = {
-        "cullen@distrobox" = home-manager.lib.homeManagerConfiguration {
-          pkgs = import nixpkgs {
-            system = "x86_64-linux";
-            config.allowUnfree = true;
-          };
-          extraSpecialArgs = {
-            inherit inputs;
-            username = "cullen";
-          };
-          modules = [
-            ./modules/home-manager
-            {
-              # Just override the shell aliases for container-specific commands
-              programs.zsh.shellAliases = lib.mkMerge [
-                {
-                  nixswitch = "home-manager switch --flake ~/src/system-config/.#cullen@distrobox";
-                  nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
-                  host-cmd = "distrobox-host-exec";
-                }
-              ];
-            }
-          ];
+        "cullen@distrobox" = mkDistroboxEnvConfig {
+          system = "x86_64-linux";
+          username = "cullen";
+          homeDirectory = "/home/cullen";
+          flakeRef = "github:cullenmcdermott/nix-config";
         };
       };
     };
