@@ -52,6 +52,7 @@ in
       fd
       gdk
       gh
+      git
       gopls
       go
       jq
@@ -99,6 +100,7 @@ in
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       # Additional gaming packages (Steam is in system for immediate use)
+      kdePackages.ksshaskpass
       steamcmd
       steam-run
       lutris # Wine game manager (Epic, GOG, etc.)
@@ -111,9 +113,6 @@ in
       obs-studio
       vlc
       openrgb # RGB lighting control
-    ]
-    ++ lib.optionals pkgs.stdenv.isLinux [
-      # Kubernetes tools that might have platform differences
       k3d
     ];
   xdg = {

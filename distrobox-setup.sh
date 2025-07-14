@@ -79,11 +79,19 @@ nix run home-manager/release-25.05 -- init --switch /home/$USERNAME/src/system-c
 echo '🐚 Setting zsh as default shell...'
 sudo chsh -s \$(which zsh) $USERNAME
 
-# Add Nix to shell profiles
+# Add Nix to shell profiles and configure git askpass
 echo '. ~/.nix-profile/etc/profile.d/nix.sh' >> ~/.bashrc
+echo 'export SSH_ASKPASS=\$(which ksshaskpass 2>/dev/null)' >> ~/.bashrc
+echo 'export GIT_ASKPASS=\$(which ksshaskpass 2>/dev/null)' >> ~/.bashrc
+
 touch ~/.zshrc
 chmod 644 ~/.zshrc
 echo '. ~/.nix-profile/etc/profile.d/nix.sh' >> ~/.zshrc
+echo 'export SSH_ASKPASS=\$(which ksshaskpass 2>/dev/null)' >> ~/.zshrc
+echo 'export GIT_ASKPASS=\$(which ksshaskpass 2>/dev/null)' >> ~/.zshrc
+
+# Configure git to use the Nix-provided askpass
+git config --global core.askpass \"\$(which ksshaskpass)\"
 
 echo '🎉 Setup complete!'
 SETUP_EOF
