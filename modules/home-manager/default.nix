@@ -75,7 +75,7 @@ in
       #playwright-driver
       pyright
       qemu
-      renovate
+      #renovate
       ripgrep
       silver-searcher
       skopeo
