@@ -74,7 +74,7 @@ in
       pipx
       #playwright-driver
       pyright
-      qemu
+      #qemu
       #renovate
       ripgrep
       silver-searcher
@@ -97,6 +97,7 @@ in
       colima
       docker-compose
       lima
+      #quickemu
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       # Additional gaming packages (Steam is in system for immediate use)
@@ -192,14 +193,8 @@ in
   };
 
   programs.zsh.plugins = [ ];
-  programs.zsh.oh-my-zsh.enable = true;
-  programs.zsh.oh-my-zsh.plugins = [
-    "git"
-    "direnv"
-  ];
+  programs.zsh.oh-my-zsh.enable = false;
   programs.direnv.enable = true;
-  programs.granted.enable = true;
-  programs.granted.enableZshIntegration = true;
   programs.starship.enable = true;
   programs.starship.enableZshIntegration = true;
   #programs.kitty = {
