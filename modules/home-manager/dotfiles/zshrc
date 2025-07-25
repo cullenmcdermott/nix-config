@@ -16,13 +16,24 @@ toggle-audio () {
 	fi
 }
 
-# Enable kubectl autocompletion
-source <(kubectl completion zsh)
+# Cached kubectl completion (regenerate with: kubectl completion zsh > ~/.cache/kubectl-completion.zsh)
+if [[ -f ~/.cache/kubectl-completion.zsh ]]; then
+  source ~/.cache/kubectl-completion.zsh
+else
+  mkdir -p ~/.cache
+  kubectl completion zsh > ~/.cache/kubectl-completion.zsh 2>/dev/null && source ~/.cache/kubectl-completion.zsh
+fi
 compdef kubecolor=kubectl
+
+# Cached dagger completion (regenerate with: dagger completion zsh > ~/.cache/dagger-completion.zsh)
+if [[ -f ~/.cache/dagger-completion.zsh ]]; then
+  source ~/.cache/dagger-completion.zsh
+else
+  mkdir -p ~/.cache
+  dagger completion zsh > ~/.cache/dagger-completion.zsh 2>/dev/null && source ~/.cache/dagger-completion.zsh
+fi
+compdef _dagger dagger
 
 bindkey '^a' autosuggest-accept
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#8ce6e6"
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-
-source <(dagger completion zsh)
-compdef _dagger dagger
