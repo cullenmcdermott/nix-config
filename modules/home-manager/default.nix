@@ -190,6 +190,7 @@ in
     gm = "git merge";
     gp = "git push";
     grb = "git rebase";
+    gst = "git status";
   };
 
   programs.zsh.plugins = [ ];
