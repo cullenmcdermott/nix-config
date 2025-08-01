@@ -37,7 +37,7 @@
     nixvim.url = "github:nix-community/nixvim";
     nixvim.inputs.nixpkgs.follows = "nixpkgs";
 
-    flox.url = "github:flox/flox/v1.5.0";
+    flox.url = "github:flox/flox";
     # Don't override flox nixpkgs - let it use its own
 
     dagger.url = "github:dagger/nix";
@@ -48,7 +48,6 @@
     # Handles making nix installed apps visibile in spotlight
     mac-app-util.url = "github:hraban/mac-app-util";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
-
 
   };
 
@@ -99,7 +98,8 @@
               users.${username}.imports = [
                 ./modules/home-manager
                 mac-app-util.homeManagerModules.default
-              ] ++ extraHomeManagerModules;
+              ]
+              ++ extraHomeManagerModules;
             };
           };
         in
@@ -127,17 +127,18 @@
               };
             }
             ./modules/darwin
-          ] ++ extraModules;
+          ]
+          ++ extraModules;
         };
 
       mkDistroboxEnvConfig =
         {
           system,
-          username, 
+          username,
           homeDirectory,
           flakeRef,
-          extraModules ? [],
-          extraPackages ? []
+          extraModules ? [ ],
+          extraPackages ? [ ],
         }:
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
@@ -155,7 +156,8 @@
               home.homeDirectory = homeDirectory;
               home.packages = extraPackages;
             }
-          ] ++ extraModules;
+          ]
+          ++ extraModules;
         };
 
     in
@@ -168,7 +170,6 @@
           extraModules = [ ./systems/personal/default.nix ];
         };
       };
-
 
       lib = {
         inherit mkDarwinConfig mkDistroboxEnvConfig;

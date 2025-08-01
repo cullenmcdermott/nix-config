@@ -229,20 +229,19 @@
         "crane": "crane",
         "fenix": "fenix",
         "nix-unit": "nix-unit",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs",
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1750804186,
-        "narHash": "sha256-abYbfeilRR3DlFZlHV2p0UGZtRnTNTjNdV6gbVNZBF4=",
+        "lastModified": 1754077465,
+        "narHash": "sha256-328mcNVTd37Pd5jkep1+kn+vTbJN6CGt789E0CjFGLM=",
         "owner": "flox",
         "repo": "flox",
-        "rev": "e9f8e4f5f380bed20939ad68623b03edc2f6b61b",
+        "rev": "925840029f67b768e235d66e9fa26f0b890f01e1",
         "type": "github"
       },
       "original": {
         "owner": "flox",
-        "ref": "v1.5.0",
         "repo": "flox",
         "type": "github"
       }
@@ -386,7 +385,10 @@
       "inputs": {
         "flake-parts": "flake-parts",
         "nix-github-actions": "nix-github-actions",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": [
+          "flox",
+          "nixpkgs"
+        ],
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
@@ -405,16 +407,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1733376361,
-        "narHash": "sha256-aLJxoTDDSqB+/3orsulE6/qdlX6MzDLIITLZqdgMpqo=",
-        "owner": "NixOS",
+        "lastModified": 1750776420,
+        "narHash": "sha256-/CG+w0o0oJ5itVklOoLbdn2dGB0wbZVOoDm4np6w09A=",
+        "owner": "flox",
         "repo": "nixpkgs",
-        "rev": "929116e316068c7318c54eb4d827f7d9756d5e9c",
+        "rev": "30a61f056ac492e3b7cdcb69c1e6abdcf00e39cf",
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
+        "owner": "flox",
+        "ref": "stable",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -436,22 +438,6 @@
       }
     },
     "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1745391562,
-        "narHash": "sha256-sPwcCYuiEopaafePqlG826tBhctuJsLx/mhKKM5Fmjo=",
-        "owner": "flox",
-        "repo": "nixpkgs",
-        "rev": "8a2f738d9d1f1d986b5a4cd2fd2061a7127237d7",
-        "type": "github"
-      },
-      "original": {
-        "owner": "flox",
-        "ref": "stable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_3": {
       "locked": {
         "lastModified": 1753749649,
         "narHash": "sha256-+jkEZxs7bfOKfBIk430K+tK9IvXlwzqQQnppC2ZKFj4=",
@@ -544,7 +530,7 @@
         "home-manager": "home-manager",
         "mac-app-util": "mac-app-util",
         "nix-homebrew": "nix-homebrew",
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_2",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim"
       }
