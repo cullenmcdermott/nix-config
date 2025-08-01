@@ -50,6 +50,7 @@ in
       docker
       docker-compose
       fd
+      flyctl
       gdk
       gh
       git
