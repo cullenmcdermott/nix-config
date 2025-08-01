@@ -192,6 +192,8 @@ in
     gp = "git push";
     grb = "git rebase";
     gst = "git status";
+    gcl = "git clone";
+    grv = "git remote -v";
   };
 
   programs.zsh.plugins = [ ];
