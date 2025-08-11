@@ -53,12 +53,25 @@
     dream2nix.url = "github:nix-community/dream2nix";
     dream2nix.inputs.nixpkgs.follows = "nixpkgs";
 
+    # kagimcp dependencies
+    pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
+    pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    uv2nix.url = "github:pyproject-nix/uv2nix";
+    uv2nix.inputs.pyproject-nix.follows = "pyproject-nix";
+    uv2nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    pyproject-build-systems.url = "github:pyproject-nix/build-system-pkgs";
+    pyproject-build-systems.inputs.pyproject-nix.follows = "pyproject-nix";
+    pyproject-build-systems.inputs.uv2nix.follows = "uv2nix";
+    pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
+
     # MCP Servers
     mcp-nixos.url = "github:utensils/mcp-nixos";
     mcp-nixos.inputs.nixpkgs.follows = "nixpkgs";
     
-    # Non-flake MCP server sources
-    kagimcp.url = "github:kagisearch/kagimcp";
+    # Local kagimcp source (embedded in flake)
+    kagimcp.url = "path:/Users/cullen/git/kagimcp";
     kagimcp.flake = false;
     
     context7-mcp.url = "github:upstash/context7-mcp";
@@ -79,6 +92,9 @@
       nix-homebrew,
       mac-app-util,
       dream2nix,
+      pyproject-nix,
+      uv2nix,
+      pyproject-build-systems,
       mcp-nixos,
       kagimcp,
       context7-mcp,
@@ -208,19 +224,36 @@
 
       # Temporary packages for lock file generation
       packages = forAllSystems (system: 
-        let pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
-        in {
-          kagimcp = inputs.dream2nix.lib.evalModules {
-            packageSets.nixpkgs = pkgs;
-            modules = [
-              ./modules/home-manager/mcp-servers/kagimcp/default.nix
-              {
-                paths.projectRoot = inputs.kagimcp;
-                paths.projectRootFile = "pyproject.toml";
-                paths.package = inputs.kagimcp;
-              }
-            ];
+        let 
+          pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+          
+          # Embedded kagimcp package logic from kagimcp flake
+          kagimcp-workspace = uv2nix.lib.workspace.loadWorkspace { 
+            workspaceRoot = inputs.kagimcp; 
           };
+          
+          kagimcp-overlay = kagimcp-workspace.mkPyprojectOverlay {
+            sourcePreference = "wheel";
+          };
+          
+          kagimcp-pyprojectOverrides = _final: _prev: {
+            # Build fixups can be added here if needed
+          };
+          
+          kagimcp-python = pkgs.python312;
+          
+          kagimcp-pythonSet = (pkgs.callPackage pyproject-nix.build.packages {
+            python = kagimcp-python;
+          }).overrideScope (
+            pkgs.lib.composeManyExtensions [
+              pyproject-build-systems.overlays.default
+              kagimcp-overlay
+              kagimcp-pyprojectOverrides
+            ]
+          );
+          
+        in {
+          kagimcp = kagimcp-pythonSet.mkVirtualEnv "kagimcp-env" kagimcp-workspace.deps.default;
           serena = inputs.dream2nix.lib.evalModules {
             packageSets.nixpkgs = pkgs;
             modules = [

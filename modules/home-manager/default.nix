@@ -93,8 +93,8 @@ in
       # MCP Servers - installed via Nix for reproducibility
       mcpServers.mcp-nixos
       mcpServers.context7-mcp
+      mcpServers.kagimcp
       # Temporarily disabled to fix path issues
-      # mcpServers.kagimcp
       # mcpServers.serena
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [

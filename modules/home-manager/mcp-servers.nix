@@ -4,18 +4,8 @@ let
   # Use mcp-nixos flake directly - much cleaner!
   mcp-nixos = inputs.mcp-nixos.packages.${pkgs.system}.default;
 
-  # kagimcp - using dream2nix for reproducible Python packaging
-  kagimcp = inputs.dream2nix.lib.evalModules {
-    packageSets.nixpkgs = pkgs;
-    modules = [
-      ./mcp-servers/kagimcp/default.nix
-      {
-        paths.projectRoot = inputs.kagimcp;
-        paths.projectRootFile = "pyproject.toml";
-        paths.package = inputs.kagimcp;
-      }
-    ];
-  };
+  # kagimcp - using embedded package from main flake
+  kagimcp = inputs.self.packages.${pkgs.system}.kagimcp;
 
   # context7-mcp - TypeScript/Node.js package (keeping existing working version)
   context7-mcp = pkgs.stdenv.mkDerivation rec {
@@ -76,8 +66,7 @@ EOF
 in
 {
   # Export each package individually - completely decoupled  
-  inherit mcp-nixos context7-mcp;
+  inherit mcp-nixos kagimcp context7-mcp;
   # Temporarily disabled to fix path issues
-  # kagimcp = kagimcp.config.public;
   # serena = serena.config.public;
 }
