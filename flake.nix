@@ -25,13 +25,12 @@
     ];
   };
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
-    home-manager.url = "github:nix-community/home-manager/release-25.05";
+    home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
-    darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.05";
+    darwin.url = "github:nix-darwin/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
     nixvim.url = "github:nix-community/nixvim";
@@ -49,18 +48,40 @@
     mac-app-util.url = "github:hraban/mac-app-util";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
 
+    # uv2nix for Python package management
+    uv2nix.url = "github:pyproject-nix/uv2nix";
+    uv2nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    # MCP Servers
+    mcp-nixos.url = "github:utensils/mcp-nixos";
+    mcp-nixos.inputs.nixpkgs.follows = "nixpkgs";
+    
+    # Non-flake MCP server sources
+    kagimcp.url = "github:kagisearch/kagimcp";
+    kagimcp.flake = false;
+    
+    context7-mcp.url = "github:upstash/context7-mcp";
+    context7-mcp.flake = false;
+    
+    serena-mcp.url = "github:oraios/serena";
+    serena-mcp.flake = false;
+
   };
 
   outputs =
     inputs@{
       nixpkgs,
-      nixpkgs-unstable,
       home-manager,
       darwin,
       flox,
       dagger,
       nix-homebrew,
       mac-app-util,
+      uv2nix,
+      mcp-nixos,
+      kagimcp,
+      context7-mcp,
+      serena-mcp,
       ...
     }:
     let

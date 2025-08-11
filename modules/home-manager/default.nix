@@ -7,14 +7,10 @@
   ...
 }:
 let
-  # Use unstable packages for latest versions
-  unstable = import inputs.nixpkgs-unstable {
-    inherit (pkgs) system;
-    config.allowUnfree = true;
-  };
+  # pkgs is already unstable now
 
-  gdk = unstable.google-cloud-sdk.withExtraComponents (
-    with unstable.google-cloud-sdk.components;
+  gdk = pkgs.google-cloud-sdk.withExtraComponents (
+    with pkgs.google-cloud-sdk.components;
     [
       gke-gcloud-auth-plugin
     ]
@@ -27,16 +23,20 @@ let
     else
       "/home/${username}"; # Linux - for future NixOS support
 
+  # Import MCP server packages
+  mcpServers = import ./mcp-servers.nix { inherit pkgs inputs lib; };
+
 in
 {
   # specify home-manager configs
   imports = [
     ./nvim
     ./packages
+    ./claude-code.nix
   ];
   home.stateVersion = "24.05";
   home.packages =
-    with unstable; # Use unstable packages
+    with pkgs; # All packages are unstable now
     [
       # Core packages available on all platforms
       alejandra
@@ -90,6 +90,11 @@ in
       uv
       unixtools.watch
       wget
+      # MCP Servers - installed via Nix for reproducibility
+      mcpServers.mcp-nixos
+      mcpServers.kagimcp
+      mcpServers.context7-mcp
+      mcpServers.serena
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       # macOS-specific packages

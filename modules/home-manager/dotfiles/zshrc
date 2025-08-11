@@ -34,6 +34,9 @@ else
 fi
 compdef _dagger dagger
 
+# Source ~/.env if it exists
+[[ -f ~/.env ]] && source ~/.env
+
 bindkey '^a' autosuggest-accept
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#8ce6e6"
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
