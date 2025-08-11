@@ -1,35 +1,28 @@
 { pkgs, inputs, lib, ... }:
 
-
 let
   # Use mcp-nixos flake directly - much cleaner!
   mcp-nixos = inputs.mcp-nixos.packages.${pkgs.system}.default;
 
-  # kagimcp - using pip in a wrapper to handle dependencies not in nixpkgs
-  kagimcp = pkgs.writeShellApplication {
-    name = "kagimcp";
-    runtimeInputs = [ pkgs.python312 pkgs.python312Packages.pip ];
-    text = ''
-      # Create a temporary venv and install deps
-      export TMPDIR="''${TMPDIR:-/tmp}"
-      VENV_DIR="$HOME/.cache/kagimcp-venv"
-      
-      if [[ ! -d "$VENV_DIR" ]]; then
-        echo "Setting up kagimcp environment..." >&2
-        ${pkgs.python312}/bin/python -m venv "$VENV_DIR"
-        "$VENV_DIR/bin/pip" install -e ${inputs.kagimcp}
-      fi
-      
-      exec "$VENV_DIR/bin/kagimcp" "$@"
-    '';
+  # kagimcp - using dream2nix for reproducible Python packaging
+  kagimcp = inputs.dream2nix.lib.evalModules {
+    packageSets.nixpkgs = pkgs;
+    modules = [
+      ./mcp-servers/kagimcp/default.nix
+      {
+        paths.projectRoot = inputs.kagimcp;
+        paths.projectRootFile = "pyproject.toml";
+        paths.package = inputs.kagimcp;
+      }
+    ];
   };
 
-  # context7-mcp - TypeScript/Node.js package  
+  # context7-mcp - TypeScript/Node.js package (keeping existing working version)
   context7-mcp = pkgs.stdenv.mkDerivation rec {
     pname = "context7-mcp";
     version = "1.0.14";
     
-    src = inputs.context7-mcp; # Use flake input directly!
+    src = inputs.context7-mcp;
     
     nativeBuildInputs = [ pkgs.nodejs pkgs.nodePackages.typescript pkgs.bun ];
     
@@ -67,27 +60,24 @@ EOF
     };
   };
 
-  # serena - using pip in a wrapper to handle dependencies not in nixpkgs  
-  serena = pkgs.writeShellApplication {
-    name = "serena";
-    runtimeInputs = [ pkgs.python311 pkgs.python311Packages.pip ];
-    text = ''
-      # Create a persistent venv and install deps
-      export TMPDIR="''${TMPDIR:-/tmp}"
-      VENV_DIR="$HOME/.cache/serena-venv"
-      
-      if [[ ! -d "$VENV_DIR" ]]; then
-        echo "Setting up serena environment..." >&2
-        ${pkgs.python311}/bin/python -m venv "$VENV_DIR"
-        "$VENV_DIR/bin/pip" install -e ${inputs.serena-mcp}
-      fi
-      
-      exec "$VENV_DIR/bin/serena" "$@"
-    '';
+  # serena - using dream2nix for reproducible Python packaging
+  serena = inputs.dream2nix.lib.evalModules {
+    packageSets.nixpkgs = pkgs;
+    modules = [
+      ./mcp-servers/serena/default.nix
+      {
+        paths.projectRoot = inputs.serena-mcp;
+        paths.projectRootFile = "pyproject.toml";
+        paths.package = inputs.serena-mcp;
+      }
+    ];
   };
 
 in
 {
-  # Export each package individually - completely decoupled
-  inherit mcp-nixos kagimcp context7-mcp serena;
+  # Export each package individually - completely decoupled  
+  inherit mcp-nixos context7-mcp;
+  # Temporarily disabled to fix path issues
+  # kagimcp = kagimcp.config.public;
+  # serena = serena.config.public;
 }

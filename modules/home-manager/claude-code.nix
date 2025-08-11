@@ -25,6 +25,55 @@
           "Bash(git log:*)"
           "Bash(git diff:*)"
           "Bash(git show:*)"
+          "Bash(mkdir:*)"
+          "Bash(chmod:*)"
+          # Additional useful bash commands
+          "Bash(nix search:*)"
+          "Bash(nix-env:*)"
+          "Bash(time zsh:*)"
+          "Bash(zsh:*)"
+          
+          # Kagi MCP tools
+          "mcp__kagi__kagi_search_fetch"
+          "mcp__kagi__kagi_summarizer"
+          
+          # Context7 MCP tools (documentation)
+          "mcp__context7__resolve-library-id"
+          "mcp__context7__get-library-docs"
+          
+          # NixOS MCP tools (all read-only)
+          "mcp__nixos__nixos_search"
+          "mcp__nixos__nixos_info"
+          "mcp__nixos__nixos_channels" 
+          "mcp__nixos__nixos_stats"
+          "mcp__nixos__nixos_flakes_search"
+          "mcp__nixos__nixos_flakes_stats"
+          "mcp__nixos__nixhub_package_versions"
+          "mcp__nixos__nixhub_find_version"
+          "mcp__nixos__home_manager_search"
+          "mcp__nixos__home_manager_info"
+          "mcp__nixos__home_manager_stats"
+          "mcp__nixos__home_manager_list_options"
+          "mcp__nixos__home_manager_options_by_prefix"
+          "mcp__nixos__darwin_search"
+          "mcp__nixos__darwin_info"
+          "mcp__nixos__darwin_stats"
+          "mcp__nixos__darwin_list_options"
+          "mcp__nixos__darwin_options_by_prefix"
+          
+          # Serena MCP tools (read-only analysis)
+          "mcp__serena__list_dir"
+          "mcp__serena__find_file"
+          "mcp__serena__search_for_pattern"
+          "mcp__serena__get_symbols_overview"
+          "mcp__serena__find_symbol"
+          "mcp__serena__find_referencing_symbols"
+          "mcp__serena__read_memory"
+          "mcp__serena__list_memories"
+          "mcp__serena__check_onboarding_performed"
+          "mcp__serena__think_about_collected_information"
+          "mcp__serena__think_about_task_adherence"
+          "mcp__serena__think_about_whether_you_are_done"
         ];
       };
       interactiveMode = true;

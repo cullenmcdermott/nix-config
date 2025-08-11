@@ -23,6 +23,7 @@
       "big-parallel"
       "kvm"
     ];
+    # GitHub token is configured in ~/.config/nix/nix.conf
   };
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -48,9 +49,9 @@
     mac-app-util.url = "github:hraban/mac-app-util";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
 
-    # uv2nix for Python package management
-    uv2nix.url = "github:pyproject-nix/uv2nix";
-    uv2nix.inputs.nixpkgs.follows = "nixpkgs";
+    # dream2nix for reproducible Python packaging with PyPI support
+    dream2nix.url = "github:nix-community/dream2nix";
+    dream2nix.inputs.nixpkgs.follows = "nixpkgs";
 
     # MCP Servers
     mcp-nixos.url = "github:utensils/mcp-nixos";
@@ -77,7 +78,7 @@
       dagger,
       nix-homebrew,
       mac-app-util,
-      uv2nix,
+      dream2nix,
       mcp-nixos,
       kagimcp,
       context7-mcp,
@@ -204,5 +205,34 @@
           flakeRef = "github:cullenmcdermott/nix-config";
         };
       };
+
+      # Temporary packages for lock file generation
+      packages = forAllSystems (system: 
+        let pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+        in {
+          kagimcp = inputs.dream2nix.lib.evalModules {
+            packageSets.nixpkgs = pkgs;
+            modules = [
+              ./modules/home-manager/mcp-servers/kagimcp/default.nix
+              {
+                paths.projectRoot = inputs.kagimcp;
+                paths.projectRootFile = "pyproject.toml";
+                paths.package = inputs.kagimcp;
+              }
+            ];
+          };
+          serena = inputs.dream2nix.lib.evalModules {
+            packageSets.nixpkgs = pkgs;
+            modules = [
+              ./modules/home-manager/mcp-servers/serena/default.nix
+              {
+                paths.projectRoot = inputs.serena-mcp;
+                paths.projectRootFile = "pyproject.toml";
+                paths.package = inputs.serena-mcp;
+              }
+            ];
+          };
+        }
+      );
     };
 }
