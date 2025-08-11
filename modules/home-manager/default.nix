@@ -94,8 +94,7 @@ in
       mcpServers.mcp-nixos
       mcpServers.context7-mcp
       mcpServers.kagimcp
-      # Temporarily disabled to fix path issues
-      # mcpServers.serena
+      mcpServers.serena
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       # macOS-specific packages

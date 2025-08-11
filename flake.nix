@@ -66,11 +66,10 @@
     pyproject-build-systems.inputs.uv2nix.follows = "uv2nix";
     pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
 
-    # MCP Servers
-    mcp-nixos.url = "github:utensils/mcp-nixos";
-    mcp-nixos.inputs.nixpkgs.follows = "nixpkgs";
+    # MCP Server sources (all non-flake for embedding)
+    mcp-nixos-src.url = "github:utensils/mcp-nixos";
+    mcp-nixos-src.flake = false;
     
-    # Local kagimcp source (embedded in flake)
     kagimcp.url = "path:/Users/cullen/git/kagimcp";
     kagimcp.flake = false;
     
@@ -95,7 +94,7 @@
       pyproject-nix,
       uv2nix,
       pyproject-build-systems,
-      mcp-nixos,
+      mcp-nixos-src,
       kagimcp,
       context7-mcp,
       serena-mcp,
@@ -222,50 +221,14 @@
         };
       };
 
-      # Temporary packages for lock file generation
+      # MCP packages built from embedded sources
       packages = forAllSystems (system: 
         let 
           pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
-          
-          # Embedded kagimcp package logic from kagimcp flake
-          kagimcp-workspace = uv2nix.lib.workspace.loadWorkspace { 
-            workspaceRoot = inputs.kagimcp; 
-          };
-          
-          kagimcp-overlay = kagimcp-workspace.mkPyprojectOverlay {
-            sourcePreference = "wheel";
-          };
-          
-          kagimcp-pyprojectOverrides = _final: _prev: {
-            # Build fixups can be added here if needed
-          };
-          
-          kagimcp-python = pkgs.python312;
-          
-          kagimcp-pythonSet = (pkgs.callPackage pyproject-nix.build.packages {
-            python = kagimcp-python;
-          }).overrideScope (
-            pkgs.lib.composeManyExtensions [
-              pyproject-build-systems.overlays.default
-              kagimcp-overlay
-              kagimcp-pyprojectOverrides
-            ]
-          );
-          
-        in {
-          kagimcp = kagimcp-pythonSet.mkVirtualEnv "kagimcp-env" kagimcp-workspace.deps.default;
-          serena = inputs.dream2nix.lib.evalModules {
-            packageSets.nixpkgs = pkgs;
-            modules = [
-              ./modules/home-manager/mcp-servers/serena/default.nix
-              {
-                paths.projectRoot = inputs.serena-mcp;
-                paths.projectRootFile = "pyproject.toml";
-                paths.package = inputs.serena-mcp;
-              }
-            ];
-          };
-        }
+        in
+          import ./lib/mcp-packages.nix { 
+            inherit inputs pkgs pyproject-nix uv2nix pyproject-build-systems; 
+          }
       );
     };
 }
