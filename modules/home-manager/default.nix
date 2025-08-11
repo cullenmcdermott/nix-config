@@ -3,9 +3,12 @@
   pkgs,
   lib,
   username,
+  inputs,
   ...
 }:
 let
+  # pkgs is already unstable now
+
   gdk = pkgs.google-cloud-sdk.withExtraComponents (
     with pkgs.google-cloud-sdk.components;
     [
@@ -13,78 +16,101 @@ let
     ]
   );
 
+  # Platform detection - enables cross-platform compatibility
+  homeDirectory =
+    if pkgs.stdenv.isDarwin then
+      "/Users/${username}" # macOS - same as before
+    else
+      "/home/${username}"; # Linux - for future NixOS support
+
+  # Import MCP server packages
+  mcpServers = import ./mcp-servers.nix { inherit pkgs inputs lib; };
 
 in
 {
   # specify home-manager configs
   imports = [
     ./nvim
+    ./packages
+    ./claude-code.nix
   ];
   home.stateVersion = "24.05";
-  home.packages = with pkgs; [
-    _1password-cli
-    aerospace
-    alejandra
-    attic-client
-    argc
-    cargo
-    chart-testing
-    claude-code
-    colima
-    curl
-    deadnix
-    devpod
-    docker
-    docker-compose
-    fd
-    gdk
-    gh
-    gopls
-    go
-    jq
-    just
-    k3d
-    k9s
-    krew
-    kubecolor
-    kubectl
-    kubernetes-helm
-    kubevirt
-    kubie
-    kubelogin-oidc
-    less
-    luajitPackages.lua-lsp
-    lima
-    nixd
-    nixfmt-rfc-style
-    nodejs
-    omnictl
-    packer
-    pipx
-    playwright-driver
-    pyright
-    qemu
-    renovate
-    ripgrep
-    silver-searcher
-    skopeo
-    statix
-    tailscale
-    talosctl
-    terraform
-    terraform-ls
-    tflint
-    unixtools.watch
-    unzip
-    uv
-    wget
-    xdg-utils
-    xdg-user-dirs
-  ];
+  home.packages =
+    with pkgs; # All packages are unstable now
+    [
+      # Core packages available on all platforms
+      alejandra
+      argc
+      cargo
+      chart-testing
+      claude-code
+      curl
+      deadnix
+      devpod
+      docker
+      docker-compose
+      fd
+      flyctl
+      gdk
+      gh
+      git
+      gopls
+      go
+      jq
+      just
+      k9s
+      kubie
+      kubecolor
+      kubectl
+      kubelogin-oidc
+      kubernetes-helm
+      krew
+      less
+      luajitPackages.lua-lsp
+      nixd
+      nixfmt-rfc-style
+      nodejs
+      omnictl
+      packer
+      pipx
+      pyright
+      ripgrep
+      silver-searcher
+      skopeo
+      statix
+      talosctl
+      tailscale
+      terraform
+      terraform-ls
+      tflint
+      unzip
+      uv
+      unixtools.watch
+      wget
+      # MCP Servers - installed via Nix for reproducibility
+      mcpServers.mcp-nixos
+      mcpServers.context7-mcp
+      mcpServers.kagimcp
+      mcpServers.serena
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      # macOS-specific packages
+      _1password-cli
+      aerospace
+      colima
+      lima
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      # Essential Linux packages for distrobox environment
+      kdePackages.ksshaskpass
+      obs-studio
+      vlc
+      k3d
+    ];
   xdg = {
     enable = true;
-    cacheHome = "${config.home.homeDirectory}/.cache";
-    configHome = "${config.home.homeDirectory}/.config";
+    cacheHome = "${homeDirectory}/.cache";
+    configHome = "${homeDirectory}/.config";
     configFile."ghostty/config" = {
       text = ''
         theme = tokyonight-storm
@@ -104,13 +130,12 @@ in
       '';
     };
   };
-  home.homeDirectory = lib.mkForce "/Users/${username}";
+  home.homeDirectory = lib.mkForce homeDirectory;
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
-    HOME = "/Users/${username}";
+    HOME = homeDirectory;
     TERM = "xterm";
-    PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
   };
   home.sessionPath = [
     "$HOME/.local/bin"
@@ -140,7 +165,7 @@ in
     ls = "ls --color=auto -F";
     vim = "nvim";
     nixswitch = "sudo darwin-rebuild switch --flake ~/src/system-config/.#";
-    nixup = "pushd ~/src/system-config; nix flake update; nixswitch; popd";
+    nixup = "~/src/system-config/scripts/nixup.sh";
     k = "kubecolor";
     ga = "git add";
     gb = "git branch";
@@ -155,59 +180,14 @@ in
     gm = "git merge";
     gp = "git push";
     grb = "git rebase";
+    gst = "git status";
+    gcl = "git clone";
+    grv = "git remote -v";
   };
 
   programs.zsh.plugins = [ ];
-  programs.zsh.oh-my-zsh.enable = true;
-  programs.zsh.oh-my-zsh.plugins = [
-    "git"
-    "direnv"
-  ];
-  
-  # Install claude-monitor and ccusage
-  home.activation.installClaudeTools = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    export PATH="${pkgs.uv}/bin:${pkgs.nodejs}/bin:$PATH"
-    $DRY_RUN_CMD ${pkgs.uv}/bin/uv tool install claude-monitor --force
-    # Install ccusage to user's home directory
-    $DRY_RUN_CMD ${pkgs.nodejs}/bin/npm install --prefix ~/.local ccusage
-  '';
+  programs.zsh.oh-my-zsh.enable = false;
   programs.direnv.enable = true;
-  programs.granted.enable = true;
-  programs.granted.enableZshIntegration = true;
   programs.starship.enable = true;
   programs.starship.enableZshIntegration = true;
-  #programs.kitty = {
-  #  enable = true;
-  #  font = {
-  #    name = "JetBrainsMono";
-  #    size = 14;
-  #  };
-  #  themeFile = "tokyo_night_storm";
-  #  keybindings = {
-  #    "ctrl+shift+'" = "launch --location=vsplit";
-  #    "ctrl+shift+5" = "launch --location=hsplit";
-  #    "ctrl+shift+h" = "neighboring_window left";
-  #    "ctrl+shift+l" = "neighboring_window right";
-  #    "ctrl+shift+k" = "neighboring_window up";
-  #    "ctrl+shift+j" = "neighboring_window down";
-  #    "ctrl+shift+o" = "layout_action rotate";
-  #    "ctrl+alt+left" = "resize_window narrower";
-  #    "ctrl+alt+right" = "resize_window wider";
-  #    "ctrl+alt+up" = "resize_window taller";
-  #    "ctrl+alt+down" = "resize_window shorter 3";
-  #    "ctrl+shift+f" = "show_scrollback";
-  #    "ctrl+left" = "no_op";
-  #    "ctrl+right" = "no_op";
-  #  };
-  #  settings = {
-  #    confirm_os_window_close = -0;
-  #    copy_on_select = true;
-  #    clipboard_control = "write-clipboard read-clipboard write-primary read-primary";
-  #    enabled_layouts = "splits";
-  #    scrollback_lines = 200000;
-  #    tab_bar_style = "powerline";
-  #    tab_activity_symbol = "*";
-  #    tab_title_template = "{activity_symbol}{title}{activity_symbol}";
-  #  };
-  #};
 }

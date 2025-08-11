@@ -8,7 +8,13 @@
 let
 in
 {
+  # Allow unsupported packages temporarily
+  nixpkgs.config.allowUnsupportedSystem = true;
+  
   system.primaryUser = username;
+  
+  # Make user trusted for Nix daemon
+  nix.settings.trusted-users = [ username "@admin" ];
   environment.shells = [
     pkgs.zsh
     pkgs.bash

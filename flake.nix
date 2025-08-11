@@ -1,23 +1,27 @@
 {
-  description = "cullen's mbp flake";
+  description = "cullen's multi-platform nix configuration";
   nixConfig = {
-    extra-trusted-substituters = [ "https://cache.flox.dev" ];
-    extra-trusted-public-keys = [ "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=" ];
+    extra-substituters = [
+      "https://cache.flox.dev"
+      "https://nix-community.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
+    # GitHub token is configured in ~/.config/nix/nix.conf
   };
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
-    darwin.url = "github:lnl7/nix-darwin";
-
+    darwin.url = "github:nix-darwin/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    nixvim.url = "github:nix-community/nixvim";
-    nixvim.inputs.nixpkgs.follows = "nixpkgs";
-
-    flox.url = "github:flox/flox/v1.3.17";
+    flox.url = "github:flox/flox";
+    # Don't override flox nixpkgs - let it use its own
 
     dagger.url = "github:dagger/nix";
     dagger.inputs.nixpkgs.follows = "nixpkgs";
@@ -26,6 +30,34 @@
 
     # Handles making nix installed apps visibile in spotlight
     mac-app-util.url = "github:hraban/mac-app-util";
+    mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
+
+    # kagimcp dependencies
+    pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
+    pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    uv2nix.url = "github:pyproject-nix/uv2nix";
+    uv2nix.inputs.pyproject-nix.follows = "pyproject-nix";
+    uv2nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    pyproject-build-systems.url = "github:pyproject-nix/build-system-pkgs";
+    pyproject-build-systems.inputs.pyproject-nix.follows = "pyproject-nix";
+    pyproject-build-systems.inputs.uv2nix.follows = "uv2nix";
+    pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
+
+    # MCP Server sources (all non-flake for embedding)
+    mcp-nixos-src.url = "github:utensils/mcp-nixos";
+    mcp-nixos-src.flake = false;
+    
+    kagimcp.url = "path:/Users/cullen/git/kagimcp";
+    kagimcp.flake = false;
+    
+    context7-mcp.url = "github:upstash/context7-mcp";
+    context7-mcp.flake = false;
+    
+    serena-mcp.url = "github:oraios/serena";
+    serena-mcp.flake = false;
+
   };
 
   outputs =
@@ -37,12 +69,19 @@
       dagger,
       nix-homebrew,
       mac-app-util,
+      pyproject-nix,
+      uv2nix,
+      pyproject-build-systems,
+      mcp-nixos-src,
+      kagimcp,
+      context7-mcp,
+      serena-mcp,
       ...
     }:
     let
       supportedSystems = [
-        "x86_64-darwin"
         "aarch64-darwin"
+        "x86_64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       mkDarwinConfig =
@@ -57,21 +96,8 @@
           baseConfiguration =
             { pkgs, ... }:
             {
-              environment.systemPackages = [
-                inputs.flox.packages.${pkgs.system}.default
-                dagger.packages.${pkgs.system}.dagger
-              ];
+              imports = [ ./modules/common ];
 
-              nix.settings = {
-                experimental-features = "nix-command flakes";
-                trusted-substituters = [
-                  "https://cache.flox.dev"
-                ];
-                trusted-public-keys = [
-                  "cullen:gtI9d0t7nPTU36OnGU6YpEP5wEndvbmna9+7jpCgWPg= "
-                  "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
-                ];
-              };
             };
 
           homeManagerConfiguration = {
@@ -85,13 +111,14 @@
               users.${username}.imports = [
                 ./modules/home-manager
                 mac-app-util.homeManagerModules.default
-              ] ++ extraHomeManagerModules;
+              ]
+              ++ extraHomeManagerModules;
             };
           };
         in
         darwin.lib.darwinSystem {
           specialArgs = {
-            inherit username;
+            inherit username inputs;
           };
           inherit system;
           pkgs = import nixpkgs {
@@ -113,8 +140,39 @@
               };
             }
             ./modules/darwin
-          ] ++ extraModules;
+          ]
+          ++ extraModules;
         };
+
+      mkDistroboxEnvConfig =
+        {
+          system,
+          username,
+          homeDirectory,
+          flakeRef,
+          extraModules ? [ ],
+          extraPackages ? [ ],
+        }:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          extraSpecialArgs = {
+            inherit inputs username flakeRef;
+          };
+          modules = [
+            ./modules/home-manager
+            ./modules/home-manager/distrobox.nix
+            {
+              home.username = username;
+              home.homeDirectory = homeDirectory;
+              home.packages = extraPackages;
+            }
+          ]
+          ++ extraModules;
+        };
+
     in
     {
       darwinConfigurations = {
@@ -127,7 +185,26 @@
       };
 
       lib = {
-        inherit mkDarwinConfig;
+        inherit mkDarwinConfig mkDistroboxEnvConfig;
       };
+
+      homeConfigurations = {
+        "cullen@distrobox" = mkDistroboxEnvConfig {
+          system = "x86_64-linux";
+          username = "cullen";
+          homeDirectory = "/home/cullen";
+          flakeRef = "github:cullenmcdermott/nix-config";
+        };
+      };
+
+      # MCP packages built from embedded sources
+      packages = forAllSystems (system: 
+        let 
+          pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+        in
+          import ./lib/mcp-packages.nix { 
+            inherit inputs pkgs pyproject-nix uv2nix pyproject-build-systems; 
+          }
+      );
     };
 }
