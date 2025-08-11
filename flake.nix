@@ -2,26 +2,12 @@
   description = "cullen's multi-platform nix configuration";
   nixConfig = {
     extra-substituters = [
-      "https://cache.nixos.org"
-      "https://cache.flox.dev"
-      "https://nix-community.cachix.org"
-    ];
-    extra-trusted-substituters = [
-      "https://cache.nixos.org"
       "https://cache.flox.dev"
       "https://nix-community.cachix.org"
     ];
     extra-trusted-public-keys = [
       "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-    ];
-    extra-platforms = [
-      "x86_64-linux"
-      "aarch64-linux"
-    ];
-    extra-system-features = [
-      "big-parallel"
-      "kvm"
     ];
     # GitHub token is configured in ~/.config/nix/nix.conf
   };
@@ -34,9 +20,6 @@
     darwin.url = "github:nix-darwin/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    nixvim.url = "github:nix-community/nixvim";
-    nixvim.inputs.nixpkgs.follows = "nixpkgs";
-
     flox.url = "github:flox/flox";
     # Don't override flox nixpkgs - let it use its own
 
@@ -48,10 +31,6 @@
     # Handles making nix installed apps visibile in spotlight
     mac-app-util.url = "github:hraban/mac-app-util";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
-
-    # dream2nix for reproducible Python packaging with PyPI support
-    dream2nix.url = "github:nix-community/dream2nix";
-    dream2nix.inputs.nixpkgs.follows = "nixpkgs";
 
     # kagimcp dependencies
     pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
@@ -90,7 +69,6 @@
       dagger,
       nix-homebrew,
       mac-app-util,
-      dream2nix,
       pyproject-nix,
       uv2nix,
       pyproject-build-systems,
@@ -102,10 +80,8 @@
     }:
     let
       supportedSystems = [
-        "x86_64-darwin"
         "aarch64-darwin"
         "x86_64-linux"
-        "aarch64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       mkDarwinConfig =
