@@ -48,13 +48,13 @@
     # MCP Server sources (all non-flake for embedding)
     mcp-nixos-src.url = "github:utensils/mcp-nixos";
     mcp-nixos-src.flake = false;
-    
-    kagimcp.url = "path:/Users/cullen/git/kagimcp";
+
+    kagimcp.url = "github:kagisearch/kagimcp";
     kagimcp.flake = false;
-    
+
     context7-mcp.url = "github:upstash/context7-mcp";
     context7-mcp.flake = false;
-    
+
     serena-mcp.url = "github:oraios/serena";
     serena-mcp.flake = false;
 
@@ -198,13 +198,23 @@
       };
 
       # MCP packages built from embedded sources
-      packages = forAllSystems (system: 
-        let 
-          pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
         in
-          import ./lib/mcp-packages.nix { 
-            inherit inputs pkgs pyproject-nix uv2nix pyproject-build-systems; 
-          }
+        import ./lib/mcp-packages.nix {
+          inherit
+            inputs
+            pkgs
+            pyproject-nix
+            uv2nix
+            pyproject-build-systems
+            ;
+        }
       );
     };
 }
