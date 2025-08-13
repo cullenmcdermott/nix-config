@@ -183,6 +183,7 @@ in
     gst = "git status";
     gcl = "git clone";
     grv = "git remote -v";
+    clod = "claude --mcp-config ~/.claude/mcp.json";
   };
 
   programs.zsh.plugins = [ ];

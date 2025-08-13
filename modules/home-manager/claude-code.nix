@@ -114,7 +114,7 @@
   # Global MCP server configuration
   home.file.".claude/mcp.json" = {
     text = builtins.toJSON {
-      servers = {
+      mcpServers = {
         # Context7 for documentation - using Nix-installed version
         context7 = {
           command = "context7-mcp";
@@ -141,7 +141,7 @@
         # Serena - using Nix-installed version
         serena = {
           command = "serena";
-          args = [];
+          args = ["start-mcp-server"];
           env = {};
         };
       };
