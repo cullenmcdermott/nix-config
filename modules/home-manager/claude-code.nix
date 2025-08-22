@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   # Global Claude Code settings
@@ -8,7 +13,7 @@
       permissions = {
         allow = [
           "Read"
-          "Glob" 
+          "Glob"
           "Grep"
           "LS"
           "WebFetch"
@@ -32,19 +37,19 @@
           "Bash(nix-env:*)"
           "Bash(time zsh:*)"
           "Bash(zsh:*)"
-          
+
           # Kagi MCP tools
           "mcp__kagi__kagi_search_fetch"
           "mcp__kagi__kagi_summarizer"
-          
+
           # Context7 MCP tools (documentation)
           "mcp__context7__resolve-library-id"
           "mcp__context7__get-library-docs"
-          
+
           # NixOS MCP tools (all read-only)
           "mcp__nixos__nixos_search"
           "mcp__nixos__nixos_info"
-          "mcp__nixos__nixos_channels" 
+          "mcp__nixos__nixos_channels"
           "mcp__nixos__nixos_stats"
           "mcp__nixos__nixos_flakes_search"
           "mcp__nixos__nixos_flakes_stats"
@@ -60,7 +65,7 @@
           "mcp__nixos__darwin_stats"
           "mcp__nixos__darwin_list_options"
           "mcp__nixos__darwin_options_by_prefix"
-          
+
           # Serena MCP tools (read-only analysis)
           "mcp__serena__list_dir"
           "mcp__serena__find_file"
@@ -68,12 +73,30 @@
           "mcp__serena__get_symbols_overview"
           "mcp__serena__find_symbol"
           "mcp__serena__find_referencing_symbols"
+
+          # Serena MCP tools (memory management)
           "mcp__serena__read_memory"
           "mcp__serena__list_memories"
+          "mcp__serena__write_memory"
+          "mcp__serena__delete_memory"
+
+          # Serena MCP tools (project management)
+          "mcp__serena__activate_project"
           "mcp__serena__check_onboarding_performed"
+          "mcp__serena__onboarding"
+          "mcp__serena__get_current_config"
+          "mcp__serena__switch_modes"
+          "mcp__serena__initial_instructions"
+          "mcp__serena__prepare_for_new_conversation"
+
+          # Serena MCP tools (thinking/analysis)
           "mcp__serena__think_about_collected_information"
           "mcp__serena__think_about_task_adherence"
           "mcp__serena__think_about_whether_you_are_done"
+
+          # Serena MCP tools (safe operations)
+          "mcp__serena__restart_language_server"
+          "mcp__serena__summarize_changes"
         ];
       };
       interactiveMode = true;
@@ -118,15 +141,15 @@
         # Context7 for documentation - using Nix-installed version
         context7 = {
           command = "context7-mcp";
-          args = [];
-          env = {};
+          args = [ ];
+          env = { };
         };
-        
+
         # NixOS helper - using Nix-installed version
         nixos = {
           command = "mcp-nixos";
-          args = [];
-          env = {};
+          args = [ ];
+          env = { };
         };
 
         # Kagi search - using Nix-installed version
@@ -134,15 +157,15 @@
         # Set with: export KAGI_API_KEY=$(op read "op://Private/Kagi API/credential")
         kagi = {
           command = "kagimcp";
-          args = [];
-          env = {};
+          args = [ ];
+          env = { };
         };
 
         # Serena - using Nix-installed version
         serena = {
           command = "serena";
-          args = ["start-mcp-server"];
-          env = {};
+          args = [ "start-mcp-server" ];
+          env = { };
         };
       };
     };
@@ -153,13 +176,13 @@
     text = ''
       #!/usr/bin/env bash
       # Configure serena with our global preferences
-      
+
       SERENA_CONFIG="$HOME/.serena/serena_config.yml"
       SERENA_DIR="$HOME/.serena"
-      
+
       # Create serena directory if it doesn't exist
       mkdir -p "$SERENA_DIR"
-      
+
       # If config doesn't exist, create minimal version
       if [[ ! -f "$SERENA_CONFIG" ]]; then
         cat > "$SERENA_CONFIG" << 'EOF'
@@ -167,20 +190,20 @@
       projects: {}
       EOF
       fi
-      
+
       # Use yq to merge our settings
       ${pkgs.yq-go}/bin/yq eval '.web_dashboard = false' -i "$SERENA_CONFIG"
       ${pkgs.yq-go}/bin/yq eval '.web_dashboard_open_on_launch = false' -i "$SERENA_CONFIG"
-      ${pkgs.yq-go}/bin/yq eval '.excluded_tools = ["replace_regex"]' -i "$SERENA_CONFIG"
+      ${pkgs.yq-go}/bin/yq eval '.excluded_tools = ["replace_regex", "replace_symbol_body", "insert_after_symbol", "insert_before_symbol", "delete_lines", "insert_at_line", "replace_lines", "create_text_file", "remove_project"]' -i "$SERENA_CONFIG"
     '';
     executable = true;
   };
-  
+
   # Add yq for YAML manipulation
   home.packages = [ pkgs.yq-go ];
 
   # Auto-configure serena on home-manager activation
-  home.activation.configureSerena = lib.hm.dag.entryAfter ["writeBoundary"] ''
+  home.activation.configureSerena = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${config.home.homeDirectory}/.local/bin/configure-serena
   '';
 }
