@@ -165,7 +165,7 @@ in
     ls = "ls --color=auto -F";
     vim = "nvim";
     nixswitch = "sudo darwin-rebuild switch --flake ~/src/system-config/.#";
-    nixup = "nix flake update --accept-flake-config ~/src/system-config && sudo darwin-rebuild switch --flake ~/src/system-config/.#";
+    nixup = "pushd ~/src/system-config && nix flake update --accept-flake-config && sudo darwin-rebuild switch --flake ~/src/system-config/.#; popd";
     k = "kubecolor";
     ga = "git add";
     gb = "git branch";
