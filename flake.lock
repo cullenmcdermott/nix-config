@@ -209,11 +209,11 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1756737500,
-        "narHash": "sha256-qoPb1JmKnPCfGHVUqTivaS1hfmC7Xrrm+f+R/eIKCfY=",
+        "lastModified": 1756828958,
+        "narHash": "sha256-1A8dc15epivu6WH+1smYJW4rGaCDSuZX/6IBd/35QHs=",
         "owner": "flox",
         "repo": "flox",
-        "rev": "43c266b8ccc450c723670d497707a3d01b292338",
+        "rev": "8d4c7e521893bc5cc99bc419d98c90082c1e062d",
         "type": "github"
       },
       "original": {
@@ -540,11 +540,11 @@
     "serena-mcp": {
       "flake": false,
       "locked": {
-        "lastModified": 1756816849,
-        "narHash": "sha256-oRprFh1WZVnzj0T8opa12PYf6Nrmap81GxRwvPi62XU=",
+        "lastModified": 1756832089,
+        "narHash": "sha256-1GaMR0vU9H1DIRuJ4izPxY2rAk6HbnquyyCiNK1VLMo=",
         "owner": "oraios",
         "repo": "serena",
-        "rev": "230ac32adb302b08066c43ae1c532bf5c08fd730",
+        "rev": "aa8c5c6ff6dc5f0bba45acb20be145d37e94b3dc",
         "type": "github"
       },
       "original": {

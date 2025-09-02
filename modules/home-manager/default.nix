@@ -88,9 +88,7 @@ in
       unixtools.watch
       wget
       # MCP Servers - installed via Nix for reproducibility
-      mcpServers.mcp-nixos
       mcpServers.context7-mcp
-      mcpServers.kagimcp
       mcpServers.serena
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [

@@ -146,20 +146,20 @@
         };
 
         # NixOS helper - using Nix-installed version
-        nixos = {
-          command = "mcp-nixos";
-          args = [ ];
-          env = { };
-        };
+        #nixos = {
+        #  command = "mcp-nixos";
+        #  args = [ ];
+        #  env = { };
+        #};
 
-        # Kagi search - using Nix-installed version
-        # Requires KAGI_API_KEY environment variable
-        # Set with: export KAGI_API_KEY=$(op read "op://Private/Kagi API/credential")
-        kagi = {
-          command = "kagimcp";
-          args = [ ];
-          env = { };
-        };
+        ## Kagi search - using Nix-installed version
+        ## Requires KAGI_API_KEY environment variable
+        ## Set with: export KAGI_API_KEY=$(op read "op://Private/Kagi API/credential")
+        #kagi = {
+        #  command = "kagimcp";
+        #  args = [ ];
+        #  env = { };
+        #};
 
         # Serena - using Nix-installed version
         serena = {
