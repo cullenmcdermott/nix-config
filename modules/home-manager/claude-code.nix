@@ -112,9 +112,21 @@
 
       You are being asked to prepare a handover summary for a new conversation. This happens when the current conversation is running out of context and needs to be continued in a fresh session.
 
+      Before writing the handover summary:
+      1. Check the current git status and include it in the handover context
+      2. Preserve any active todo list state
+      3. Note the current project name and working modes
+      4. Identify what task or work was in progress
+
       Please call the `mcp__serena__prepare_for_new_conversation` tool to get instructions on how to summarize the current task progress and write it to a memory file for the next conversation to continue from where you left off.
 
-      After writing the handover summary to memory, provide a clear prompt that I can copy and paste into the new conversation to continue the work seamlessly.
+      After writing the handover summary to memory, provide a clear prompt that I can copy and paste into the new conversation to continue the work seamlessly. The prompt MUST:
+      1. Explicitly instruct the new LLM to activate the correct project first
+      2. Specify the exact memory file name to read (e.g., "conversation_handover")
+      3. Have the new LLM confirm understanding of the context before proceeding
+      4. Resume any incomplete todo items or tasks
+      5. Check current git status to see if anything changed since handover
+      6. Ask any clarifying questions if additional context is needed from the user
 
       The tool will provide specific guidance on what information to include in the handover summary.
     '';
