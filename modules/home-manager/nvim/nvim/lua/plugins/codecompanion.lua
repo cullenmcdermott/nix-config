@@ -14,18 +14,20 @@ return {
       log_level = "DEBUG",
     },
     adapters = {
-      anthropic = function()
-        return require("codecompanion.adapters").extend("anthropic", {
-          env = {
-            api_key = "cmd:op read op://Private/AnthropicAPIKey/credential --account erinandcullen.1password.com",
-          },
-          schema = {
-            model = {
-              default = "claude-3-7-sonnet-latest",
+      http = {
+        anthropic = function()
+          return require("codecompanion.adapters").extend("anthropic", {
+            env = {
+              api_key = "cmd:op read op://Private/AnthropicAPIKey/credential --account erinandcullen.1password.com",
             },
-          },
-        })
-      end,
+            schema = {
+              model = {
+                default = "claude-3-7-sonnet-latest",
+              },
+            },
+          })
+        end,
+      },
     },
     strategies = {
       default = {
