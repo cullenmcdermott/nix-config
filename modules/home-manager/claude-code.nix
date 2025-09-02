@@ -103,6 +103,23 @@
     };
   };
 
+  # Custom slash command for handover preparation
+  home.file.".claude/commands/handover.md" = {
+    text = ''
+      ---
+      description: Prepare handover summary for new conversation when running out of context
+      ---
+
+      You are being asked to prepare a handover summary for a new conversation. This happens when the current conversation is running out of context and needs to be continued in a fresh session.
+
+      Please call the `mcp__serena__prepare_for_new_conversation` tool to get instructions on how to summarize the current task progress and write it to a memory file for the next conversation to continue from where you left off.
+
+      After writing the handover summary to memory, provide a clear prompt that I can copy and paste into the new conversation to continue the work seamlessly.
+
+      The tool will provide specific guidance on what information to include in the handover summary.
+    '';
+  };
+
   # Global CLAUDE.md for user-wide preferences
   home.file.".claude/CLAUDE.md" = {
     text = ''
