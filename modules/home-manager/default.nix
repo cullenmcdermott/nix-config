@@ -74,6 +74,7 @@ in
       packer
       pipx
       pyright
+      renovate
       ripgrep
       silver-searcher
       skopeo
