@@ -41,6 +41,7 @@ in
       # Core packages available on all platforms
       alejandra
       argc
+      argocd
       cargo
       chart-testing
       claude-code
