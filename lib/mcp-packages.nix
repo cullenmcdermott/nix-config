@@ -88,6 +88,8 @@ in
     #};
 
   # TypeScript/Node.js packages that don't use the Python helper
+  # playwright-mcp is now available in nixpkgs, so we use that instead
+
   context7-mcp = pkgs.stdenv.mkDerivation rec {
     pname = "context7-mcp";
 

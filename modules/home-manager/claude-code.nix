@@ -97,6 +97,7 @@
           # Serena MCP tools (safe operations)
           "mcp__serena__restart_language_server"
           "mcp__serena__summarize_changes"
+
         ];
       };
       interactiveMode = true;
@@ -196,6 +197,14 @@
           args = [ "start-mcp-server" ];
           env = { };
         };
+
+        # Playwright MCP - using wrapper script to fix browser path issues
+        # Fixes nixpkgs issue #443704 by using command line arguments instead of env vars
+        playwright = {
+          command = "mcp-server-playwright-wrapper";
+          args = [ ];
+          env = { };
+        };
       };
     };
   };
@@ -228,8 +237,18 @@
     executable = true;
   };
 
-  # Add yq for YAML manipulation
-  home.packages = [ pkgs.yq-go ];
+  # Add yq for YAML manipulation and Playwright wrapper
+  home.packages = [
+    pkgs.yq-go
+    # Playwright MCP wrapper script that fixes browser path issues
+    (pkgs.writeShellScriptBin "mcp-server-playwright-wrapper" ''
+      export PWMCP_PROFILES_DIR_FOR_TEST="$HOME/.pwmcp-profiles"
+      exec ${pkgs.playwright-mcp}/bin/mcp-server-playwright \
+        --executable-path "${pkgs.google-chrome}/bin/google-chrome-stable" \
+        --browser chrome \
+        "$@"
+    '')
+  ];
 
   # Auto-configure serena on home-manager activation
   home.activation.configureSerena = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

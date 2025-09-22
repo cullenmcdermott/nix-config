@@ -44,6 +44,7 @@ in
       argocd
       cargo
       chart-testing
+      google-chrome
       claude-code
       curl
       deadnix
@@ -92,6 +93,8 @@ in
       # MCP Servers - installed via Nix for reproducibility
       mcpServers.context7-mcp
       mcpServers.serena
+      playwright-mcp # From nixpkgs
+      playwright-driver # Playwright browser driver
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       # macOS-specific packages
