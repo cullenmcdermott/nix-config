@@ -186,7 +186,7 @@ in
     gst = "git status";
     gcl = "git clone";
     grv = "git remote -v";
-    clod = "claude --mcp-config ~/.claude/mcp.json";
+    clod = "claude --mcp-config ~/.claude/mcp.json --model claude-sonnet-4-5-20250929";
   };
 
   programs.zsh.plugins = [ ];
