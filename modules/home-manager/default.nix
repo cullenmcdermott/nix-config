@@ -23,8 +23,30 @@ let
     else
       "/home/${username}"; # Linux - for future NixOS support
 
-  # Import MCP server packages
+  # Import MCP server packages and other custom packages from flake
   mcpServers = import ./mcp-servers.nix { inherit pkgs inputs lib; };
+  customPackages = import ../../lib/mcp-packages.nix {
+    inherit inputs pkgs;
+    inherit (inputs) pyproject-nix uv2nix pyproject-build-systems;
+  };
+
+  happy-cli = pkgs.mkYarnPackage rec {
+    pname = "happy-cli";
+    version = (builtins.fromJSON (builtins.readFile "${inputs.happy-cli}/package.json")).version;
+
+    src = inputs.happy-cli;
+
+    buildPhase = ''
+      yarn --offline build
+    '';
+
+    meta = with pkgs.lib; {
+      description = "Mobile and desktop client for AI coding tools";
+      homepage = "https://github.com/slopus/happy-cli";
+      license = licenses.mit;
+      mainProgram = "happy";
+    };
+  };
 
 in
 {
@@ -71,7 +93,7 @@ in
       luajitPackages.lua-lsp
       nixd
       nixfmt-rfc-style
-      nodejs
+      #      nodejs
       omnictl
       packer
       pipx
@@ -95,6 +117,8 @@ in
       mcpServers.serena
       playwright-mcp # From nixpkgs
       playwright-driver # Playwright browser driver
+      # Custom packages
+      happy-cli
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       # macOS-specific packages
@@ -116,7 +140,7 @@ in
     configHome = "${homeDirectory}/.config";
     configFile."ghostty/config" = {
       text = ''
-        theme = tokyonight-storm
+        theme = TokyoNight Storm
         font-family = JetBrainsMono Nerd Font
         font-style = medium
         font-size = 14

@@ -58,6 +58,9 @@
     serena-mcp.url = "github:oraios/serena";
     serena-mcp.flake = false;
 
+    happy-cli.url = "github:slopus/happy-cli";
+    happy-cli.flake = false;
+
   };
 
   outputs =
@@ -76,6 +79,7 @@
       kagimcp,
       context7-mcp,
       serena-mcp,
+      happy-cli,
       ...
     }:
     let
