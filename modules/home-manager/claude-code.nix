@@ -38,33 +38,9 @@
           "Bash(time zsh:*)"
           "Bash(zsh:*)"
 
-          # Kagi MCP tools
-          "mcp__kagi__kagi_search_fetch"
-          "mcp__kagi__kagi_summarizer"
-
           # Context7 MCP tools (documentation)
           "mcp__context7__resolve-library-id"
           "mcp__context7__get-library-docs"
-
-          # NixOS MCP tools (all read-only)
-          "mcp__nixos__nixos_search"
-          "mcp__nixos__nixos_info"
-          "mcp__nixos__nixos_channels"
-          "mcp__nixos__nixos_stats"
-          "mcp__nixos__nixos_flakes_search"
-          "mcp__nixos__nixos_flakes_stats"
-          "mcp__nixos__nixhub_package_versions"
-          "mcp__nixos__nixhub_find_version"
-          "mcp__nixos__home_manager_search"
-          "mcp__nixos__home_manager_info"
-          "mcp__nixos__home_manager_stats"
-          "mcp__nixos__home_manager_list_options"
-          "mcp__nixos__home_manager_options_by_prefix"
-          "mcp__nixos__darwin_search"
-          "mcp__nixos__darwin_info"
-          "mcp__nixos__darwin_stats"
-          "mcp__nixos__darwin_list_options"
-          "mcp__nixos__darwin_options_by_prefix"
 
           # Serena MCP tools (read-only analysis)
           "mcp__serena__list_dir"
@@ -174,22 +150,6 @@
           args = [ ];
           env = { };
         };
-
-        # NixOS helper - using Nix-installed version
-        #nixos = {
-        #  command = "mcp-nixos";
-        #  args = [ ];
-        #  env = { };
-        #};
-
-        ## Kagi search - using Nix-installed version
-        ## Requires KAGI_API_KEY environment variable
-        ## Set with: export KAGI_API_KEY=$(op read "op://Private/Kagi API/credential")
-        #kagi = {
-        #  command = "kagimcp";
-        #  args = [ ];
-        #  env = { };
-        #};
 
         # Serena - using Nix-installed version
         serena = {

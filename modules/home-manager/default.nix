@@ -30,24 +30,6 @@ let
     inherit (inputs) pyproject-nix uv2nix pyproject-build-systems;
   };
 
-  happy-cli = pkgs.mkYarnPackage rec {
-    pname = "happy-cli";
-    version = (builtins.fromJSON (builtins.readFile "${inputs.happy-cli}/package.json")).version;
-
-    src = inputs.happy-cli;
-
-    buildPhase = ''
-      yarn --offline build
-    '';
-
-    meta = with pkgs.lib; {
-      description = "Mobile and desktop client for AI coding tools";
-      homepage = "https://github.com/slopus/happy-cli";
-      license = licenses.mit;
-      mainProgram = "happy";
-    };
-  };
-
 in
 {
   # specify home-manager configs
@@ -93,7 +75,7 @@ in
       luajitPackages.lua-lsp
       nixd
       nixfmt-rfc-style
-      #      nodejs
+      nodejs
       omnictl
       packer
       pipx
@@ -117,8 +99,6 @@ in
       mcpServers.serena
       playwright-mcp # From nixpkgs
       playwright-driver # Playwright browser driver
-      # Custom packages
-      happy-cli
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       # macOS-specific packages
@@ -192,7 +172,7 @@ in
     ls = "ls --color=auto -F";
     vim = "nvim";
     nixswitch = "sudo darwin-rebuild switch --flake ~/src/system-config/.#";
-    nixup = "pushd ~/src/system-config && nix flake update --accept-flake-config && sudo darwin-rebuild switch --flake ~/src/system-config/.#; popd";
+    nixup = "pushd ~/src/system-config && nix flake update && sudo darwin-rebuild switch --flake ~/src/system-config/.#; popd";
     k = "kubecolor";
     ga = "git add";
     gb = "git branch";

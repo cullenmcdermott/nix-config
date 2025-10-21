@@ -44,14 +44,6 @@ let
 
 in
 {
-  # All MCP server packages
-  #kagimcp = mkMcpPackage {
-  #  name = "kagimcp";
-  #  workspaceRoot = inputs.kagimcp;
-  #  pythonVersion = pkgs.python312;
-  #  executables = [ "kagimcp" ];
-  #};
-
   serena = mkMcpPackage {
     name = "serena";
     workspaceRoot = inputs.serena-mcp;
@@ -70,22 +62,6 @@ in
       });
     };
   };
-
-    #mcp-nixos = mkMcpPackage {
-    #  name = "mcp-nixos";
-    #  workspaceRoot = inputs.mcp-nixos-src;
-    #  pythonVersion = pkgs.python312;
-    #  executables = [ "mcp-nixos" ];
-    #  overrides = final: prev: {
-    #    # Build fixups for mcp-nixos dependencies
-    #    pyperclip = prev.pyperclip.overrideAttrs (old: {
-    #      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
-    #        final.setuptools
-    #        final.wheel
-    #      ];
-    #    });
-    #  };
-    #};
 
   # TypeScript/Node.js packages that don't use the Python helper
   # playwright-mcp is now available in nixpkgs, so we use that instead
