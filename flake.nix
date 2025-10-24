@@ -9,10 +9,10 @@
       "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
     ];
-    # GitHub token is configured in ~/.config/nix/nix.conf
   };
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # Temporarily lock to 10/20/25
+    nixpkgs.url = "github:NixOS/nixpkgs/cb82756ecc37fa623f8cf3e88854f9bf7f64af93";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
@@ -20,19 +20,16 @@
     darwin.url = "github:nix-darwin/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    flox.url = "github:flox/flox";
-    # Don't override flox nixpkgs - let it use its own
+    flox.url = "github:flox/flox/v1.7.5";
 
     dagger.url = "github:dagger/nix";
     dagger.inputs.nixpkgs.follows = "nixpkgs";
 
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
 
-    # Handles making nix installed apps visibile in spotlight
-    mac-app-util.url = "github:hraban/mac-app-util";
+    mac-app-util.url = "github:hraban/mac-app-util/8414fa1e2cb775b17793104a9095aabeeada63ef";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
 
-    # kagimcp dependencies
     pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
     pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";
 

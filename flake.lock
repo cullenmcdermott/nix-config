@@ -70,11 +70,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1759943815,
-        "narHash": "sha256-FRQ39EJyAXjwhD6jo21cBwPu84MuMEkTIWKHm4Sp6D0=",
+        "lastModified": 1761251311,
+        "narHash": "sha256-bhmVbrrNdMPBgvfVuBJjMOJB8wzTaCApeBu+fX0ANqU=",
         "owner": "dagger",
         "repo": "nix",
-        "rev": "474769abf51cdb9dc460030632ef28ff8a43c2f5",
+        "rev": "1b1e579d59431a7c1ddf18fd425083be4a56ba35",
         "type": "github"
       },
       "original": {
@@ -209,15 +209,16 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1761229930,
-        "narHash": "sha256-SsIzgopF2Y/ePVsja0+HOgz+qqnSMEEVZmF8kMy/e8s=",
+        "lastModified": 1760948591,
+        "narHash": "sha256-sFNuRP/sZHEk2VIwcmkMf2QljpEiurv/tybFBF7niNU=",
         "owner": "flox",
         "repo": "flox",
-        "rev": "b3322d28b0a62e23727ef16325d95a1fa5435c3c",
+        "rev": "d166318203bc99cd35287bc77979865032d3125e",
         "type": "github"
       },
       "original": {
         "owner": "flox",
+        "ref": "v1.7.5",
         "repo": "flox",
         "type": "github"
       }
@@ -251,11 +252,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1761235135,
-        "narHash": "sha256-cux9xeceLIER1lBxUa1gMafkz7gg5ntcUmJBynWdBWI=",
+        "lastModified": 1761266473,
+        "narHash": "sha256-QxCyKWBmuzI+eMhYV1JmbZsiUnBNATRP1EW34OBt5Vg=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "0adf9ba3f567da2d53af581a857aacf671aaa547",
+        "rev": "5c71d4a730bd3c972befff343bb074421e345937",
         "type": "github"
       },
       "original": {
@@ -286,6 +287,7 @@
       "original": {
         "owner": "hraban",
         "repo": "mac-app-util",
+        "rev": "8414fa1e2cb775b17793104a9095aabeeada63ef",
         "type": "github"
       }
     },
@@ -396,8 +398,8 @@
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
         "repo": "nixpkgs",
+        "rev": "cb82756ecc37fa623f8cf3e88854f9bf7f64af93",
         "type": "github"
       }
     },
