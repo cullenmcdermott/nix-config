@@ -106,6 +106,18 @@ python3 scripts/ha_get_config.py
 
 **When to use:** To understand the HA setup, available integrations, or system information.
 
+#### `ha_get_config_entries.py [domain]`
+Get Home Assistant config entries, optionally filtered by domain. This is essential for services that require a `config_entry_id`, such as `telegram_bot.send_message`.
+
+**Usage:**
+```bash
+python3 scripts/ha_get_config_entries.py              # All config entries
+python3 scripts/ha_get_config_entries.py telegram_bot # Just Telegram bots
+python3 scripts/ha_get_config_entries.py mqtt         # Just MQTT entries
+```
+
+**When to use:** When you need to get config_entry_id for services like Telegram notifications, or to discover what integrations are configured.
+
 ### Service Calling
 
 #### `ha_call_service.py <domain> <service> <json_data>`
@@ -167,6 +179,33 @@ python3 scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_ro
 1. **Use search or domain filtering** - Find entities of interest
 2. **Check specific states** - Get detailed state information
 3. **Report findings** - Present relevant information clearly
+
+### Sending Telegram Notifications
+
+Telegram notifications require using the `telegram_bot.send_message` service with a `config_entry_id` parameter (not the notify service pattern).
+
+**Workflow:**
+1. **Get the Telegram bot config_entry_id** - Use `ha_get_config_entries.py telegram_bot` to find the config entry ID
+2. **Use the telegram_bot.send_message service** - Include the config_entry_id in the action data
+
+**Example Automation with Telegram Notification:**
+```yaml
+alias: Example Telegram Alert
+description: Send a Telegram notification when something happens
+triggers:
+  - entity_id: binary_sensor.front_door
+    to: "on"
+    trigger: state
+conditions: []
+actions:
+  - action: telegram_bot.send_message
+    data:
+      message: "Front door opened at {{ now().strftime('%I:%M %p') }}"
+      config_entry_id: 01JZE11D7Y6B7C3WCARWVZRYNH  # Get this from ha_get_config_entries.py
+mode: single
+```
+
+**Note:** The `config_entry_id` is specific to your Telegram bot configuration. Always use `ha_get_config_entries.py telegram_bot` to get the correct ID for your setup.
 
 ## Important Notes
 
