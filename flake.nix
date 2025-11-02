@@ -12,7 +12,7 @@
   };
   inputs = {
     # Temporarily lock to 10/20/25
-    nixpkgs.url = "github:NixOS/nixpkgs/cb82756ecc37fa623f8cf3e88854f9bf7f64af93";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
@@ -107,12 +107,11 @@
           specialArgs = {
             inherit username inputs;
           };
-          inherit system;
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
           modules = [
+            {
+              nixpkgs.hostPlatform = system;
+              nixpkgs.config.allowUnfree = true;
+            }
             baseConfiguration
             homeManagerConfiguration
             home-manager.darwinModules.home-manager

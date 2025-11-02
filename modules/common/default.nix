@@ -28,7 +28,7 @@
 
   # Shared system packages across all platforms
   environment.systemPackages = [
-    inputs.flox.packages.${pkgs.system}.default  # Using flox's recommended approach
-    inputs.dagger.packages.${pkgs.system}.dagger
+    inputs.flox.packages.${pkgs.stdenv.hostPlatform.system}.default  # Using flox's recommended approach
+    inputs.dagger.packages.${pkgs.stdenv.hostPlatform.system}.dagger
   ];
 }

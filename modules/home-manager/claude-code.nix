@@ -5,6 +5,15 @@
   ...
 }:
 
+let
+  # Fetch the entire Claude Code skills repository
+  claudeSkills = pkgs.fetchFromGitHub {
+    owner = "anthropics";
+    repo = "skills";
+    rev = "main";
+    hash = "sha256-5SxVADhG86yNe8tS7kC0Ruqmb/mTguz5I4Kv1GRBidY=";
+  };
+in
 {
   # Global Claude Code settings
   home.file.".claude/settings.json" = {
@@ -214,4 +223,22 @@
   home.activation.configureSerena = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD ${config.home.homeDirectory}/.local/bin/configure-serena
   '';
+
+  # Claude Code Skills
+  # Copy entire skill directories from the fetched repository
+  home.file.".claude/skills/slack-gif-creator" = {
+    source = "${claudeSkills}/slack-gif-creator";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/skill-creator" = {
+    source = "${claudeSkills}/skill-creator";
+    recursive = true;
+  };
+
+  # Home Assistant skill - local custom skill
+  home.file.".claude/skills/home-assistant" = {
+    source = ./../../skills/home-assistant;
+    recursive = true;
+  };
 }
