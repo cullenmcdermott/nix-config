@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "homeassistant-api",
+# ]
+# ///
 """
 Get all available Home Assistant services with their descriptions and fields.
 
 Usage:
-    python3 ha_get_services.py [domain]
+    uv run ha_get_services.py [domain]
 
 Examples:
-    python3 ha_get_services.py           # All services
-    python3 ha_get_services.py light     # Just light services
-    python3 ha_get_services.py climate   # Just climate services
+    uv run ha_get_services.py           # All services
+    uv run ha_get_services.py light     # Just light services
+    uv run ha_get_services.py climate   # Just climate services
 
 Requires HA_TOKEN environment variable to be set.
 """
@@ -16,10 +21,9 @@ Requires HA_TOKEN environment variable to be set.
 import os
 import sys
 import json
-import urllib.request
-import urllib.error
+from homeassistant_api import Client
 
-HA_URL = "https://ha.cullen.rocks"
+HA_URL = "https://ha.cullen.rocks/api"
 
 def get_services(domain=None):
     """Fetch available services, optionally filtered by domain."""
@@ -28,30 +32,28 @@ def get_services(domain=None):
         print("Error: HA_TOKEN environment variable not set", file=sys.stderr)
         sys.exit(1)
 
-    url = f"{HA_URL}/api/services"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-
     try:
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req) as response:
-            services_list = json.loads(response.read().decode())
-
-            # Convert list of {domain, services} to dict
-            services_dict = {item["domain"]: item["services"] for item in services_list}
+        with Client(HA_URL, token) as client:
+            # Get domains which contain the services
+            domains = client.get_domains()
 
             if domain:
-                if domain in services_dict:
-                    return {domain: services_dict[domain]}
+                # Get specific domain
+                if domain in domains:
+                    domain_obj = domains[domain]
+                    # Get services from the domain
+                    services = {svc_name: svc.model_dump(mode='json') for svc_name, svc in domain_obj.services.items()}
+                    return {domain: services}
                 else:
                     return {}
 
-            return services_dict
-    except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.reason}", file=sys.stderr)
-        sys.exit(1)
+            # Get all services from all domains
+            all_services = {}
+            for domain_name, domain_obj in domains.items():
+                services = {svc_name: svc.model_dump(mode='json') for svc_name, svc in domain_obj.services.items()}
+                all_services[domain_name] = services
+
+            return all_services
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

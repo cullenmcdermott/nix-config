@@ -30,6 +30,8 @@ When helping with Home Assistant tasks, follow this general approach:
 
 All scripts require the `HA_TOKEN` environment variable to be set, which contains the Home Assistant long-lived access token. The HA instance is available at `https://ha.cullen.rocks`.
 
+**Important:** All scripts now use `uv` with inline PEP 723 dependency declarations and the `homeassistant-api` library for consistent, maintainable code. Dependencies are automatically installed by `uv` on first run.
+
 ### Entity Discovery
 
 #### `ha_get_entities.py [domain]`
@@ -37,9 +39,9 @@ Retrieve all entities, optionally filtered by domain.
 
 **Usage:**
 ```bash
-python3 scripts/ha_get_entities.py           # All entities
-python3 scripts/ha_get_entities.py light     # Just lights
-python3 scripts/ha_get_entities.py sensor    # Just sensors
+uv run scripts/ha_get_entities.py           # All entities
+uv run scripts/ha_get_entities.py light     # Just lights
+uv run scripts/ha_get_entities.py sensor    # Just sensors
 ```
 
 **When to use:** To discover what entities are available, especially when building new automations.
@@ -49,7 +51,7 @@ Get the current state and attributes of a specific entity.
 
 **Usage:**
 ```bash
-python3 scripts/ha_get_state.py light.living_room
+uv run scripts/ha_get_state.py light.living_room
 ```
 
 **When to use:** To check current state, available attributes, or confirm an entity exists.
@@ -59,9 +61,9 @@ Search for entities matching a pattern in their entity_id or friendly_name.
 
 **Usage:**
 ```bash
-python3 scripts/ha_search_similar_entities.py "bedroom"
-python3 scripts/ha_search_similar_entities.py "motion"
-python3 scripts/ha_search_similar_entities.py "temperature"
+uv run scripts/ha_search_similar_entities.py "bedroom"
+uv run scripts/ha_search_similar_entities.py "motion"
+uv run scripts/ha_search_similar_entities.py "temperature"
 ```
 
 **When to use:** To find entities related to what the user wants to automate. This is especially useful for finding examples before creating new automations.
@@ -73,12 +75,68 @@ Retrieve all automations, optionally filtered by search term.
 
 **Usage:**
 ```bash
-python3 scripts/ha_get_automations.py              # All automations
-python3 scripts/ha_get_automations.py motion       # Automations with 'motion'
-python3 scripts/ha_get_automations.py light        # Automations with 'light'
+uv run scripts/ha_get_automations.py              # All automations
+uv run scripts/ha_get_automations.py motion       # Automations with 'motion'
+uv run scripts/ha_get_automations.py light        # Automations with 'light'
 ```
 
 **When to use:** To find existing automations that are similar to what the user wants to create. Use these as templates.
+
+### Automation Trace Analysis
+
+#### `ha_list_traces.py [automation_id]`
+List automation execution traces with timestamps and status.
+
+**Usage:**
+```bash
+uv run scripts/ha_list_traces.py                                  # All traces
+uv run scripts/ha_list_traces.py automation.notify_on_door_open   # Specific automation traces
+```
+
+**When to use:** To see recent automation runs, their status, and timing. Use this to identify which run IDs to investigate further.
+
+**Output includes:**
+- Run ID (for use with `ha_get_trace.py`)
+- Timestamp
+- Execution state (stopped, running, etc.)
+- Script execution status (finished, failed_single, failed_conditions, etc.)
+- Last step executed
+- Any errors
+
+#### `ha_get_trace.py <automation_id> <run_id>`
+Get detailed step-by-step trace for a specific automation run.
+
+**Usage:**
+```bash
+uv run scripts/ha_get_trace.py automation.notify_on_door_open 1ceef6b2b6f63a8745eb5dba3fe12f71
+```
+
+**When to use:** To debug a specific automation run. Shows the complete execution path including:
+- Trigger details
+- Condition evaluations (pass/fail)
+- Actions executed
+- Variables at each step
+- Timing information
+- Error details if failed
+
+**Tip:** Get the run_id from `ha_list_traces.py` output.
+
+#### `ha_trace_summary.py <automation_id>`
+Get aggregated statistics for an automation's execution history.
+
+**Usage:**
+```bash
+uv run scripts/ha_trace_summary.py automation.notify_on_door_open
+```
+
+**When to use:** To understand automation reliability and performance over time.
+
+**Output includes:**
+- Total runs
+- Success/failure counts and rates
+- Average/min/max execution times
+- Common error patterns
+- Distribution of where executions complete
 
 ### Service Discovery
 
@@ -87,9 +145,9 @@ Get all available services with descriptions and field information.
 
 **Usage:**
 ```bash
-python3 scripts/ha_get_services.py              # All services
-python3 scripts/ha_get_services.py light        # Just light services
-python3 scripts/ha_get_services.py climate      # Just climate services
+uv run scripts/ha_get_services.py              # All services
+uv run scripts/ha_get_services.py light        # Just light services
+uv run scripts/ha_get_services.py climate      # Just climate services
 ```
 
 **When to use:** To discover what services are available and what parameters they accept.
@@ -101,7 +159,7 @@ Get Home Assistant configuration including version, location, and components.
 
 **Usage:**
 ```bash
-python3 scripts/ha_get_config.py
+uv run scripts/ha_get_config.py
 ```
 
 **When to use:** To understand the HA setup, available integrations, or system information.
@@ -111,9 +169,9 @@ Get Home Assistant config entries, optionally filtered by domain. This is essent
 
 **Usage:**
 ```bash
-python3 scripts/ha_get_config_entries.py              # All config entries
-python3 scripts/ha_get_config_entries.py telegram_bot # Just Telegram bots
-python3 scripts/ha_get_config_entries.py mqtt         # Just MQTT entries
+uv run scripts/ha_get_config_entries.py              # All config entries
+uv run scripts/ha_get_config_entries.py telegram_bot # Just Telegram bots
+uv run scripts/ha_get_config_entries.py mqtt         # Just MQTT entries
 ```
 
 **When to use:** When you need to get config_entry_id for services like Telegram notifications, or to discover what integrations are configured.
@@ -125,7 +183,7 @@ Call a Home Assistant service (use with caution).
 
 **Usage:**
 ```bash
-python3 scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_room"}'
+uv run scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_room"}'
 ```
 
 **When to use:** Rarely. Generally only for testing or when the user explicitly asks to control something.
@@ -150,21 +208,39 @@ python3 scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_ro
 
 ### Debugging an Automation
 
-1. **Get the automation state** - Use `ha_get_state.py automation.automation_name` to check:
+1. **Check automation status** - Use `uv run scripts/ha_get_state.py automation.automation_name` to check:
    - Current state (on/off)
    - Last triggered time
    - Current execution count
    - Automation mode
-2. **Check related entities** - Use `ha_get_state.py` to verify trigger entities are in expected states
-3. **Review the automation configuration** - Use `ha_get_automations.py` to see the full automation details
-4. **Test trigger conditions** - Manually verify that:
-   - Trigger entities exist and are accessible
-   - Conditions would evaluate correctly
-   - Target entities for actions exist
-5. **Identify the issue** - Based on state data and configuration review
-6. **Suggest fix** - Provide corrected YAML or configuration changes
+2. **Review execution history** - Use trace analysis tools:
+   - `uv run scripts/ha_trace_summary.py automation.automation_name` - Get success rate and common issues
+   - `uv run scripts/ha_list_traces.py automation.automation_name` - See recent runs
+   - `uv run scripts/ha_get_trace.py automation.automation_name <run_id>` - Detailed step-by-step trace
+3. **Analyze trace data** - Look for:
+   - Which trigger fired
+   - Whether conditions passed or failed
+   - Which actions executed successfully
+   - Where the automation stopped or errored
+   - Variable values at each step
+4. **Check related entities** - Use `uv run scripts/ha_get_state.py` to verify trigger entities are in expected states
+5. **Review the automation configuration** - Use `uv run scripts/ha_get_automations.py` to see the full automation details
+6. **Identify the issue** - Based on trace data, state information, and configuration review
+7. **Suggest fix** - Provide corrected YAML or configuration changes
 
-**Note:** For detailed execution traces, use the Home Assistant web UI (Settings → Automations & Scenes → select automation → traces)
+**Trace-based Debugging Workflow:**
+```bash
+# Step 1: Check if automation has been running and get stats
+uv run scripts/ha_trace_summary.py automation.problem_automation
+
+# Step 2: List recent runs to find failing ones
+uv run scripts/ha_list_traces.py automation.problem_automation
+
+# Step 3: Get detailed trace for a specific failed run
+uv run scripts/ha_get_trace.py automation.problem_automation <run_id_from_step_2>
+
+# Step 4: Examine the trace to see exactly where and why it failed
+```
 
 ### Modifying a Dashboard
 
@@ -185,7 +261,7 @@ python3 scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_ro
 Telegram notifications require using the `telegram_bot.send_message` service with a `config_entry_id` parameter (not the notify service pattern).
 
 **Workflow:**
-1. **Get the Telegram bot config_entry_id** - Use `ha_get_config_entries.py telegram_bot` to find the config entry ID
+1. **Get the Telegram bot config_entry_id** - Use `uv run scripts/ha_get_config_entries.py telegram_bot` to find the config entry ID
 2. **Use the telegram_bot.send_message service** - Include the config_entry_id in the action data
 
 **Example Automation with Telegram Notification:**
@@ -205,7 +281,7 @@ actions:
 mode: single
 ```
 
-**Note:** The `config_entry_id` is specific to your Telegram bot configuration. Always use `ha_get_config_entries.py telegram_bot` to get the correct ID for your setup.
+**Note:** The `config_entry_id` is specific to your Telegram bot configuration. Always use `uv run scripts/ha_get_config_entries.py telegram_bot` to get the correct ID for your setup.
 
 ## Important Notes
 

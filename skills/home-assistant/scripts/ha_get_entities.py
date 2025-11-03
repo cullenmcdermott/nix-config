@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "homeassistant-api",
+# ]
+# ///
 """
 Retrieve entities from Home Assistant.
 
 Usage:
-    python3 ha_get_entities.py [domain]
+    uv run ha_get_entities.py [domain]
 
 Examples:
-    python3 ha_get_entities.py light
-    python3 ha_get_entities.py sensor
-    python3 ha_get_entities.py          # All entities
+    uv run ha_get_entities.py light
+    uv run ha_get_entities.py sensor
+    uv run ha_get_entities.py          # All entities
 
 Requires HA_TOKEN environment variable to be set.
 """
@@ -16,10 +21,9 @@ Requires HA_TOKEN environment variable to be set.
 import os
 import sys
 import json
-import urllib.request
-import urllib.error
+from homeassistant_api import Client
 
-HA_URL = "https://ha.cullen.rocks"
+HA_URL = "https://ha.cullen.rocks/api"
 
 def get_entities(domain=None):
     """Fetch entities from Home Assistant, optionally filtered by domain."""
@@ -28,24 +32,17 @@ def get_entities(domain=None):
         print("Error: HA_TOKEN environment variable not set", file=sys.stderr)
         sys.exit(1)
 
-    url = f"{HA_URL}/api/states"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-
     try:
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req) as response:
-            entities = json.loads(response.read().decode())
+        with Client(HA_URL, token) as client:
+            entities = client.get_states()
+
+            # Convert to dict format for JSON serialization (mode='json' handles datetime serialization)
+            entities_data = [entity.model_dump(mode='json') for entity in entities]
 
             if domain:
-                entities = [e for e in entities if e["entity_id"].startswith(f"{domain}.")]
+                entities_data = [e for e in entities_data if e["entity_id"].startswith(f"{domain}.")]
 
-            return entities
-    except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.reason}", file=sys.stderr)
-        sys.exit(1)
+            return entities_data
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

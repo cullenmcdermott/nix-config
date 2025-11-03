@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "requests",
+# ]
+# ///
 """
 Get Home Assistant config entries, optionally filtered by domain.
 Requires HA_TOKEN environment variable.
 
 Usage:
-    python3 ha_get_config_entries.py              # All config entries
-    python3 ha_get_config_entries.py telegram_bot # Just Telegram bots
-    python3 ha_get_config_entries.py mqtt         # Just MQTT entries
+    uv run ha_get_config_entries.py              # All config entries
+    uv run ha_get_config_entries.py telegram_bot # Just Telegram bots
+    uv run ha_get_config_entries.py mqtt         # Just MQTT entries
 """
 
 import os
 import sys
-import requests
 import json
+import requests
 
 HA_URL = "https://ha.cullen.rocks"
 

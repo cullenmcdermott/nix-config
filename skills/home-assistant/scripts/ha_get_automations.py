@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "homeassistant-api",
+# ]
+# ///
 """
 Retrieve all automations from Home Assistant with their configurations.
 
 Usage:
-    python3 ha_get_automations.py [search_term]
+    uv run ha_get_automations.py [search_term]
 
 Examples:
-    python3 ha_get_automations.py                    # All automations
-    python3 ha_get_automations.py motion             # Automations with 'motion' in name
-    python3 ha_get_automations.py light              # Automations with 'light' in name
+    uv run ha_get_automations.py                    # All automations
+    uv run ha_get_automations.py motion             # Automations with 'motion' in name
+    uv run ha_get_automations.py light              # Automations with 'light' in name
 
 Requires HA_TOKEN environment variable to be set.
 """
@@ -16,10 +21,9 @@ Requires HA_TOKEN environment variable to be set.
 import os
 import sys
 import json
-import urllib.request
-import urllib.error
+from homeassistant_api import Client
 
-HA_URL = "https://ha.cullen.rocks"
+HA_URL = "https://ha.cullen.rocks/api"
 
 def get_automations(search_term=None):
     """Fetch all automation entities."""
@@ -28,19 +32,15 @@ def get_automations(search_term=None):
         print("Error: HA_TOKEN environment variable not set", file=sys.stderr)
         sys.exit(1)
 
-    url = f"{HA_URL}/api/states"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-
     try:
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req) as response:
-            entities = json.loads(response.read().decode())
+        with Client(HA_URL, token) as client:
+            entities = client.get_states()
 
             # Filter to automation entities
-            automations = [e for e in entities if e["entity_id"].startswith("automation.")]
+            automations = [
+                entity.model_dump(mode='json') for entity in entities
+                if entity.entity_id.startswith("automation.")
+            ]
 
             # Filter by search term if provided
             if search_term:
@@ -52,9 +52,6 @@ def get_automations(search_term=None):
                 ]
 
             return automations
-    except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.reason}", file=sys.stderr)
-        sys.exit(1)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

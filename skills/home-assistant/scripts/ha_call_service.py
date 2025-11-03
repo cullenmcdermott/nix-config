@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "homeassistant-api",
+# ]
+# ///
 """
 Call a Home Assistant service.
 
 Usage:
-    python3 ha_call_service.py <domain> <service> <service_data_json>
+    uv run ha_call_service.py <domain> <service> <service_data_json>
 
 Example:
-    python3 ha_call_service.py light turn_on '{"entity_id": "light.living_room", "brightness": 255}'
+    uv run ha_call_service.py light turn_on '{"entity_id": "light.living_room", "brightness": 255}'
 
 Requires HA_TOKEN environment variable to be set.
 """
@@ -14,10 +19,9 @@ Requires HA_TOKEN environment variable to be set.
 import os
 import sys
 import json
-import urllib.request
-import urllib.error
+from homeassistant_api import Client
 
-HA_URL = "https://ha.cullen.rocks"
+HA_URL = "https://ha.cullen.rocks/api"
 
 def call_service(domain, service, service_data):
     """Call a Home Assistant service."""
@@ -26,28 +30,31 @@ def call_service(domain, service, service_data):
         print("Error: HA_TOKEN environment variable not set", file=sys.stderr)
         sys.exit(1)
 
-    url = f"{HA_URL}/api/services/{domain}/{service}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-
     try:
-        data = json.dumps(service_data).encode('utf-8')
-        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
-        with urllib.request.urlopen(req) as response:
-            result = json.loads(response.read().decode())
-            return result
-    except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.reason}", file=sys.stderr)
-        sys.exit(1)
+        with Client(HA_URL, token) as client:
+            # Get all domains
+            domains = client.get_domains()
+
+            if domain not in domains:
+                print(f"Error: Domain '{domain}' not found", file=sys.stderr)
+                sys.exit(1)
+
+            domain_obj = domains[domain]
+
+            if service not in domain_obj.services:
+                print(f"Error: Service '{service}' not found in domain '{domain}'", file=sys.stderr)
+                sys.exit(1)
+
+            service_obj = domain_obj.services[service]
+            result = service_obj.trigger(**service_data)
+            return result if result else {"success": True}
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
 def main():
     if len(sys.argv) < 4:
-        print("Usage: ha_call_service.py <domain> <service> <service_data_json>", file=sys.stderr)
+        print("Usage: uv run ha_call_service.py <domain> <service> <service_data_json>", file=sys.stderr)
         sys.exit(1)
 
     domain = sys.argv[1]
