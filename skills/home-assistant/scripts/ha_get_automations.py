@@ -22,8 +22,25 @@ import os
 import sys
 import json
 from homeassistant_api import Client
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 HA_URL = "https://ha.cullen.rocks/api"
+MOUNTAIN_TZ = ZoneInfo("America/Denver")
+
+def convert_to_mountain_time(timestamp_str):
+    """Convert ISO timestamp string to Mountain Time formatted string."""
+    if not timestamp_str:
+        return None
+    try:
+        # Parse ISO timestamp (handles both +00:00 and Z formats)
+        dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        # Convert to Mountain Time
+        dt_mountain = dt.astimezone(MOUNTAIN_TZ)
+        # Return formatted string
+        return dt_mountain.strftime("%Y-%m-%d %H:%M:%S %Z")
+    except Exception:
+        return timestamp_str  # Return original if conversion fails
 
 def get_automations(search_term=None):
     """Fetch all automation entities."""
@@ -50,6 +67,18 @@ def get_automations(search_term=None):
                     if search_term in a["entity_id"].lower() or
                        search_term in a.get("attributes", {}).get("friendly_name", "").lower()
                 ]
+
+            # Convert timestamps to Mountain Time
+            for automation in automations:
+                # Convert last_triggered in attributes
+                if "attributes" in automation and "last_triggered" in automation["attributes"]:
+                    automation["attributes"]["last_triggered"] = convert_to_mountain_time(
+                        automation["attributes"]["last_triggered"]
+                    )
+                # Convert top-level timestamps
+                for field in ["last_changed", "last_updated", "last_reported"]:
+                    if field in automation:
+                        automation[field] = convert_to_mountain_time(automation[field])
 
             return automations
     except Exception as e:

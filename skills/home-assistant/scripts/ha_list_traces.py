@@ -22,8 +22,25 @@ import sys
 import json
 import asyncio
 import websockets
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 HA_URL = "wss://ha.cullen.rocks/api/websocket"
+MOUNTAIN_TZ = ZoneInfo("America/Denver")
+
+def convert_to_mountain_time(timestamp_str):
+    """Convert ISO timestamp string to Mountain Time formatted string."""
+    if not timestamp_str:
+        return None
+    try:
+        # Parse ISO timestamp (handles both +00:00 and Z formats)
+        dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        # Convert to Mountain Time
+        dt_mountain = dt.astimezone(MOUNTAIN_TZ)
+        # Return formatted string
+        return dt_mountain.strftime("%Y-%m-%d %H:%M:%S %Z")
+    except Exception:
+        return timestamp_str  # Return original if conversion fails
 
 async def list_traces(automation_id=None):
     """List automation traces, optionally filtered by automation_id."""
@@ -92,10 +109,11 @@ async def list_traces(automation_id=None):
             formatted_traces = []
             for trace in result:
                 item_id = trace.get("item_id")
+                start_time = trace.get("timestamp", {}).get("start")
                 formatted_traces.append({
                     "automation_id": f"automation.{item_id}" if item_id else "unknown",
                     "run_id": trace.get("run_id"),
-                    "timestamp": trace.get("timestamp", {}).get("start"),
+                    "timestamp": convert_to_mountain_time(start_time),
                     "state": trace.get("state"),
                     "script_execution": trace.get("script_execution"),
                     "last_step": trace.get("last_step"),

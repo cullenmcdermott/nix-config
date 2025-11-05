@@ -89,9 +89,11 @@ List automation execution traces with timestamps and status.
 
 **Usage:**
 ```bash
-uv run scripts/ha_list_traces.py                                  # All traces
-uv run scripts/ha_list_traces.py automation.notify_on_door_open   # Specific automation traces
+uv run scripts/ha_list_traces.py                    # All traces
+uv run scripts/ha_list_traces.py 1761430536701      # Specific automation traces (using numeric ID)
 ```
+
+**Important:** Use the numeric automation ID (e.g., `1761430536701`), not the full entity_id (e.g., `automation.bedroom_light`). You can find the numeric ID in the automation's attributes from `ha_get_automations.py` output.
 
 **When to use:** To see recent automation runs, their status, and timing. Use this to identify which run IDs to investigate further.
 
@@ -108,8 +110,10 @@ Get detailed step-by-step trace for a specific automation run.
 
 **Usage:**
 ```bash
-uv run scripts/ha_get_trace.py automation.notify_on_door_open 1ceef6b2b6f63a8745eb5dba3fe12f71
+uv run scripts/ha_get_trace.py 1761430536701 1ceef6b2b6f63a8745eb5dba3fe12f71
 ```
+
+**Important:** Use the numeric automation ID (e.g., `1761430536701`), not the full entity_id.
 
 **When to use:** To debug a specific automation run. Shows the complete execution path including:
 - Trigger details
@@ -126,8 +130,10 @@ Get aggregated statistics for an automation's execution history.
 
 **Usage:**
 ```bash
-uv run scripts/ha_trace_summary.py automation.notify_on_door_open
+uv run scripts/ha_trace_summary.py 1761430536701
 ```
+
+**Important:** Use the numeric automation ID (e.g., `1761430536701`), not the full entity_id.
 
 **When to use:** To understand automation reliability and performance over time.
 
@@ -213,10 +219,10 @@ uv run scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_roo
    - Last triggered time
    - Current execution count
    - Automation mode
-2. **Review execution history** - Use trace analysis tools:
-   - `uv run scripts/ha_trace_summary.py automation.automation_name` - Get success rate and common issues
-   - `uv run scripts/ha_list_traces.py automation.automation_name` - See recent runs
-   - `uv run scripts/ha_get_trace.py automation.automation_name <run_id>` - Detailed step-by-step trace
+2. **Review execution history** - Use trace analysis tools (use numeric automation ID from attributes):
+   - `uv run scripts/ha_trace_summary.py <numeric_id>` - Get success rate and common issues
+   - `uv run scripts/ha_list_traces.py <numeric_id>` - See recent runs
+   - `uv run scripts/ha_get_trace.py <numeric_id> <run_id>` - Detailed step-by-step trace
 3. **Analyze trace data** - Look for:
    - Which trigger fired
    - Whether conditions passed or failed
@@ -230,16 +236,19 @@ uv run scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_roo
 
 **Trace-based Debugging Workflow:**
 ```bash
-# Step 1: Check if automation has been running and get stats
-uv run scripts/ha_trace_summary.py automation.problem_automation
+# Step 1: Get the automation details to find the numeric ID
+uv run scripts/ha_get_automations.py problem_automation
 
-# Step 2: List recent runs to find failing ones
-uv run scripts/ha_list_traces.py automation.problem_automation
+# Step 2: Check if automation has been running and get stats (use numeric ID from step 1)
+uv run scripts/ha_trace_summary.py 1761430536701
 
-# Step 3: Get detailed trace for a specific failed run
-uv run scripts/ha_get_trace.py automation.problem_automation <run_id_from_step_2>
+# Step 3: List recent runs to find failing ones (use numeric ID)
+uv run scripts/ha_list_traces.py 1761430536701
 
-# Step 4: Examine the trace to see exactly where and why it failed
+# Step 4: Get detailed trace for a specific failed run (use numeric ID)
+uv run scripts/ha_get_trace.py 1761430536701 <run_id_from_step_3>
+
+# Step 5: Examine the trace to see exactly where and why it failed
 ```
 
 ### Modifying a Dashboard

@@ -21,8 +21,40 @@ import sys
 import json
 import asyncio
 import websockets
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 HA_URL = "wss://ha.cullen.rocks/api/websocket"
+MOUNTAIN_TZ = ZoneInfo("America/Denver")
+
+def convert_to_mountain_time(timestamp_str):
+    """Convert ISO timestamp string to Mountain Time formatted string."""
+    if not timestamp_str:
+        return None
+    try:
+        # Parse ISO timestamp (handles both +00:00 and Z formats)
+        dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        # Convert to Mountain Time
+        dt_mountain = dt.astimezone(MOUNTAIN_TZ)
+        # Return formatted string
+        return dt_mountain.strftime("%Y-%m-%d %H:%M:%S %Z")
+    except Exception:
+        return timestamp_str  # Return original if conversion fails
+
+def convert_trace_timestamps(trace):
+    """Convert timestamp fields in trace data to Mountain Time."""
+    if not trace:
+        return trace
+
+    # Convert top-level timestamp fields
+    if "timestamp" in trace and isinstance(trace["timestamp"], dict):
+        timestamp = trace["timestamp"]
+        if "start" in timestamp:
+            timestamp["start"] = convert_to_mountain_time(timestamp["start"])
+        if "finish" in timestamp:
+            timestamp["finish"] = convert_to_mountain_time(timestamp["finish"])
+
+    return trace
 
 async def get_trace(automation_id, run_id):
     """Get detailed trace for a specific automation run."""
@@ -83,6 +115,9 @@ async def get_trace(automation_id, run_id):
             if not trace:
                 print(f"No trace found for {automation_id} run {run_id}", file=sys.stderr)
                 sys.exit(1)
+
+            # Convert timestamps to Mountain Time
+            trace = convert_trace_timestamps(trace)
 
             return trace
 

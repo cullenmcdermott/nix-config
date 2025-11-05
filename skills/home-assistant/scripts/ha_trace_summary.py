@@ -168,8 +168,9 @@ def calculate_execution_time(run):
         return None
 
     try:
-        start_dt = datetime.fromisoformat(start.replace('+00:00', '').replace('Z', ''))
-        finish_dt = datetime.fromisoformat(finish.replace('+00:00', '').replace('Z', ''))
+        # Parse ISO timestamps with timezone info (handles both +00:00 and Z formats)
+        start_dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
+        finish_dt = datetime.fromisoformat(finish.replace('Z', '+00:00'))
         duration = (finish_dt - start_dt).total_seconds()
         return duration
     except:
