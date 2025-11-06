@@ -27,7 +27,7 @@
 
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
 
-    mac-app-util.url = "github:hraban/mac-app-util/8414fa1e2cb775b17793104a9095aabeeada63ef";
+    mac-app-util.url = "github:hraban/mac-app-util";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
 
     pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
