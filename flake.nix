@@ -27,8 +27,13 @@
 
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
 
+    # Workaround for GitLab Common Lisp 404 error (mac-app-util issue #39)
+    # Pin to specific commit that fixes iterate download URL
+    cl-nix-lite.url = "github:r4v3n6101/cl-nix-lite/6deefd29913ad23b73db8f1ade0a397e1518619f";
+
     mac-app-util.url = "github:hraban/mac-app-util";
     mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
+    mac-app-util.inputs.cl-nix-lite.follows = "cl-nix-lite";
 
     pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
     pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";
