@@ -11,8 +11,8 @@
     ];
   };
   inputs = {
-    # Temporarily lock to 10/20/25
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # Pin to working revision before fish 4.2.1 test failures (Nov 8, 2025)
+    nixpkgs.url = "github:NixOS/nixpkgs/f6b44b2401525650256b977063dbcf830f762369";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
