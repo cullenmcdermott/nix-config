@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
 }:
 
@@ -13,6 +14,9 @@ let
     rev = "main";
     hash = "sha256-5SxVADhG86yNe8tS7kC0Ruqmb/mTguz5I4Kv1GRBidY=";
   };
+
+  # Flox agentic skills from flake input
+  floxAgentic = inputs.flox-agentic;
 in
 {
   # Global Claude Code settings
@@ -341,6 +345,13 @@ in
   # Home Assistant skill - local custom skill
   home.file.".claude/skills/home-assistant" = {
     source = ./../../skills/home-assistant;
+    recursive = true;
+  };
+
+  # Flox agentic skills - copy entire skills directory
+  # This automatically includes all current and future skills
+  home.file.".claude/skills/flox" = {
+    source = "${floxAgentic}/flox-plugin/skills";
     recursive = true;
   };
 }
