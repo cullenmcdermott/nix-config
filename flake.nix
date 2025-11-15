@@ -52,6 +52,9 @@
 
     serena-mcp.url = "github:oraios/serena";
     serena-mcp.flake = false;
+
+    flox-agentic.url = "github:flox/flox-agentic";
+    flox-agentic.flake = false;
   };
 
   outputs =
@@ -68,6 +71,7 @@
       pyproject-build-systems,
       context7-mcp,
       serena-mcp,
+      flox-agentic,
       ...
     }:
     let

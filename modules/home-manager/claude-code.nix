@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
 }:
 
@@ -13,6 +14,9 @@ let
     rev = "main";
     hash = "sha256-5SxVADhG86yNe8tS7kC0Ruqmb/mTguz5I4Kv1GRBidY=";
   };
+
+  # Flox agentic skills from flake input
+  floxAgentic = inputs.flox-agentic;
 in
 {
   # Global Claude Code settings
@@ -341,6 +345,42 @@ in
   # Home Assistant skill - local custom skill
   home.file.".claude/skills/home-assistant" = {
     source = ./../../skills/home-assistant;
+    recursive = true;
+  };
+
+  # Flox agentic skills
+  home.file.".claude/skills/flox-environments" = {
+    source = "${floxAgentic}/flox-plugin/skills/flox-environments";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/flox-services" = {
+    source = "${floxAgentic}/flox-plugin/skills/flox-services";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/flox-builds" = {
+    source = "${floxAgentic}/flox-plugin/skills/flox-builds";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/flox-containers" = {
+    source = "${floxAgentic}/flox-plugin/skills/flox-containers";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/flox-publish" = {
+    source = "${floxAgentic}/flox-plugin/skills/flox-publish";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/flox-sharing" = {
+    source = "${floxAgentic}/flox-plugin/skills/flox-sharing";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/flox-cuda" = {
+    source = "${floxAgentic}/flox-plugin/skills/flox-cuda";
     recursive = true;
   };
 }
