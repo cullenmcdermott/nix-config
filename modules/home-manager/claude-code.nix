@@ -90,6 +90,7 @@ in
         ];
       };
       interactiveMode = true;
+      autoCompact = false;
 
       # Custom status line configuration
       statusLine = {
