@@ -11,11 +11,9 @@
     ];
   };
   inputs = {
-    # Pinned to Nov 8, 2025 - last known-good commit before pyarrow issue
-    # Fish fix (PR #462589, Nov 17) disabled darwin checks, so no issues here
-    # Pyarrow issue #461396 (Nov 13+) affects claude-monitor build on darwin
-    # Waiting for protobuf fixes in staging (PRs #461569, #461572) to land
-    nixpkgs.url = "github:NixOS/nixpkgs/f6b44b2401525650256b977063dbcf830f762369";
+    # claude-monitor temporarily disabled to avoid pyarrow issue (#461396)
+    # This allows us to use latest nixpkgs-unstable without pinning
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
