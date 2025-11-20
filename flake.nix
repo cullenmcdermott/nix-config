@@ -14,7 +14,7 @@
     # Temporarily pinned: fish fix (PR #462589) disabled checks on darwin
     # Waiting for protobuf conflict fixes in staging (PRs #461569, #461572)
     # to resolve pyarrow build failures (issue #461396)
-    nixpkgs.url = "github:NixOS/nixpkgs/f6b44b2401525650256b977063dbcf830f762369";
+    nixpkgs.url = "github:NixOS/nixpkgs/89c2b2330e733d6cdb5eae7b899326930c2c0648";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
