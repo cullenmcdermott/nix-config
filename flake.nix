@@ -11,8 +11,6 @@
     ];
   };
   inputs = {
-    # claude-monitor temporarily disabled to avoid pyarrow issue (#461396)
-    # This allows us to use latest nixpkgs-unstable without pinning
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     home-manager.url = "github:nix-community/home-manager";
