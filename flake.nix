@@ -11,10 +11,11 @@
     ];
   };
   inputs = {
-    # Temporarily pinned: fish fix (PR #462589) disabled checks on darwin
-    # Waiting for protobuf conflict fixes in staging (PRs #461569, #461572)
-    # to resolve pyarrow build failures (issue #461396)
-    nixpkgs.url = "github:NixOS/nixpkgs/89c2b2330e733d6cdb5eae7b899326930c2c0648";
+    # Pinned to Nov 8, 2025 - last known-good commit before pyarrow issue
+    # Fish fix (PR #462589, Nov 17) disabled darwin checks, so no issues here
+    # Pyarrow issue #461396 (Nov 13+) affects claude-monitor build on darwin
+    # Waiting for protobuf fixes in staging (PRs #461569, #461572) to land
+    nixpkgs.url = "github:NixOS/nixpkgs/f6b44b2401525650256b977063dbcf830f762369";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
