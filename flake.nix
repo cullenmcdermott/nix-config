@@ -46,7 +46,7 @@
     pyproject-build-systems.inputs.uv2nix.follows = "uv2nix";
     pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
 
-    context7-mcp.url = "github:upstash/context7-mcp";
+    context7-mcp.url = "github:upstash/context7-mcp/f35c002beeada90ed6fdddf19c0345f9f41cccdb";
     context7-mcp.flake = false;
 
     serena-mcp.url = "github:oraios/serena";
