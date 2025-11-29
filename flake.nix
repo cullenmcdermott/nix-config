@@ -46,6 +46,8 @@
     pyproject-build-systems.inputs.uv2nix.follows = "uv2nix";
     pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
 
+    # Pinned to f35c002 (2025-11-24) due to TypeScript build errors in newer commits
+    # TODO: Try updating once upstream fixes path alias resolution (@http, @commands, etc.)
     context7-mcp.url = "github:upstash/context7-mcp/f35c002beeada90ed6fdddf19c0345f9f41cccdb";
     context7-mcp.flake = false;
 
