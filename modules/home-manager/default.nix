@@ -93,6 +93,7 @@ in
       unzip
       uv
       unixtools.watch
+      vscode
       wget
       # MCP Servers - installed via Nix for reproducibility
       mcpServers.context7-mcp
