@@ -50,6 +50,7 @@ in
       chart-testing
       google-chrome
       claude-code
+      copilot-language-server
       curl
       deadnix
       devpod
@@ -78,6 +79,7 @@ in
       nodejs
       omnictl
       packer
+      python3
       pipx
       pyright
       renovate

@@ -17,7 +17,7 @@ let
 in
 {
   home.activation.installAstroNvim = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    ${pkgs.rsync}/bin/rsync -avz --chmod=D2755,F744 ${./nvim}/ ${config.xdg.configHome}/nvim/
+    ${pkgs.rsync}/bin/rsync -avz --delete --chmod=D2755,F744 ${./nvim}/ ${config.xdg.configHome}/nvim/
   '';
 
   home.shellAliases = shellAliases;
@@ -29,7 +29,6 @@ in
     viAlias = true;
     vimAlias = true;
     plugins = with pkgs.vimPlugins; [
-      telescope-fzf-native-nvim
     ];
   };
 }

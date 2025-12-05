@@ -19,7 +19,7 @@
     darwin.url = "github:nix-darwin/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    flox.url = "github:flox/flox/v1.7.6";
+    flox.url = "github:flox/flox/v1.7.8";
 
     dagger.url = "github:dagger/nix";
     dagger.inputs.nixpkgs.follows = "nixpkgs";
