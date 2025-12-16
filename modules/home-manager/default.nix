@@ -37,6 +37,7 @@ in
     ./nvim
     ./packages
     ./claude-code.nix
+    ./zwift-media.nix
   ];
   home.stateVersion = "24.05";
   home.packages =
@@ -201,4 +202,7 @@ in
   programs.direnv.enable = true;
   programs.starship.enable = true;
   programs.starship.enableZshIntegration = true;
+
+  # Zwift Ride media controls - set to false to disable
+  programs.zwift-media.enable = pkgs.stdenv.isDarwin;
 }

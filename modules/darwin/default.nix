@@ -62,6 +62,7 @@ in
       "caffeine"
       "discord"
       "firefox"
+      "karabiner-elements"  # Requires privileged daemons, can't use nixpkgs version
       "philips-hue-sync"
       "hiddenbar"
       "istat-menus"
