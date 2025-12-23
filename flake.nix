@@ -56,6 +56,9 @@
 
     flox-agentic.url = "github:flox/flox-agentic";
     flox-agentic.flake = false;
+
+    agent-os.url = "github:buildermethods/agent-os/8b12ec5b3d002988da7171b89b9f60e5dbd88abc";
+    agent-os.flake = false;
   };
 
   outputs =

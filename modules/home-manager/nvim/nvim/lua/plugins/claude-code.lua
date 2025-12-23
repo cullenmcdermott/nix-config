@@ -2,7 +2,9 @@ return {
   "coder/claudecode.nvim",
   dependencies = { "folke/snacks.nvim" },
   config = function()
-    require("claudecode").setup()
+    require("claudecode").setup({
+      terminal_cmd = "claude --mcp-config ~/.claude/mcp.json",
+    })
 
     -- Set up terminal mode keybindings for Claude Code buffers
     vim.api.nvim_create_autocmd("TermOpen", {

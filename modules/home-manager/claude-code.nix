@@ -11,12 +11,21 @@ let
   claudeSkills = pkgs.fetchFromGitHub {
     owner = "anthropics";
     repo = "skills";
-    rev = "main";
-    hash = "sha256-5SxVADhG86yNe8tS7kC0Ruqmb/mTguz5I4Kv1GRBidY=";
+    rev = "f232228244495c018b3c1857436cf491ebb79bbb";
+    hash = "sha256-/u7NC9opHNXh9kQMWYzeLyurdQPPHULiCTUbvTZsXeU=";
   };
 
   # Flox agentic skills from flake input
   floxAgentic = inputs.flox-agentic;
+
+  # Agent OS from flake input - patched to work with nix symlinks
+  # The original scripts use `find` without -L, which doesn't follow symlinks
+  agentOS = pkgs.runCommand "agent-os-patched" { } ''
+    cp -r ${inputs.agent-os} $out
+    chmod -R u+w $out
+    # Patch find commands to follow symlinks (required for nix store symlinks)
+    sed -i 's/find "\$search_dir" -type f/find -L "\$search_dir" -type f/g' $out/scripts/common-functions.sh
+  '';
 in
 {
   # Global Claude Code settings
@@ -107,25 +116,107 @@ in
       description: Prepare handover summary for new conversation when running out of context
       ---
 
-      You are being asked to prepare a handover summary for a new conversation. This happens when the current conversation is running out of context and needs to be continued in a fresh session.
+      # Handover Preparation
 
-      Before writing the handover summary:
-      1. Check the current git status and include it in the handover context
-      2. Preserve any active todo list state
-      3. Note the current project name and working modes
-      4. Identify what task or work was in progress
+      You are preparing a handover summary for a new conversation. This happens when the current conversation is running out of context and needs to be continued in a fresh session.
 
-      Please call the `mcp__serena__prepare_for_new_conversation` tool to get instructions on how to summarize the current task progress and write it to a memory file for the next conversation to continue from where you left off.
+      ## Phase 1: Gather State
 
-      After writing the handover summary to memory, provide a clear prompt that I can copy and paste into the new conversation to continue the work seamlessly. The prompt MUST:
-      1. Explicitly instruct the new LLM to activate the correct project first
-      2. Specify the exact memory file name to read (e.g., "conversation_handover")
-      3. Have the new LLM confirm understanding of the context before proceeding
-      4. Resume any incomplete todo items or tasks
-      5. Check current git status to see if anything changed since handover
-      6. Ask any clarifying questions if additional context is needed from the user
+      Collect the following information:
 
-      The tool will provide specific guidance on what information to include in the handover summary.
+      ### Task State
+      - Capture any active TodoWrite items (pending and in-progress)
+      - Identify the primary task/goal of this session
+      - Note any subtasks or next steps that were planned
+
+      ### Session Knowledge
+      - **Debugging findings**: What was learned while investigating (even if not solved)
+      - **Failed approaches**: What was tried and didn't work (to avoid repeating)
+      - **Key decisions**: Important choices made and their rationale
+      - **Blockers**: Any issues preventing progress
+
+      ## Phase 2: Memory Management
+
+      Before writing the handover, consider persistent knowledge:
+
+      ### Review Existing Memories
+      Use `mcp__serena__list_memories` to see current memories. Consider:
+      - Are any memories now **stale or outdated** based on this session's work?
+      - Should any memories be **updated** with new information?
+
+      ### Create New Memories (if applicable)
+      If this session produced **reusable knowledge** that will help in future sessions (not just this continuation), create new memories for:
+      - New patterns or conventions discovered
+      - Important architectural decisions
+      - Useful commands or workflows
+      - Project-specific gotchas or tips
+
+      Use `mcp__serena__write_memory` for any new persistent knowledge.
+
+      ## Phase 3: Write Handover
+
+      Call `mcp__serena__prepare_for_new_conversation` and write the handover memory with:
+
+      ```markdown
+      # Conversation Handover - [Brief Title]
+
+      ## Session Context
+      - **Date**: [today's date]
+      - **Primary Goal**: [what we were trying to accomplish]
+
+      ## Completed Work ✅
+      [list of completed items with brief descriptions]
+
+      ## In Progress 🔄
+      [current task and its state]
+      [any partial work or findings]
+
+      ## Pending Tasks 📋
+      [remaining todo items]
+
+      ## Key Findings This Session
+      - [important discoveries]
+      - [failed approaches to avoid]
+      - [decisions made and why]
+
+      ## Blockers / Unknowns ❓
+      [anything blocking progress]
+      [questions that need answers]
+
+      ## Next Steps for New Session
+      1. [specific first action]
+      2. [follow-up actions]
+
+      ## Memories Updated/Created
+      - [list any memories modified this session]
+      ```
+
+      ## Phase 4: Generate Continuation Prompt
+
+      Provide a copy-pasteable prompt for the new conversation:
+
+      ```
+      I'm continuing work from a previous session. Please:
+
+      1. Activate project: [project name]
+      2. Read the handover memory: conversation_handover
+      3. Summarize your understanding of:
+         - What was accomplished
+         - What's currently in progress
+         - What needs to be done next
+      4. Ask any clarifying questions before proceeding
+      5. Resume work on the pending tasks
+      ```
+
+      ## Handover Quality Checklist
+
+      Before finishing, verify:
+      - [ ] All in-progress work is documented with enough detail to resume
+      - [ ] Failed approaches noted (so they won't be repeated)
+      - [ ] Key decisions and rationale recorded
+      - [ ] Any reusable knowledge saved as separate memories
+      - [ ] Continuation prompt is specific and actionable
+      - [ ] Next session can start without user re-explaining the task
     '';
   };
 
@@ -383,6 +474,13 @@ in
 
   home.file.".claude/skills/flox-cuda" = {
     source = "${floxAgentic}/flox-plugin/skills/flox-cuda";
+    recursive = true;
+  };
+
+  # Agent OS - install to $HOME/agent-os for the install scripts to work
+  # The aos-project-install script expects Agent OS at $HOME/agent-os
+  home.file."agent-os" = {
+    source = agentOS;
     recursive = true;
   };
 }
