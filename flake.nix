@@ -27,8 +27,6 @@
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
 
     mac-app-util.url = "github:hraban/mac-app-util";
-    # Don't follow nixpkgs - ECL has stdbool.h build issues on macOS in nixpkgs-unstable
-    # mac-app-util.inputs.nixpkgs.follows = "nixpkgs";
 
     pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
     pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";

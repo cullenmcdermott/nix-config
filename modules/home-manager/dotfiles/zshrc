@@ -34,8 +34,8 @@ else
 fi
 compdef _dagger dagger
 
-# Source ~/.env if it exists
-[[ -f ~/.env ]] && source ~/.env
+# Source ~/.env if it exists (set -a auto-exports all variables)
+[[ -f ~/.env ]] && { set -a; source ~/.env; set +a; }
 
 bindkey '^a' autosuggest-accept
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#8ce6e6"

@@ -157,6 +157,7 @@ in
   programs.fzf.enable = true;
   programs.fzf.enableZshIntegration = true;
   programs.zsh.enable = true;
+  programs.zsh.dotDir = "${config.xdg.configHome}/zsh";
   programs.zsh.enableCompletion = true;
   programs.zsh.autosuggestion.enable = true;
   programs.zsh.history = {
