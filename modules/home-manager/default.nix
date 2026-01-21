@@ -83,6 +83,7 @@ in
       python3
       pipx
       pyright
+      qemu
       renovate
       ripgrep
       silver-searcher
