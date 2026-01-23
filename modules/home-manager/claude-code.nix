@@ -101,6 +101,12 @@ in
       interactiveMode = true;
       autoCompact = false;
 
+      # Enable sandbox with auto-allow for bash commands
+      sandbox = {
+        enabled = true;
+        autoAllowBashIfSandboxed = true;
+      };
+
       # Custom status line configuration
       statusLine = {
         type = "command";
