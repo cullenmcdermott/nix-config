@@ -331,6 +331,8 @@ in
       get_tokens_output() { echo "$input" | ${pkgs.jq}/bin/jq -r '.cost.total_output_tokens // 0'; }
       get_lines_added() { echo "$input" | ${pkgs.jq}/bin/jq -r '.cost.total_lines_added // 0'; }
       get_lines_removed() { echo "$input" | ${pkgs.jq}/bin/jq -r '.cost.total_lines_removed // 0'; }
+      get_context_used() { echo "$input" | ${pkgs.jq}/bin/jq -r '.context.used // 0'; }
+      get_context_limit() { echo "$input" | ${pkgs.jq}/bin/jq -r '.context.limit // 0'; }
 
       # Extract core info
       MODEL=$(get_model_name)
@@ -366,6 +368,8 @@ in
       TOKENS_OUT=$(get_tokens_output)
       LINES_ADD=$(get_lines_added)
       LINES_REM=$(get_lines_removed)
+      CONTEXT_USED=$(get_context_used)
+      CONTEXT_LIMIT=$(get_context_limit)
 
       # Format cost (only show if > 0)
       if [ "$COST" != "0" ] && [ "$COST" != "null" ]; then
@@ -391,6 +395,23 @@ in
           fi
 
           STATUS="$STATUS ''${MAGENTA}🔢 $TOKENS_IN_FMT↓/$TOKENS_OUT_FMT↑''${RESET}"
+      fi
+
+      # Show context usage percentage
+      if [ "$CONTEXT_USED" != "0" ] && [ "$CONTEXT_USED" != "null" ] && [ "$CONTEXT_LIMIT" != "0" ] && [ "$CONTEXT_LIMIT" != "null" ]; then
+          CONTEXT_PCT=$(echo "scale=1; $CONTEXT_USED * 100 / $CONTEXT_LIMIT" | ${pkgs.bc}/bin/bc)
+          CONTEXT_PCT_INT=$(echo "$CONTEXT_PCT / 1" | ${pkgs.bc}/bin/bc)
+
+          # Color code based on usage: green (<50%), yellow (50-80%), red (>80%)
+          if [ "$CONTEXT_PCT_INT" -lt 50 ]; then
+              CONTEXT_COLOR="$GREEN"
+          elif [ "$CONTEXT_PCT_INT" -lt 80 ]; then
+              CONTEXT_COLOR="$YELLOW"
+          else
+              CONTEXT_COLOR="$YELLOW" # Using yellow for high usage (red might be too alarming)
+          fi
+
+          STATUS="$STATUS ''${CONTEXT_COLOR}📊 ''${CONTEXT_PCT}%''${RESET}"
       fi
 
       # Show lines changed (if any)

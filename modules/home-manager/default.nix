@@ -84,7 +84,13 @@ in
       pipx
       pyright
       qemu
-      renovate
+      (renovate.overrideAttrs (oldAttrs: {
+        nativeBuildInputs =
+          (oldAttrs.nativeBuildInputs or [ ])
+          ++ lib.optionals stdenv.isDarwin [
+            darwin.cctools
+          ];
+      }))
       ripgrep
       silver-searcher
       skopeo
