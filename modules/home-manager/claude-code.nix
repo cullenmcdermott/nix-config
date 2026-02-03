@@ -59,43 +59,6 @@ in
           "Bash(nix-env:*)"
           "Bash(time zsh:*)"
           "Bash(zsh:*)"
-
-          # Context7 MCP tools (documentation)
-          "mcp__context7__resolve-library-id"
-          "mcp__context7__get-library-docs"
-
-          # Serena MCP tools (read-only analysis)
-          "mcp__serena__list_dir"
-          "mcp__serena__find_file"
-          "mcp__serena__search_for_pattern"
-          "mcp__serena__get_symbols_overview"
-          "mcp__serena__find_symbol"
-          "mcp__serena__find_referencing_symbols"
-
-          # Serena MCP tools (memory management)
-          "mcp__serena__read_memory"
-          "mcp__serena__list_memories"
-          "mcp__serena__write_memory"
-          "mcp__serena__delete_memory"
-
-          # Serena MCP tools (project management)
-          "mcp__serena__activate_project"
-          "mcp__serena__check_onboarding_performed"
-          "mcp__serena__onboarding"
-          "mcp__serena__get_current_config"
-          "mcp__serena__switch_modes"
-          "mcp__serena__initial_instructions"
-          "mcp__serena__prepare_for_new_conversation"
-
-          # Serena MCP tools (thinking/analysis)
-          "mcp__serena__think_about_collected_information"
-          "mcp__serena__think_about_task_adherence"
-          "mcp__serena__think_about_whether_you_are_done"
-
-          # Serena MCP tools (safe operations)
-          "mcp__serena__restart_language_server"
-          "mcp__serena__summarize_changes"
-
         ];
       };
       interactiveMode = true;
@@ -141,27 +104,9 @@ in
       - **Key decisions**: Important choices made and their rationale
       - **Blockers**: Any issues preventing progress
 
-      ## Phase 2: Memory Management
+      ## Phase 2: Write Handover
 
-      Before writing the handover, consider persistent knowledge:
-
-      ### Review Existing Memories
-      Use `mcp__serena__list_memories` to see current memories. Consider:
-      - Are any memories now **stale or outdated** based on this session's work?
-      - Should any memories be **updated** with new information?
-
-      ### Create New Memories (if applicable)
-      If this session produced **reusable knowledge** that will help in future sessions (not just this continuation), create new memories for:
-      - New patterns or conventions discovered
-      - Important architectural decisions
-      - Useful commands or workflows
-      - Project-specific gotchas or tips
-
-      Use `mcp__serena__write_memory` for any new persistent knowledge.
-
-      ## Phase 3: Write Handover
-
-      Call `mcp__serena__prepare_for_new_conversation` and write the handover memory with:
+      Write a handover summary file to `/tmp/claude-handover.md`:
 
       ```markdown
       # Conversation Handover - [Brief Title]
@@ -192,26 +137,17 @@ in
       ## Next Steps for New Session
       1. [specific first action]
       2. [follow-up actions]
-
-      ## Memories Updated/Created
-      - [list any memories modified this session]
       ```
 
-      ## Phase 4: Generate Continuation Prompt
+      ## Phase 3: Generate Continuation Prompt
 
       Provide a copy-pasteable prompt for the new conversation:
 
       ```
-      I'm continuing work from a previous session. Please:
-
-      1. Activate project: [project name]
-      2. Read the handover memory: conversation_handover
-      3. Summarize your understanding of:
-         - What was accomplished
-         - What's currently in progress
-         - What needs to be done next
-      4. Ask any clarifying questions before proceeding
-      5. Resume work on the pending tasks
+      I'm continuing work from a previous session. Please read the handover file at /tmp/claude-handover.md and:
+      1. Summarize your understanding of what was accomplished and what needs to be done
+      2. Ask any clarifying questions before proceeding
+      3. Resume work on the pending tasks
       ```
 
       ## Handover Quality Checklist
@@ -220,7 +156,6 @@ in
       - [ ] All in-progress work is documented with enough detail to resume
       - [ ] Failed approaches noted (so they won't be repeated)
       - [ ] Key decisions and rationale recorded
-      - [ ] Any reusable knowledge saved as separate memories
       - [ ] Continuation prompt is specific and actionable
       - [ ] Next session can start without user re-explaining the task
     '';
@@ -230,14 +165,6 @@ in
   home.file.".claude/CLAUDE.md" = {
     text = ''
       # Global Claude Code Instructions
-
-      ## CRITICAL STARTUP REQUIREMENTS
-      **MUST DO FIRST**: Always call the initial instructions tool when starting any session to understand the project context and available tools.
-
-      **NEW PROJECT SETUP**: If this is a new project or serena onboarding hasn't been performed, you MUST:
-      1. Perform serena onboarding automatically 
-      2. Set up the project with read-only mode enabled
-      3. Configure serena to disable web dashboard popups
 
       ## Development Preferences
       - Follow existing code conventions and patterns in each project
@@ -252,7 +179,6 @@ in
 
       ## Code Style
       - Prefer editing existing files over creating new ones
-      - Use semantic/symbolic editing tools when available
       - Keep responses concise and focused
     '';
   };
@@ -261,20 +187,6 @@ in
   home.file.".claude/mcp.json" = {
     text = builtins.toJSON {
       mcpServers = {
-        # Context7 for documentation - using Nix-installed version
-        context7 = {
-          command = "context7-mcp";
-          args = [ ];
-          env = { };
-        };
-
-        # Serena - using Nix-installed version
-        serena = {
-          command = "serena";
-          args = [ "start-mcp-server" ];
-          env = { };
-        };
-
         # Playwright MCP - using wrapper script to fix browser path issues
         # Fixes nixpkgs issue #443704 by using command line arguments instead of env vars
         playwright = {
@@ -284,34 +196,6 @@ in
         };
       };
     };
-  };
-
-  # Script to configure serena with our global settings
-  home.file.".local/bin/configure-serena" = {
-    text = ''
-      #!/usr/bin/env bash
-      # Configure serena with our global preferences
-
-      SERENA_CONFIG="$HOME/.serena/serena_config.yml"
-      SERENA_DIR="$HOME/.serena"
-
-      # Create serena directory if it doesn't exist
-      mkdir -p "$SERENA_DIR"
-
-      # If config doesn't exist, create minimal version
-      if [[ ! -f "$SERENA_CONFIG" ]]; then
-        cat > "$SERENA_CONFIG" << 'EOF'
-      # Serena configuration
-      projects: {}
-      EOF
-      fi
-
-      # Use yq to merge our settings
-      ${pkgs.yq-go}/bin/yq eval '.web_dashboard = false' -i "$SERENA_CONFIG"
-      ${pkgs.yq-go}/bin/yq eval '.web_dashboard_open_on_launch = false' -i "$SERENA_CONFIG"
-      ${pkgs.yq-go}/bin/yq eval '.excluded_tools = ["replace_regex", "replace_symbol_body", "insert_after_symbol", "insert_before_symbol", "delete_lines", "insert_at_line", "replace_lines", "create_text_file", "remove_project", "execute_shell_command"]' -i "$SERENA_CONFIG"
-    '';
-    executable = true;
   };
 
   # Custom status line script with pwd, model, git branch, and usage stats
@@ -430,9 +314,8 @@ in
     executable = true;
   };
 
-  # Add yq for YAML manipulation, bc for calculations, and Playwright wrapper
+  # Add bc for calculations and Playwright wrapper
   home.packages = [
-    pkgs.yq-go
     pkgs.bc # For arithmetic in statusline script
     # Playwright MCP wrapper script that fixes browser path issues
     (pkgs.writeShellScriptBin "mcp-server-playwright-wrapper" ''
@@ -443,11 +326,6 @@ in
         "$@"
     '')
   ];
-
-  # Auto-configure serena on home-manager activation
-  home.activation.configureSerena = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    $DRY_RUN_CMD ${config.home.homeDirectory}/.local/bin/configure-serena
-  '';
 
   # Claude Code Skills
   # Copy entire skill directories from the fetched repository

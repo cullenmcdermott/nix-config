@@ -28,26 +28,6 @@
 
     mac-app-util.url = "github:hraban/mac-app-util";
 
-    pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
-    pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";
-
-    uv2nix.url = "github:pyproject-nix/uv2nix";
-    uv2nix.inputs.pyproject-nix.follows = "pyproject-nix";
-    uv2nix.inputs.nixpkgs.follows = "nixpkgs";
-
-    pyproject-build-systems.url = "github:pyproject-nix/build-system-pkgs";
-    pyproject-build-systems.inputs.pyproject-nix.follows = "pyproject-nix";
-    pyproject-build-systems.inputs.uv2nix.follows = "uv2nix";
-    pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
-
-    # Pinned to f35c002 (2025-11-24) due to TypeScript build errors in newer commits
-    # TODO: Try updating once upstream fixes path alias resolution (@http, @commands, etc.)
-    context7-mcp.url = "github:upstash/context7-mcp/f35c002beeada90ed6fdddf19c0345f9f41cccdb";
-    context7-mcp.flake = false;
-
-    serena-mcp.url = "github:oraios/serena";
-    serena-mcp.flake = false;
-
     flox-agentic.url = "github:flox/flox-agentic";
     flox-agentic.flake = false;
 
@@ -64,20 +44,10 @@
       dagger,
       nix-homebrew,
       mac-app-util,
-      pyproject-nix,
-      uv2nix,
-      pyproject-build-systems,
-      context7-mcp,
-      serena-mcp,
       flox-agentic,
       ...
     }:
     let
-      supportedSystems = [
-        "aarch64-darwin"
-        "x86_64-linux"
-      ];
-      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       mkDarwinConfig =
         {
           system,
@@ -190,24 +160,5 @@
         };
       };
 
-      # MCP packages built from embedded sources
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
-        in
-        import ./lib/mcp-packages.nix {
-          inherit
-            inputs
-            pkgs
-            pyproject-nix
-            uv2nix
-            pyproject-build-systems
-            ;
-        }
-      );
     };
 }

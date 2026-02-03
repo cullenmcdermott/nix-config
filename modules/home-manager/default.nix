@@ -23,13 +23,6 @@ let
     else
       "/home/${username}"; # Linux - for future NixOS support
 
-  # Import MCP server packages and other custom packages from flake
-  mcpServers = import ./mcp-servers.nix { inherit pkgs inputs lib; };
-  customPackages = import ../../lib/mcp-packages.nix {
-    inherit inputs pkgs;
-    inherit (inputs) pyproject-nix uv2nix pyproject-build-systems;
-  };
-
 in
 {
   # specify home-manager configs
@@ -106,8 +99,6 @@ in
       vscode
       wget
       # MCP Servers - installed via Nix for reproducibility
-      mcpServers.context7-mcp
-      mcpServers.serena
       playwright-mcp # From nixpkgs
       playwright-driver # Playwright browser driver
     ]
