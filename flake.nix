@@ -53,6 +53,7 @@
           system,
           username,
           hostname,
+          claudeCodeOverrides ? {},
           extraModules ? [ ],
           extraHomeManagerModules ? [ ],
         }:
@@ -70,7 +71,7 @@
               useUserPackages = true;
               backupFileExtension = "back";
               extraSpecialArgs = {
-                inherit inputs username;
+                inherit inputs username claudeCodeOverrides;
               };
               users.${username}.imports = [
                 ./modules/home-manager
@@ -113,6 +114,7 @@
           username,
           homeDirectory,
           flakeRef,
+          claudeCodeOverrides ? {},
           extraModules ? [ ],
           extraPackages ? [ ],
         }:
@@ -122,7 +124,7 @@
             config.allowUnfree = true;
           };
           extraSpecialArgs = {
-            inherit inputs username flakeRef;
+            inherit inputs username flakeRef claudeCodeOverrides;
           };
           modules = [
             ./modules/home-manager

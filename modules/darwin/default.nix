@@ -10,6 +10,10 @@ in
 {
   # Allow unsupported packages temporarily
   nixpkgs.config.allowUnsupportedSystem = true;
+  # Chrome updater is broken in nixpkgs - allow until fixed
+  nixpkgs.config.permittedInsecurePackages = [
+    "google-chrome-144.0.7559.97"
+  ];
 
   system.primaryUser = username;
 

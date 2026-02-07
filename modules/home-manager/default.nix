@@ -43,7 +43,6 @@ in
       cargo
       chart-testing
       google-chrome
-      claude-code
       copilot-language-server
       curl
       deadnix
