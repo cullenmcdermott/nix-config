@@ -73,7 +73,7 @@ in
       # Custom status line configuration
       statusLine = {
         type = "command";
-        command = "${config.home.homeDirectory}/.claude/statusline.sh";
+        command = "${config.home.homeDirectory}/.claude/statusline-command.sh";
       };
     };
   };
@@ -164,22 +164,22 @@ in
   # Global CLAUDE.md for user-wide preferences
   home.file.".claude/CLAUDE.md" = {
     text = ''
-      # Global Claude Code Instructions
+      ## Sandbox Awareness
+      - If a command fails with unexpected "permission denied", TLS errors, or connection refused, it is likely a sandbox restriction. Retry the command outside the sandbox before investigating other causes.
 
-      ## Development Preferences
-      - Follow existing code conventions and patterns in each project
-      - Use the project's existing libraries and frameworks
-      - Write concise, readable code with minimal comments unless requested
-      - Always run linting and type checking after changes
+      ## Verify Before Claiming
+      - Always verify state with actual commands before making claims. Do not assert that code isn't pushed, tags don't exist, or services aren't running without checking first.
+      - When debugging, form hypotheses and test them with commands — do not state assumptions as fact.
 
-      ## Security
-      - Never commit secrets or API keys
-      - Follow security best practices
-      - Use environment variables for sensitive configuration
+      ## Destructive Changes
+      - Before removing, deleting, or cleaning up resources, confirm the replacement is fully working first. Never prematurely remove old infrastructure during migrations.
+      - For multi-step migrations: deploy new -> migrate data -> verify -> clean up old, with confirmation at each gate.
 
-      ## Code Style
-      - Prefer editing existing files over creating new ones
-      - Keep responses concise and focused
+      ## Safety
+      - When using `op` or another CLI command that will output sensitive information, never directly read the secrets — redact before printing to stdout.
+
+      ## Preferences
+      - Prefer Mermaid diagrams over ASCII diagrams.
     '';
   };
 
@@ -310,6 +310,244 @@ in
 
       # Output the status line (echo -e interprets escape sequences)
       echo -e "$STATUS"
+    '';
+    executable = true;
+  };
+
+  # Rich 3-line status line script with API usage tracking
+  home.file.".claude/statusline-command.sh" = {
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      # Rich 3-line statusline for Claude Code on macOS
+      # Ported from PowerShell version
+
+      # Error handling - always output something
+      trap 'echo "Claude"' ERR
+
+      # Color definitions (matching PowerShell version)
+      BLUE='\033[38;2;0;153;255m'
+      ORANGE='\033[38;2;255;176;85m'
+      GREEN='\033[38;2;0;160;0m'
+      CYAN='\033[38;2;46;149;153m'
+      RED='\033[38;2;255;85;85m'
+      YELLOW='\033[38;2;230;200;0m'
+      DIM='\033[2m'
+      RESET='\033[0m'
+
+      # Read JSON from stdin
+      input=$(cat)
+
+      # Extract model and context info
+      model=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.model.display_name // "Unknown"')
+      context_size=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.context_window_size // 0')
+      used_pct=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.used_percentage // 0')
+
+      # Calculate current token usage
+      input_tokens=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.current_usage.input_tokens // 0')
+      output_tokens=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.current_usage.output_tokens // 0')
+      cache_creation=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
+      cache_read=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
+
+      current_tokens=$((input_tokens + output_tokens + cache_creation + cache_read))
+
+      # Format token counts with k/m suffixes
+      format_tokens() {
+          local tokens=$1
+          # Convert to integer if it has decimals
+          tokens=''${tokens%.*}
+
+          if [ $tokens -ge 1000000 ]; then
+              local result=$(echo "scale=1; $tokens / 1000000" | ${pkgs.bc}/bin/bc)
+              printf "%.1fm" $result
+          elif [ $tokens -ge 1000 ]; then
+              local result=$(echo "scale=0; $tokens / 1000" | ${pkgs.bc}/bin/bc)
+              printf "%.0fk" $result
+          else
+              printf "%d" $tokens
+          fi
+      }
+
+      current_display=$(format_tokens $current_tokens)
+      total_display=$(format_tokens $context_size)
+
+      # Build context usage bar
+      build_context_bar() {
+          local percent=$1
+          local width=10
+
+          # Convert to integer
+          local pct_int=''${percent%.*}
+
+          # Calculate filled and empty dots
+          local filled=$(echo "scale=0; $pct_int * $width / 100" | ${pkgs.bc}/bin/bc)
+          local empty=$((width - filled))
+
+          # Choose color based on percentage (Green: 0-39, Yellow: 40-74, Red: 75+)
+          local bar_color="''${GREEN}"
+          if [ $(echo "$pct_int >= 75" | ${pkgs.bc}/bin/bc) -eq 1 ]; then
+              bar_color="''${RED}"
+          elif [ $(echo "$pct_int >= 40" | ${pkgs.bc}/bin/bc) -eq 1 ]; then
+              bar_color="''${YELLOW}"
+          fi
+
+          # Build bar string
+          local bar=""
+          for ((i=0; i<filled; i++)); do bar="''${bar}●"; done
+          for ((i=0; i<empty; i++)); do bar="''${bar}○"; done
+
+          # Return colored "22% ●●○○○○○○○○" format
+          printf "''${bar_color}%.0f%% %s''${RESET}" "$percent" "$bar"
+      }
+
+      context_bar=$(build_context_bar $used_pct)
+
+      # Check thinking mode from settings
+      thinking_status="''${DIM}Off''${RESET}"
+      if [ -f "$HOME/.claude/settings.json" ]; then
+          thinking_enabled=$(cat "$HOME/.claude/settings.json" | ${pkgs.jq}/bin/jq -r '.alwaysThinkingEnabled // false')
+          if [ "$thinking_enabled" = "true" ]; then
+              thinking_status="''${ORANGE}On''${RESET}"
+          fi
+      fi
+
+      # Line 1: Model | Tokens | Context Bar | Thinking
+      printf "''${BLUE}%s''${RESET} ''${DIM}|''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}/''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}|''${RESET} %b ''${DIM}|''${RESET} thinking: %b\n" \
+          "$model" "$current_display" "$total_display" "$context_bar" "$thinking_status"
+
+      # Cache configuration
+      CACHE_FILE="/tmp/claude-statusline-usage-cache.json"
+      CACHE_TTL=60
+
+      # Function to check if cache is valid
+      is_cache_valid() {
+          if [ ! -f "$CACHE_FILE" ]; then
+              return 1
+          fi
+
+          local now=$(date +%s)
+          local cache_mtime=$(date -r "$CACHE_FILE" +%s 2>/dev/null || echo 0)
+          local age=$((now - cache_mtime))
+
+          [ $age -lt $CACHE_TTL ]
+      }
+
+      # Function to fetch usage data
+      fetch_usage_data() {
+          # Try to get OAuth token from Keychain
+          local credentials=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
+          if [ $? -ne 0 ] || [ -z "$credentials" ]; then
+              return 1
+          fi
+
+          # Parse access token from credentials JSON
+          local access_token=$(echo "$credentials" | ${pkgs.jq}/bin/jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
+          if [ -z "$access_token" ]; then
+              return 1
+          fi
+
+          # Fetch usage data from API
+          local response=$(${pkgs.curl}/bin/curl -s -H "Authorization: Bearer $access_token" \
+                                -H "anthropic-beta: oauth-2025-04-20" \
+                                "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
+
+          if [ $? -eq 0 ] && [ -n "$response" ]; then
+              # Validate response is actual usage data, not an error
+              local has_data=$(echo "$response" | ${pkgs.jq}/bin/jq -r '.five_hour // empty' 2>/dev/null)
+              if [ -n "$has_data" ]; then
+                  echo "$response" > "$CACHE_FILE"
+                  return 0
+              else
+                  # Error response — remove stale cache so we retry next time
+                  rm -f "$CACHE_FILE"
+                  return 1
+              fi
+          fi
+
+          return 1
+      }
+
+      # Function to build progress bar
+      build_bar() {
+          local percent=$1
+          local width=10
+          local filled=$(echo "scale=0; $percent * $width / 100" | ${pkgs.bc}/bin/bc)
+          local empty=$((width - filled))
+
+          # Choose color based on percentage
+          local bar_color="''${GREEN}"
+          if [ $(echo "$percent >= 90" | ${pkgs.bc}/bin/bc) -eq 1 ]; then
+              bar_color="''${RED}"
+          elif [ $(echo "$percent >= 70" | ${pkgs.bc}/bin/bc) -eq 1 ]; then
+              bar_color="''${YELLOW}"
+          elif [ $(echo "$percent >= 50" | ${pkgs.bc}/bin/bc) -eq 1 ]; then
+              bar_color="''${ORANGE}"
+          fi
+
+          # Build bar string
+          local bar=""
+          for ((i=0; i<filled; i++)); do bar="''${bar}●"; done
+          for ((i=0; i<empty; i++)); do bar="''${bar}○"; done
+
+          printf "''${bar_color}%s''${RESET}" "$bar"
+      }
+
+      # Function to format reset time
+      format_reset_time() {
+          local iso_time=$1
+          if [ -z "$iso_time" ] || [ "$iso_time" = "null" ] || [ "$iso_time" = "N/A" ]; then
+              echo "N/A"
+              return
+          fi
+
+          # GNU date can parse ISO 8601 with timezone directly
+          # Input format: 2026-02-15T19:00:00.882117+00:00
+          local formatted=$(date -d "$iso_time" "+%b %d %I:%M %p" 2>/dev/null)
+          if [ $? -eq 0 ]; then
+              echo "$formatted"
+          else
+              echo "N/A"
+          fi
+      }
+
+      # Get or fetch usage data
+      usage_data=""
+      if is_cache_valid; then
+          usage_data=$(cat "$CACHE_FILE")
+      else
+          if fetch_usage_data; then
+              usage_data=$(cat "$CACHE_FILE")
+          fi
+      fi
+
+      # If we have usage data, display lines 2 and 3
+      if [ -n "$usage_data" ]; then
+          # Verify this is valid usage data (not a cached error)
+          has_valid_data=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.five_hour // empty' 2>/dev/null)
+          if [ -n "$has_valid_data" ]; then
+              # Extract five_hour and seven_day data directly
+              current_pct=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.five_hour.utilization // 0' 2>/dev/null)
+              current_reset=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.five_hour.resets_at // "N/A"' 2>/dev/null)
+
+              weekly_pct=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.seven_day.utilization // 0' 2>/dev/null)
+              weekly_reset=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.seven_day.resets_at // "N/A"' 2>/dev/null)
+
+              # Build bars
+              current_bar=$(build_bar $current_pct)
+              weekly_bar=$(build_bar $weekly_pct)
+
+              # Format reset times
+              current_reset_fmt=$(format_reset_time "$current_reset")
+              weekly_reset_fmt=$(format_reset_time "$weekly_reset")
+
+              # Line 2: Usage bars
+              printf "''${DIM}Current (5h):''${RESET} %s ''${CYAN}%.0f%%''${RESET} ''${DIM}|''${RESET} ''${DIM}Weekly (7d):''${RESET} %s ''${CYAN}%.0f%%''${RESET}\n" \
+                  "$current_bar" "$current_pct" "$weekly_bar" "$weekly_pct"
+
+              # Line 3: Reset times
+              printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET} ''${DIM}|''${RESET} ''${DIM}Weekly:''${RESET} ''${CYAN}%s''${RESET}\n" \
+                  "$current_reset_fmt" "$weekly_reset_fmt"
+          fi
+      fi
     '';
     executable = true;
   };
