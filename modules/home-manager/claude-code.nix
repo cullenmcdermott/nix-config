@@ -180,6 +180,7 @@ in
 
       ## Preferences
       - Prefer Mermaid diagrams over ASCII diagrams.
+      - When performing complex logic, write a script (preferably in python or go) and run it rather than trying to run/wrap all commands in a single bash -c or equivalent call
     '';
   };
 
@@ -337,10 +338,12 @@ in
       # Read JSON from stdin
       input=$(cat)
 
-      # Extract model and context info
+      # Extract model, context, and workspace info
       model=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.model.display_name // "Unknown"')
       context_size=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.context_window_size // 0')
       used_pct=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.used_percentage // 0')
+      current_dir=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.cwd // .workspace.current_dir // "~"')
+      dir_name=''${current_dir##*/}
 
       # Calculate current token usage
       input_tokens=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.context_window.current_usage.input_tokens // 0')
@@ -401,18 +404,18 @@ in
 
       context_bar=$(build_context_bar $used_pct)
 
-      # Check thinking mode from settings
-      thinking_status="''${DIM}Off''${RESET}"
-      if [ -f "$HOME/.claude/settings.json" ]; then
-          thinking_enabled=$(cat "$HOME/.claude/settings.json" | ${pkgs.jq}/bin/jq -r '.alwaysThinkingEnabled // false')
-          if [ "$thinking_enabled" = "true" ]; then
-              thinking_status="''${ORANGE}On''${RESET}"
+      # Get git branch if in a repo
+      git_info=""
+      if ${pkgs.git}/bin/git -C "$current_dir" rev-parse --git-dir > /dev/null 2>&1; then
+          branch=$(${pkgs.git}/bin/git -C "$current_dir" branch --show-current 2>/dev/null)
+          if [ -n "$branch" ]; then
+              git_info=" ''${GREEN}($branch)''${RESET}"
           fi
       fi
 
-      # Line 1: Model | Tokens | Context Bar | Thinking
-      printf "''${BLUE}%s''${RESET} ''${DIM}|''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}/''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}|''${RESET} %b ''${DIM}|''${RESET} thinking: %b\n" \
-          "$model" "$current_display" "$total_display" "$context_bar" "$thinking_status"
+      # Line 1: Model | dir (branch) | Tokens | Context Bar
+      printf "''${BLUE}%s''${RESET} ''${DIM}|''${RESET} ''${CYAN}%s''${RESET}%b ''${DIM}|''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}/''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}|''${RESET} %b\n" \
+          "$model" "$dir_name" "$git_info" "$current_display" "$total_display" "$context_bar"
 
       # Cache configuration
       CACHE_FILE="/tmp/claude-statusline-usage-cache.json"
