@@ -404,6 +404,16 @@ in
 
       context_bar=$(build_context_bar $used_pct)
 
+      # Extract session cost
+      session_cost=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.cost.total_cost_usd // 0')
+
+      # Format cost display (only show if > 0)
+      cost_display=""
+      if [ "$session_cost" != "0" ] && [ "$session_cost" != "null" ] && [ "$session_cost" != "0.0" ]; then
+          cost_fmt=$(printf "%.4f" "$session_cost" 2>/dev/null || echo "0.0000")
+          cost_display=" ''${DIM}|''${RESET} ''${YELLOW}\$''${RESET}''${YELLOW}''${cost_fmt}''${RESET}"
+      fi
+
       # Get git branch if in a repo
       git_info=""
       if ${pkgs.git}/bin/git -C "$current_dir" rev-parse --git-dir > /dev/null 2>&1; then
@@ -413,9 +423,9 @@ in
           fi
       fi
 
-      # Line 1: Model | dir (branch) | Tokens | Context Bar
-      printf "''${BLUE}%s''${RESET} ''${DIM}|''${RESET} ''${CYAN}%s''${RESET}%b ''${DIM}|''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}/''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}|''${RESET} %b\n" \
-          "$model" "$dir_name" "$git_info" "$current_display" "$total_display" "$context_bar"
+      # Line 1: Model | dir (branch) | Tokens | Context Bar | $cost
+      printf "''${BLUE}%s''${RESET} ''${DIM}|''${RESET} ''${CYAN}%s''${RESET}%b ''${DIM}|''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}/''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}|''${RESET} %b%b\n" \
+          "$model" "$dir_name" "$git_info" "$current_display" "$total_display" "$context_bar" "$cost_display"
 
       # Cache configuration
       CACHE_FILE="/tmp/claude-statusline-usage-cache.json"
@@ -577,6 +587,11 @@ in
 
   home.file.".claude/skills/skill-creator" = {
     source = "${claudeSkills}/skill-creator";
+    recursive = true;
+  };
+
+  home.file.".claude/skills/frontend-design" = {
+    source = "${claudeSkills}/skills/frontend-design";
     recursive = true;
   };
 
