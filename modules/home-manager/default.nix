@@ -46,7 +46,6 @@ in
       copilot-language-server
       curl
       deadnix
-      devpod
       docker
       docker-compose
       fd

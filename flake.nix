@@ -19,7 +19,7 @@
     darwin.url = "github:nix-darwin/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    flox.url = "github:flox/flox/v1.8.0";
+    flox.url = "github:flox/flox/v1.9.1";
 
     dagger.url = "github:dagger/nix";
     dagger.inputs.nixpkgs.follows = "nixpkgs";
@@ -53,7 +53,7 @@
           system,
           username,
           hostname,
-          claudeCodeOverrides ? {},
+          claudeCodeOverrides ? { },
           extraModules ? [ ],
           extraHomeManagerModules ? [ ],
         }:
@@ -114,7 +114,7 @@
           username,
           homeDirectory,
           flakeRef,
-          claudeCodeOverrides ? {},
+          claudeCodeOverrides ? { },
           extraModules ? [ ],
           extraPackages ? [ ],
         }:
@@ -124,7 +124,12 @@
             config.allowUnfree = true;
           };
           extraSpecialArgs = {
-            inherit inputs username flakeRef claudeCodeOverrides;
+            inherit
+              inputs
+              username
+              flakeRef
+              claudeCodeOverrides
+              ;
           };
           modules = [
             ./modules/home-manager
