@@ -83,9 +83,18 @@ in
             darwin.cctools
           ];
       }))
+      ast-grep
+      delta
+      difftastic
+      hyperfine
       ripgrep
+      sd
+      scc
+      shellcheck
       silver-searcher
       skopeo
+      watchexec
+      yq-go
       statix
       talosctl
       tailscale
