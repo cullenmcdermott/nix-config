@@ -52,6 +52,25 @@ in
   system.defaults.NSGlobalDomain.AppleShowAllExtensions = true;
   system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
   system.defaults.NSGlobalDomain.KeyRepeat = 2;
+  # Nix garbage collection — runs multiple times per week so a missed window
+  # (laptop asleep) doesn't mean waiting a full week.
+  nix.gc = {
+    automatic = true;
+    options = "--delete-older-than 30d";
+  };
+  # Override the single launchd interval with multiple start times:
+  # Mon/Wed/Fri/Sun at 10:00 and 12:00 to maximise chance of catching the laptop awake.
+  launchd.daemons.nix-gc.serviceConfig.StartCalendarInterval = [
+    { Weekday = 1; Hour = 10; Minute = 0; }
+    { Weekday = 1; Hour = 12; Minute = 0; }
+    { Weekday = 3; Hour = 10; Minute = 0; }
+    { Weekday = 3; Hour = 12; Minute = 0; }
+    { Weekday = 5; Hour = 10; Minute = 0; }
+    { Weekday = 5; Hour = 12; Minute = 0; }
+    { Weekday = 0; Hour = 10; Minute = 0; }
+    { Weekday = 0; Hour = 12; Minute = 0; }
+  ];
+
   system.stateVersion = 6;
   homebrew = {
     enable = true;

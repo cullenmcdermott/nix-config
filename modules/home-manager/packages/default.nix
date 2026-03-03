@@ -11,5 +11,6 @@ in
     ccusage
     agent-os
     claude-code
+    pkgs.cursor-cli # Cursor CLI (cursor-agent binary) for multi-LLM orchestration
   ];
 }
