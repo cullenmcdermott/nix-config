@@ -331,7 +331,7 @@ let
           {
             type = "basic";
             from = {
-              pointing_button = "button1";  # Xbox A button
+              pointing_button = "button1"; # Xbox A button
             };
             to = [
               {
@@ -356,7 +356,7 @@ let
           {
             type = "basic";
             from = {
-              pointing_button = "button5";  # Xbox Y button
+              pointing_button = "button8"; # Xbox Y button
             };
             to = [
               {
@@ -380,7 +380,7 @@ let
           {
             type = "basic";
             from = {
-              pointing_button = "button4";  # Xbox X button
+              pointing_button = "button7"; # Xbox left shoulder
             };
             to = [
               {
@@ -404,7 +404,7 @@ let
           {
             type = "basic";
             from = {
-              pointing_button = "button2";  # Xbox B button
+              pointing_button = "button2"; # Xbox B button
             };
             to = [
               {
@@ -609,7 +609,10 @@ in
     enable = lib.mkEnableOption "Zwift Ride media controls for browser playback";
 
     mode = lib.mkOption {
-      type = lib.types.enum [ "youtube" "universal" ];
+      type = lib.types.enum [
+        "youtube"
+        "universal"
+      ];
       default = "universal";
       description = ''
         Default playback mode.
@@ -620,7 +623,7 @@ in
 
     enableZwiftCondition = lib.mkOption {
       type = lib.types.bool;
-      default = true;  # Only trigger when Zwift is frontmost
+      default = true; # Only trigger when Zwift is frontmost
       description = ''
         If true, media controls only work when Zwift is the frontmost application.
         If false, controls work globally.

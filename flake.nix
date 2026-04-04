@@ -152,6 +152,14 @@
           hostname = "cullens-MacBook-Pro";
           extraModules = [ ./systems/personal/default.nix ];
         };
+
+        # Example: Work laptop with Claude Code overrides
+        # "work-macbook" = mkDarwinConfig {
+        #   username = "cullen";
+        #   system = "aarch64-darwin";
+        #   hostname = "work-macbook";
+        #   extraHomeManagerModules = [ ./systems/work/claude-code.nix ];
+        # };
       };
 
       lib = {

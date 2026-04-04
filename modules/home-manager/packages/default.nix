@@ -1,16 +1,15 @@
-{ pkgs, lib, inputs, claudeCodeOverrides ? {}, ... }:
+{ pkgs, claudeCodeOverrides ? {}, ... }:
 
 let
   ccusage = pkgs.callPackage ./ccusage.nix { };
-  agent-os = pkgs.callPackage ./agent-os.nix { };
-  claude-code = pkgs.callPackage ./claude-code.nix claudeCodeOverrides;
+  depot-cli = pkgs.callPackage ./depot-cli.nix { };
 in
 {
   # Custom packages available to home-manager
+  # Note: claude-code binary is installed by programs.claude-code module
   home.packages = [
     ccusage
-    agent-os
-    claude-code
+    depot-cli
     pkgs.cursor-cli # Cursor CLI (cursor-agent binary) for multi-LLM orchestration
   ];
 }

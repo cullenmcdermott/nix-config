@@ -7,8 +7,6 @@
   ...
 }:
 let
-  # pkgs is already unstable now
-
   gdk = pkgs.google-cloud-sdk.withExtraComponents (
     with pkgs.google-cloud-sdk.components;
     [
@@ -22,6 +20,18 @@ let
       "/Users/${username}" # macOS - same as before
     else
       "/home/${username}"; # Linux - for future NixOS support
+
+  # Fetch the entire Claude Code skills repository
+  claudeSkills = pkgs.fetchFromGitHub {
+    owner = "anthropics";
+    repo = "skills";
+    rev = "f232228244495c018b3c1857436cf491ebb79bbb";
+    hash = "sha256-/u7NC9opHNXh9kQMWYzeLyurdQPPHULiCTUbvTZsXeU=";
+  };
+
+  # Flox agentic skills from flake input
+  floxAgentic = inputs.flox-agentic;
+
 
 in
 {
@@ -100,6 +110,7 @@ in
       terraform
       terraform-ls
       tflint
+      typescript-language-server
       unzip
       uv
       unixtools.watch
@@ -200,7 +211,7 @@ in
     gst = "git status";
     gcl = "git clone";
     grv = "git remote -v";
-    clod = "claude --mcp-config ~/.claude/mcp.json";
+    # NOTE: claude and clod aliases are now managed by programs.claude-code module
   };
 
   programs.zsh.plugins = [ ];
@@ -211,4 +222,190 @@ in
 
   # Zwift Ride media controls - set to false to disable
   programs.zwift-media.enable = pkgs.stdenv.isDarwin;
+
+  # --- Claude Code Configuration (upstream home-manager module) ---
+  programs.claude-code = {
+    enable = true;
+
+    # Settings (flat JSON merged into ~/.claude/settings.json)
+    settings = {
+      permissions = {
+        allow = [
+          "Read"
+          "Glob"
+          "Grep"
+          "LS"
+          "WebFetch"
+          "WebSearch"
+          # Read-only bash commands
+          "Bash(ls:*)"
+          "Bash(find:*)"
+          "Bash(grep:*)"
+          "Bash(rg:*)"
+          "Bash(cat:*)"
+          "Bash(head:*)"
+          "Bash(tail:*)"
+          "Bash(git status)"
+          "Bash(git log:*)"
+          "Bash(git diff:*)"
+          "Bash(git show:*)"
+          "Bash(mkdir:*)"
+          "Bash(chmod:*)"
+          # Additional useful bash commands
+          "Bash(nix search:*)"
+          "Bash(nix-env:*)"
+          "Bash(time zsh:*)"
+          "Bash(zsh:*)"
+          # Modern CLI tools (read-only / analysis)
+          "Bash(sg:*)"
+          "Bash(ast-grep:*)"
+          "Bash(difft:*)"
+          "Bash(shellcheck:*)"
+          "Bash(scc:*)"
+          "Bash(yq:*)"
+          "Bash(delta:*)"
+          "Bash(hyperfine:*)"
+          # LLM orchestration CLIs
+          "Bash(cursor-agent:*)"
+          "Bash(uv run:*)"
+        ];
+      };
+      interactiveMode = true;
+      autoCompact = false;
+      sandbox = {
+        enabled = true;
+        autoAllowBashIfSandboxed = true;
+      };
+    };
+
+    # CLAUDE.md content
+    memory.text = ''
+      ## Environment
+      This is a Nix-managed system (nix-darwin + home-manager). All packages are declaratively managed.
+      - **Never install packages imperatively** — do not use `brew install`, `npm install -g`, `pip install`, `cargo install`, `go install`, or `apt-get`. If a tool is needed permanently, tell the user to add it to their Nix config.
+      - **For one-off commands**, use `nix run nixpkgs#<package>` (e.g., `nix run nixpkgs#cowsay -- hello`).
+      - **For temporary shell sessions** with a package, use `nix shell nixpkgs#<package>`.
+      - **To search for packages**, use `nix search nixpkgs <query>`.
+      - Do not assume a tool is available unless it is listed below or you have verified it exists on the system.
+      - **LSP servers are Nix-managed.** Do not install LSP plugins from the Claude Code marketplace. All language server configuration is declarative via the `programs.claude-code-nix.lsp.servers` option.
+
+      ## Sandbox Awareness
+      - If a command fails with unexpected "permission denied", TLS errors, or connection refused, it is likely a sandbox restriction. Retry the command outside the sandbox before investigating other causes.
+
+      ## Verify Before Claiming
+      - Always verify state with actual commands before making claims. Do not assert that code isn't pushed, tags don't exist, or services aren't running without checking first.
+      - When debugging, form hypotheses and test them with commands — do not state assumptions as fact.
+
+      ## Destructive Changes
+      - Before removing, deleting, or cleaning up resources, confirm the replacement is fully working first. Never prematurely remove old infrastructure during migrations.
+      - For multi-step migrations: deploy new -> migrate data -> verify -> clean up old, with confirmation at each gate.
+
+      ## Safety
+      - When using `op` or another CLI command that will output sensitive information, never directly read the secrets — redact before printing to stdout.
+
+      ## Preferences
+      - Prefer Mermaid diagrams over ASCII diagrams.
+      - When performing complex logic, write a script (preferably in python or go) and run it rather than trying to run/wrap all commands in a single bash -c or equivalent call
+
+      ## Available CLI Tools
+      Prefer these over traditional alternatives (e.g., use `sd` not `sed`, `difft` not `diff`, `rg` not `grep`, `fd` not `find`, `bat` not `cat`):
+      - `sg` (ast-grep): Structural code search/refactor using AST patterns. Prefer over regex for code-aware searches.
+      - `difft` (difftastic): Syntax-aware structural diff.
+      - `shellcheck`: Shell script linter. Run on shell scripts before executing them.
+      - `sd`: Modern `sed` replacement with standard regex syntax.
+      - `scc`: Fast code counter for project overviews.
+      - `yq`: Query and modify YAML, JSON, TOML, and XML while preserving comments.
+      - `hyperfine`: Statistical command benchmarking.
+      - `watchexec`: Run commands on file changes.
+      - `delta`: Syntax-highlighting pager for git diffs.
+      - `rg` (ripgrep), `fd`, `bat`, `jq`, `curl`, `gh` (GitHub CLI)
+    '';
+
+    # Skills (upstream: path = directory, string = inline SKILL.md content)
+    skills = {
+      # From official Anthropic skills repo
+      slack-gif-creator = "${claudeSkills}/slack-gif-creator";
+      skill-creator = "${claudeSkills}/skill-creator";
+      frontend-design = "${claudeSkills}/skills/frontend-design";
+
+      # Local custom skills
+      home-assistant = ./../../skills/home-assistant;
+      llm-orchestrator = ./../../skills/llm-orchestrator;
+      claude-code-config = ./../../skills/claude-code-config;
+
+      # Flox agentic skills
+      flox-environments = "${floxAgentic}/flox-plugin/skills/flox-environments";
+      flox-services = "${floxAgentic}/flox-plugin/skills/flox-services";
+      flox-builds = "${floxAgentic}/flox-plugin/skills/flox-builds";
+      flox-containers = "${floxAgentic}/flox-plugin/skills/flox-containers";
+      flox-publish = "${floxAgentic}/flox-plugin/skills/flox-publish";
+      flox-sharing = "${floxAgentic}/flox-plugin/skills/flox-sharing";
+      flox-cuda = "${floxAgentic}/flox-plugin/skills/flox-cuda";
+    };
+
+    # Agents and commands from repo root directories
+    agentsDir = ./../../agents;
+    commandsDir = ./../../commands;
+  };
+
+  # --- Claude Code Nix Extensions (our custom module) ---
+  programs.claude-code-nix = {
+    enable = true;
+
+    # MCP servers (written to ~/.claude/mcp.json, auto-read by Claude Code)
+    mcpServers.playwright = {
+      command = "mcp-server-playwright-wrapper";
+      args = [ ];
+      env = { };
+    };
+
+    # LSP servers with absolute Nix store paths
+    lsp.servers = {
+      go = {
+        command = "${pkgs.gopls}/bin/gopls";
+        args = [ "serve" ];
+        extensionToLanguage = { ".go" = "go"; };
+      };
+      python = {
+        command = "${pkgs.pyright}/bin/pyright-langserver";
+        args = [ "--stdio" ];
+        extensionToLanguage = { ".py" = "python"; ".pyi" = "python"; };
+      };
+      typescript = {
+        command = "${pkgs.typescript-language-server}/bin/typescript-language-server";
+        args = [ "--stdio" ];
+        extensionToLanguage = {
+          ".ts" = "typescript";
+          ".tsx" = "typescriptreact";
+          ".js" = "javascript";
+          ".jsx" = "javascriptreact";
+        };
+      };
+      terraform = {
+        command = "${pkgs.terraform-ls}/bin/terraform-ls";
+        args = [ "serve" ];
+        extensionToLanguage = { ".tf" = "terraform"; ".tfvars" = "terraform"; };
+      };
+      nix = {
+        command = "${pkgs.nixd}/bin/nixd";
+        args = [ ];
+        extensionToLanguage = { ".nix" = "nix"; };
+        initializationOptions = {
+          nixpkgs = { expr = "import <nixpkgs> {}"; };
+        };
+      };
+    };
+
+    # Extra packages
+    extraPackages = [
+      # Playwright MCP wrapper script that fixes browser path issues
+      (pkgs.writeShellScriptBin "mcp-server-playwright-wrapper" ''
+        export PWMCP_PROFILES_DIR_FOR_TEST="$HOME/.pwmcp-profiles"
+        exec ${pkgs.playwright-mcp}/bin/mcp-server-playwright \
+          --executable-path "${pkgs.google-chrome}/bin/google-chrome-stable" \
+          --browser chrome \
+          "$@"
+      '')
+    ];
+  };
 }
