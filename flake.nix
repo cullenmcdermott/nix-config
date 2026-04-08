@@ -19,7 +19,7 @@
     darwin.url = "github:nix-darwin/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    flox.url = "github:flox/flox/v1.9.1";
+    flox.url = "github:flox/flox/v1.11.1";
 
     dagger.url = "github:dagger/nix";
     dagger.inputs.nixpkgs.follows = "nixpkgs";
@@ -31,8 +31,8 @@
     flox-agentic.url = "github:flox/flox-agentic";
     flox-agentic.flake = false;
 
-    agent-os.url = "github:buildermethods/agent-os/8b12ec5b3d002988da7171b89b9f60e5dbd88abc";
-    agent-os.flake = false;
+    superpowers.url = "github:obra/superpowers/v5.0.7";
+    superpowers.flake = false;
   };
 
   outputs =

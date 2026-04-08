@@ -32,6 +32,8 @@ let
   # Flox agentic skills from flake input
   floxAgentic = inputs.flox-agentic;
 
+  # Superpowers workflow skills
+  superpowers = inputs.superpowers;
 
 in
 {
@@ -341,10 +343,36 @@ in
       flox-publish = "${floxAgentic}/flox-plugin/skills/flox-publish";
       flox-sharing = "${floxAgentic}/flox-plugin/skills/flox-sharing";
       flox-cuda = "${floxAgentic}/flox-plugin/skills/flox-cuda";
+
+      # Superpowers workflow skills (v5.0.7)
+      sp-brainstorming = "${superpowers}/skills/brainstorming";
+      sp-using-git-worktrees = "${superpowers}/skills/using-git-worktrees";
+      sp-writing-plans = "${superpowers}/skills/writing-plans";
+      sp-subagent-driven-development = "${superpowers}/skills/subagent-driven-development";
+      sp-test-driven-development = "${superpowers}/skills/test-driven-development";
+      sp-systematic-debugging = "${superpowers}/skills/systematic-debugging";
+      sp-dispatching-parallel-agents = "${superpowers}/skills/dispatching-parallel-agents";
+      sp-requesting-code-review = "${superpowers}/skills/requesting-code-review";
+      sp-receiving-code-review = "${superpowers}/skills/receiving-code-review";
+      sp-executing-plans = "${superpowers}/skills/executing-plans";
+      sp-finishing-a-development-branch = "${superpowers}/skills/finishing-a-development-branch";
+      sp-using-superpowers = "${superpowers}/skills/using-superpowers";
+      sp-writing-skills = "${superpowers}/skills/writing-skills";
+      sp-verification-before-completion = "${superpowers}/skills/verification-before-completion";
     };
 
-    # Agents and commands from repo root directories
-    agentsDir = ./../../agents;
+    # Agents: local reviewers + superpowers code-reviewer
+    agents = {
+      external-reviewer = ./../../agents/external-reviewer.md;
+      reviewer-architect = ./../../agents/reviewer-architect.md;
+      reviewer-newcomer = ./../../agents/reviewer-newcomer.md;
+      reviewer-perf = ./../../agents/reviewer-perf.md;
+      reviewer-security = ./../../agents/reviewer-security.md;
+      reviewer-stylist = ./../../agents/reviewer-stylist.md;
+      reviewer-tester = ./../../agents/reviewer-tester.md;
+      code-reviewer = "${superpowers}/agents/code-reviewer.md";
+    };
+
     commandsDir = ./../../commands;
   };
 
