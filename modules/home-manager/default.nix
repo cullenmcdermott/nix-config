@@ -379,6 +379,7 @@ in
   # --- Claude Code Nix Extensions (our custom module) ---
   programs.claude-code-nix = {
     enable = true;
+    defaultModel = "claude-opus-4-6";
 
     # MCP servers (written to ~/.claude/mcp.json, auto-read by Claude Code)
     mcpServers.playwright = {
