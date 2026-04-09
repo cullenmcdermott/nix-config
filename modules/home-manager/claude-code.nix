@@ -21,7 +21,7 @@ let
   cfg = config.programs.claude-code-nix;
 
   # Plugin directory for LSP servers
-  lspPluginDir = "${config.home.homeDirectory}/.claude/custom-plugins/lsp-servers";
+  lspPluginDir = "${config.home.homeDirectory}/.claude/custom-plugins";
 
   # Default rich 3-line statusline script
   defaultStatusLineScript = ''
@@ -295,6 +295,14 @@ in
       '';
     };
 
+    # --- Default Model ---
+
+    defaultModel = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Default model to pass via --model to claude aliases. null omits the flag.";
+    };
+
     # --- Extra Packages ---
 
     extraPackages = lib.mkOption {
@@ -341,10 +349,15 @@ in
     };
 
     # Shell aliases - inject --plugin-dir so LSP works without special invocation
-    programs.zsh.shellAliases = lib.mkIf cfg.lsp.enable {
-      claude = "command claude --plugin-dir ${lspPluginDir}";
-      clod = "command claude --plugin-dir ${lspPluginDir}";
-    };
+    programs.zsh.shellAliases = lib.mkIf cfg.lsp.enable (
+      let
+        modelFlag = lib.optionalString (cfg.defaultModel != null) " --model ${cfg.defaultModel}";
+      in
+      {
+        claude = "command claude --plugin-dir ${lspPluginDir}${modelFlag}";
+        clod = "command claude --plugin-dir ${lspPluginDir}${modelFlag}";
+      }
+    );
 
     # Wire statusline into upstream settings if enabled
     programs.claude-code.settings = lib.mkIf cfg.statusLine.enable {
