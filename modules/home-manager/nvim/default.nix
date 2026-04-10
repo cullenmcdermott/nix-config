@@ -14,11 +14,24 @@ let
     v = "nvim";
     vdiff = "nvim -d";
   };
+
+  # Recursively collect all files under a directory and produce
+  # xdg.configFile entries mapping them into nvim/.
+  nvimSource = ./nvim;
+  collectFiles = prefix: dirPath:
+    lib.concatMapAttrs (name: type:
+      let
+        relPath = "${prefix}${name}";
+        absPath = dirPath + "/${name}";
+      in
+      if type == "directory" then
+        collectFiles "${relPath}/" absPath
+      else
+        { "nvim/${relPath}" = { source = absPath; }; }
+    ) (builtins.readDir dirPath);
 in
 {
-  home.activation.installAstroNvim = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    ${pkgs.rsync}/bin/rsync -avz --delete --chmod=D2755,F744 ${./nvim}/ ${config.xdg.configHome}/nvim/
-  '';
+  xdg.configFile = collectFiles "" nvimSource;
 
   home.shellAliases = shellAliases;
   programs.nushell.shellAliases = shellAliases;
