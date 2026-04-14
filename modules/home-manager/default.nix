@@ -272,6 +272,10 @@ in
           "Bash(uv run:*)"
         ];
       };
+      env = {
+        CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING = "1";
+      };
+      effortLevel = "high";
       interactiveMode = true;
       autoCompact = false;
       sandbox = {
