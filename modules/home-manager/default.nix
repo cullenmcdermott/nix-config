@@ -79,7 +79,7 @@ in
       less
       luajitPackages.lua-lsp
       nixd
-      nixfmt-rfc-style
+      nixfmt
       nodejs
       omnictl
       packer
@@ -285,7 +285,7 @@ in
     };
 
     # CLAUDE.md content
-    memory.text = ''
+    context = ''
       ## Environment
       This is a Nix-managed system (nix-darwin + home-manager). All packages are declaratively managed.
       - **Never install packages imperatively** — do not use `brew install`, `npm install -g`, `pip install`, `cargo install`, `go install`, or `apt-get`. If a tool is needed permanently, tell the user to add it to their Nix config.
@@ -383,7 +383,7 @@ in
   # --- Claude Code Nix Extensions (our custom module) ---
   programs.claude-code-nix = {
     enable = true;
-    defaultModel = "claude-opus-4-6";
+    defaultModel = "claude-opus-4-7";
 
     # MCP servers (written to ~/.claude/mcp.json, auto-read by Claude Code)
     mcpServers.playwright = {
