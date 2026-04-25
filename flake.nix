@@ -135,6 +135,15 @@
             };
         in
         {
+          darwinModules = {
+            default = ./modules/darwin;
+            shared = ./modules/common;
+          };
+
+          homeManagerModules = {
+            default = ./modules/home-manager;
+          };
+
           darwinConfigurations = {
             "cullens-MacBook-Pro" = mkDarwinConfig {
               username = "cullen";
