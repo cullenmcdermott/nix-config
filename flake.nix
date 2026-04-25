@@ -48,6 +48,7 @@
       imports = [
         ./flake-modules/modules.nix
         ./flake-modules/compat.nix
+        ./flake-modules/per-system.nix
         ./hosts/cullens-macbook-pro
       ];
     };
