@@ -42,6 +42,7 @@ in
     ./nvim
     ./packages
     ./claude-code.nix
+    ./pi.nix
     ./zwift-media.nix
   ];
   home.stateVersion = "24.05";
