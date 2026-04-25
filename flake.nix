@@ -41,7 +41,7 @@
   };
 
   outputs =
-    inputs@{ flake-parts, nixpkgs, home-manager, darwin, flox, dagger, nix-homebrew, mac-app-util, flox-agentic, ... }:
+    inputs@{ flake-parts, home-manager, darwin, flox, dagger, nix-homebrew, mac-app-util, flox-agentic, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "aarch64-darwin" "x86_64-linux" ];
 
@@ -108,35 +108,6 @@
               ++ extraModules;
             };
 
-          mkDistroboxEnvConfig =
-            {
-              system,
-              username,
-              homeDirectory,
-              flakeRef,
-              claudeCodeOverrides ? { },
-              extraModules ? [ ],
-              extraPackages ? [ ],
-            }:
-            home-manager.lib.homeManagerConfiguration {
-              pkgs = import nixpkgs {
-                inherit system;
-                config.allowUnfree = true;
-              };
-              extraSpecialArgs = {
-                inherit inputs username flakeRef claudeCodeOverrides;
-              };
-              modules = [
-                ./modules/home-manager
-                ./modules/home-manager/distrobox.nix
-                {
-                  home.username = username;
-                  home.homeDirectory = homeDirectory;
-                  home.packages = extraPackages;
-                }
-              ]
-              ++ extraModules;
-            };
         in
         {
           darwinModules = {
@@ -152,16 +123,7 @@
           # registered by ./hosts/cullens-macbook-pro
 
           lib = {
-            inherit mkDarwinConfig mkDistroboxEnvConfig;
-          };
-
-          homeConfigurations = {
-            "cullen@distrobox" = mkDistroboxEnvConfig {
-              system = "x86_64-linux";
-              username = "cullen";
-              homeDirectory = "/home/cullen";
-              flakeRef = "github:cullenmcdermott/nix-config";
-            };
+            inherit mkDarwinConfig;
           };
         };
     };
