@@ -45,6 +45,10 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "aarch64-darwin" "x86_64-linux" ];
 
+      imports = [
+        ./hosts/cullens-macbook-pro
+      ];
+
       flake =
         let
           mkDarwinConfig =
@@ -144,14 +148,8 @@
             default = ./modules/home-manager;
           };
 
-          darwinConfigurations = {
-            "cullens-MacBook-Pro" = mkDarwinConfig {
-              username = "cullen";
-              system = "aarch64-darwin";
-              hostname = "cullens-MacBook-Pro";
-              extraModules = [ ./systems/personal/default.nix ];
-            };
-          };
+          # darwinConfigurations entry for cullens-MacBook-Pro is now
+          # registered by ./hosts/cullens-macbook-pro
 
           lib = {
             inherit mkDarwinConfig mkDistroboxEnvConfig;
