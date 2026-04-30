@@ -3,7 +3,6 @@
   pkgs,
   lib,
   username,
-  inputs,
   ...
 }:
 let
@@ -14,26 +13,18 @@ let
     ]
   );
 
-  # Platform detection - enables cross-platform compatibility
   homeDirectory =
     if pkgs.stdenv.isDarwin then
-      "/Users/${username}" # macOS - same as before
+      "/Users/${username}"
     else
-      "/home/${username}"; # Linux - for future NixOS support
+      "/home/${username}";
 
-  # Fetch the entire Claude Code skills repository
   claudeSkills = pkgs.fetchFromGitHub {
     owner = "anthropics";
     repo = "skills";
     rev = "f232228244495c018b3c1857436cf491ebb79bbb";
     hash = "sha256-/u7NC9opHNXh9kQMWYzeLyurdQPPHULiCTUbvTZsXeU=";
   };
-
-  # Flox agentic skills from flake input
-  floxAgentic = inputs.flox-agentic;
-
-  # Superpowers workflow skills
-  superpowers = inputs.superpowers;
 
 in
 {
@@ -413,36 +404,10 @@ in
       # Local custom skills
       llm-orchestrator = ./../../skills/llm-orchestrator;
       claude-code-config = ./../../skills/claude-code-config;
-
-      # Flox agentic skills
-      flox-environments = "${floxAgentic}/flox-plugin/skills/flox-environments";
-      flox-services = "${floxAgentic}/flox-plugin/skills/flox-services";
-      flox-builds = "${floxAgentic}/flox-plugin/skills/flox-builds";
-      flox-containers = "${floxAgentic}/flox-plugin/skills/flox-containers";
-      flox-publish = "${floxAgentic}/flox-plugin/skills/flox-publish";
-      flox-sharing = "${floxAgentic}/flox-plugin/skills/flox-sharing";
-      flox-cuda = "${floxAgentic}/flox-plugin/skills/flox-cuda";
-
-      # Superpowers workflow skills (v5.0.7)
-      sp-brainstorming = "${superpowers}/skills/brainstorming";
-      sp-using-git-worktrees = "${superpowers}/skills/using-git-worktrees";
-      sp-writing-plans = "${superpowers}/skills/writing-plans";
-      sp-subagent-driven-development = "${superpowers}/skills/subagent-driven-development";
-      sp-test-driven-development = "${superpowers}/skills/test-driven-development";
-      sp-systematic-debugging = "${superpowers}/skills/systematic-debugging";
-      sp-dispatching-parallel-agents = "${superpowers}/skills/dispatching-parallel-agents";
-      sp-requesting-code-review = "${superpowers}/skills/requesting-code-review";
-      sp-receiving-code-review = "${superpowers}/skills/receiving-code-review";
-      sp-executing-plans = "${superpowers}/skills/executing-plans";
-      sp-finishing-a-development-branch = "${superpowers}/skills/finishing-a-development-branch";
-      sp-using-superpowers = "${superpowers}/skills/using-superpowers";
-      sp-writing-skills = "${superpowers}/skills/writing-skills";
-      sp-verification-before-completion = "${superpowers}/skills/verification-before-completion";
     } // lib.optionalAttrs config.programs.claude-code-nix.homeAssistant.enable {
       home-assistant = ./../../skills/home-assistant;
     };
 
-    # Agents: local reviewers + superpowers code-reviewer
     agents = {
       external-reviewer = ./../../agents/external-reviewer.md;
       reviewer-architect = ./../../agents/reviewer-architect.md;
@@ -451,7 +416,6 @@ in
       reviewer-security = ./../../agents/reviewer-security.md;
       reviewer-stylist = ./../../agents/reviewer-stylist.md;
       reviewer-tester = ./../../agents/reviewer-tester.md;
-      code-reviewer = "${superpowers}/agents/code-reviewer.md";
     };
 
     commandsDir = ./../../commands;

@@ -15,6 +15,12 @@ in {
         nixpkgs.config.allowUnfree = true;
       }
       {imports = [self.darwinModules.shared];}
+      self.darwinModules.flox
+      self.darwinModules.dagger
+      {
+        cullen.flox.enable = true;
+        cullen.dagger.enable = true;
+      }
       {
         home-manager = {
           useGlobalPkgs = true;
@@ -26,7 +32,11 @@ in {
           };
           users.${username}.imports = [
             self.homeManagerModules.default
+            self.homeManagerModules.agenticSkills
             inputs.mac-app-util.homeManagerModules.default
+            ({...}: {
+              cullen.agenticSkills.enable = true;
+            })
             ({...}: {
               # Personal-laptop-only: Home Assistant integrations
               # (registers home-assistant skill + ha-claude launcher + statusline badge)
