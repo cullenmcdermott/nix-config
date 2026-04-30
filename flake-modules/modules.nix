@@ -4,12 +4,20 @@
 #
 # Optional modules close over this flake's own inputs so consumers don't need
 # to declare flox, dagger, flox-agentic, or superpowers as local inputs.
-{ inputs, ... }:
+{ self, inputs, ... }:
 {
   flake.darwinModules = {
-    default = ../modules/darwin;
+    # Compatibility alias — points to the full opinionated profile so existing
+    # consumers (e.g. compat shim) keep working without changes.
+    default = self.darwinModules.profiles.personalMac;
     shared = ../modules/common;
     base = ../modules/common;
+
+    macDefaults = ../modules/darwin/mac-defaults.nix;
+    nixGc = ../modules/darwin/nix-gc.nix;
+    nixAppTrampolines = ../modules/darwin/nix-app-trampolines.nix;
+    homebrewBase = ../modules/darwin/homebrew-base.nix;
+    homebrewPersonal = ../modules/darwin/homebrew-personal.nix;
 
     flox = { config, lib, pkgs, ... }: {
       options.cullen.flox.enable = lib.mkEnableOption "Flox CLI";
@@ -28,11 +36,47 @@
         ];
       };
     };
+
+    profiles.personalMac = { ... }: {
+      imports = [
+        self.darwinModules.base
+        self.darwinModules.macDefaults
+        self.darwinModules.nixGc
+        self.darwinModules.nixAppTrampolines
+        self.darwinModules.homebrewBase
+        self.darwinModules.homebrewPersonal
+      ];
+    };
   };
 
   flake.homeManagerModules = {
-    default = ../modules/home-manager;
-    base = ../modules/home-manager;
+    # Compatibility alias — full opinionated profile (same content as default.nix).
+    # Consumers wanting minimal layers should import named sub-modules directly.
+    default = self.homeManagerModules.full;
+    full = ../modules/home-manager;
+
+    # Minimal layer — nix settings only. Downstream hosts must provide:
+    #   home.username        (required)
+    #   home.homeDirectory   (required)
+    #   programs.home-manager.enable = true
+    #   username in specialArgs
+    base = ../modules/home-manager/base.nix;
+
+    # Shell layer — xdg config, zsh, bat, fzf, starship, direnv.
+    # Requires base (or a module that sets home.stateVersion).
+    shell = ../modules/home-manager/shell.nix;
+
+    # Development packages — the full package list with gdk, Kubernetes tools, etc.
+    devPackages = ../modules/home-manager/dev-packages.nix;
+
+    editor = ../modules/home-manager/nvim;
+    claudeCode = ../modules/home-manager/claude-code.nix;
+    zwiftMedia = ../modules/home-manager/zwift-media.nix;
+
+    pi = { lib, ... }: {
+      _module.args.superpowers = inputs.superpowers;
+      imports = [ ../modules/home-manager/pi.nix ];
+    };
 
     agenticSkills = { config, lib, ... }: {
       options.cullen.agenticSkills.enable = lib.mkEnableOption "Flox and Superpowers agentic skills for Claude Code";
@@ -64,6 +108,16 @@
           sp-verification-before-completion = "${inputs.superpowers}/skills/verification-before-completion";
         };
       };
+    };
+
+    profiles.workstation = { ... }: {
+      imports = [
+        self.homeManagerModules.base
+        self.homeManagerModules.shell
+        self.homeManagerModules.devPackages
+        self.homeManagerModules.editor
+        self.homeManagerModules.claudeCode
+      ];
     };
   };
 }

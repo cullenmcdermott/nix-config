@@ -1,13 +1,11 @@
 {
   config,
   lib,
-  inputs,
+  superpowers,
   ...
 }:
 let
   piAgentDir = "${config.xdg.configHome}/pi/agent";
-
-  superpowers = inputs.superpowers;
 
   superPowersSkillNames = [
     "brainstorming"
@@ -152,35 +150,39 @@ let
   };
 in
 {
-  home.sessionVariables = {
-    PI_CODING_AGENT_DIR = piAgentDir;
-    PI_TELEMETRY = lib.mkDefault "0";
-  };
+  options.cullen.pi.enable = lib.mkEnableOption "Pi agent with Superpowers skills";
 
-  xdg.configFile = superPowersSkillFiles // {
-    "pi/agent/settings.json".text = builtins.toJSON piSettings;
-    "pi/agent/keybindings.json".text = builtins.toJSON piKeybindings;
-    "pi/agent/presets.json".text = builtins.toJSON piPresets;
-    "pi/agent/AGENTS.md".text = piAgentsMd;
-
-    "pi/agent/extensions" = {
-      source = ./pi/extensions;
-      recursive = true;
+  config = lib.mkIf config.cullen.pi.enable {
+    home.sessionVariables = {
+      PI_CODING_AGENT_DIR = piAgentDir;
+      PI_TELEMETRY = lib.mkDefault "0";
     };
 
-    "pi/agent/themes" = {
-      source = ./pi/themes;
-      recursive = true;
-    };
+    xdg.configFile = superPowersSkillFiles // {
+      "pi/agent/settings.json".text = builtins.toJSON piSettings;
+      "pi/agent/keybindings.json".text = builtins.toJSON piKeybindings;
+      "pi/agent/presets.json".text = builtins.toJSON piPresets;
+      "pi/agent/AGENTS.md".text = piAgentsMd;
 
-    "pi/agent/prompts" = {
-      source = ./../../commands;
-      recursive = true;
-    };
+      "pi/agent/extensions" = {
+        source = ./pi/extensions;
+        recursive = true;
+      };
 
-    "pi/agent/skills" = {
-      source = ./../../skills;
-      recursive = true;
+      "pi/agent/themes" = {
+        source = ./pi/themes;
+        recursive = true;
+      };
+
+      "pi/agent/prompts" = {
+        source = ./../../commands;
+        recursive = true;
+      };
+
+      "pi/agent/skills" = {
+        source = ./../../skills;
+        recursive = true;
+      };
     };
   };
 }

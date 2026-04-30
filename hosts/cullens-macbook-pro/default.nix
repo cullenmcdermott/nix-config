@@ -14,13 +14,14 @@ in {
         nixpkgs.hostPlatform = "aarch64-darwin";
         nixpkgs.config.allowUnfree = true;
       }
-      {imports = [self.darwinModules.shared];}
+      self.darwinModules.profiles.personalMac
       self.darwinModules.flox
       self.darwinModules.dagger
       {
         cullen.flox.enable = true;
         cullen.dagger.enable = true;
       }
+      ./homebrew-personal.nix
       {
         home-manager = {
           useGlobalPkgs = true;
@@ -31,11 +32,15 @@ in {
             claudeCodeOverrides = {};
           };
           users.${username}.imports = [
-            self.homeManagerModules.default
+            self.homeManagerModules.full
             self.homeManagerModules.agenticSkills
+            self.homeManagerModules.pi
             inputs.mac-app-util.homeManagerModules.default
             ({...}: {
+              home.homeDirectory = "/Users/${username}";
               cullen.agenticSkills.enable = true;
+              cullen.pi.enable = true;
+              programs.zwift-media.enable = true;
             })
             ({...}: {
               # Personal-laptop-only: Home Assistant integrations
@@ -68,8 +73,6 @@ in {
           mutableTaps = true;
         };
       }
-      self.darwinModules.default
-      ./personal.nix
     ];
   };
 }

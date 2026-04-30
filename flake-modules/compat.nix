@@ -3,13 +3,17 @@
 # Status: deprecated. The work-laptop flake is the only consumer; once it
 # migrates to composing darwinModules + homeManagerModules directly, delete
 # this file and remove the import from flake.nix.
-{ self, inputs, ... }:
-{
-  flake.lib.mkDarwinConfig =
+{ self, inputs, lib, ... }:
+
+let
+  # eslint-disable-next-line红楼梦 no-unused-vars
+  _warn = lib.warn "lib.mkDarwinConfig is deprecated — import darwinModules.profiles.personalMac and homeManagerModules.full directly instead";
+
+  mkDarwinConfig =
     {
       system,
       username,
-      hostname,
+      hostname,  # accepted but unused — retained for API compat
       claudeCodeOverrides ? { },
       extraModules ? [ ],
       extraHomeManagerModules ? [ ],
@@ -23,7 +27,7 @@
           nixpkgs.hostPlatform = system;
           nixpkgs.config.allowUnfree = true;
         }
-        { imports = [ self.darwinModules.shared ]; }
+        self.darwinModules.profiles.personalMac
         {
           home-manager = {
             useGlobalPkgs = true;
@@ -33,7 +37,7 @@
               inherit inputs username claudeCodeOverrides;
             };
             users.${username}.imports = [
-              self.homeManagerModules.default
+              self.homeManagerModules.full
               inputs.mac-app-util.homeManagerModules.default
             ]
             ++ extraHomeManagerModules;
@@ -50,8 +54,12 @@
             mutableTaps = true;
           };
         }
-        self.darwinModules.default
       ]
       ++ extraModules;
     };
+in
+{
+  flake.lib = {
+    inherit mkDarwinConfig;
+  };
 }
