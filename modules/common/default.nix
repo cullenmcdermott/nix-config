@@ -19,6 +19,7 @@
     trusted-public-keys = [
       "cullen:gtI9d0t7nPTU36OnGU6YpEP5wEndvbmna9+7jpCgWPg= "
       "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs="
+      "floxhub-1:0QOAlcobcEvq1mqEf4qAYCaWnTTOXpyoRv/PmqfSixM="
     ];
     # Performance optimizations for faster downloads/builds
     download-buffer-size = 268435456;  # 256 MB (default is 64 MB)

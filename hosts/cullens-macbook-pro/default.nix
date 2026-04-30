@@ -1,8 +1,10 @@
-{ self, inputs, ... }:
-let
-  username = "cullen";
-in
 {
+  self,
+  inputs,
+  ...
+}: let
+  username = "cullen";
+in {
   flake.darwinConfigurations."cullens-MacBook-Pro" = inputs.darwin.lib.darwinSystem {
     specialArgs = {
       inherit username inputs;
@@ -12,7 +14,7 @@ in
         nixpkgs.hostPlatform = "aarch64-darwin";
         nixpkgs.config.allowUnfree = true;
       }
-      { imports = [ self.darwinModules.shared ]; }
+      {imports = [self.darwinModules.shared];}
       {
         home-manager = {
           useGlobalPkgs = true;
@@ -20,11 +22,28 @@ in
           backupFileExtension = "back";
           extraSpecialArgs = {
             inherit inputs username;
-            claudeCodeOverrides = { };
+            claudeCodeOverrides = {};
           };
           users.${username}.imports = [
             self.homeManagerModules.default
             inputs.mac-app-util.homeManagerModules.default
+            ({...}: {
+              # Personal-laptop-only: Home Assistant integrations
+              # (registers home-assistant skill + ha-claude launcher + statusline badge)
+              programs.claude-code-nix.homeAssistant.enable = true;
+            })
+            ({...}: {
+              # Personal-laptop-only: MiniMax via their native Anthropic-compatible endpoint.
+              # To activate: add the API key to 1Password at op://Personal/MiniMax/credential,
+              # then flip enable to true and nixswitch.
+              programs.claude-code-nix.alternativeProvider = {
+                enable = true;
+                baseUrl = "https://api.minimax.io/anthropic";
+                model = "MiniMax-M2.7";
+                opSecretRef = "op://Private/MiniMax/credential";
+                groupId = "op://Private/MiniMax/groupId";
+              };
+            })
           ];
         };
       }

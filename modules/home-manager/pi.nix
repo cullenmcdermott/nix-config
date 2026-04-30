@@ -1,10 +1,40 @@
 {
   config,
   lib,
+  inputs,
   ...
 }:
 let
   piAgentDir = "${config.xdg.configHome}/pi/agent";
+
+  superpowers = inputs.superpowers;
+
+  superPowersSkillNames = [
+    "brainstorming"
+    "dispatching-parallel-agents"
+    "executing-plans"
+    "finishing-a-development-branch"
+    "receiving-code-review"
+    "requesting-code-review"
+    "subagent-driven-development"
+    "systematic-debugging"
+    "test-driven-development"
+    "using-git-worktrees"
+    "using-superpowers"
+    "verification-before-completion"
+    "writing-plans"
+    "writing-skills"
+  ];
+
+  superPowersSkillFiles = builtins.listToAttrs (
+    map (skill: {
+      name = "pi/agent/skills/${skill}";
+      value = {
+        source = "${superpowers}/skills/${skill}";
+        recursive = true;
+      };
+    }) superPowersSkillNames
+  );
   piSessionDir = "${config.xdg.stateHome}/pi/sessions";
 
   piAgentsMd = ''
@@ -127,28 +157,30 @@ in
     PI_TELEMETRY = lib.mkDefault "0";
   };
 
-  xdg.configFile."pi/agent/settings.json".text = builtins.toJSON piSettings;
-  xdg.configFile."pi/agent/keybindings.json".text = builtins.toJSON piKeybindings;
-  xdg.configFile."pi/agent/presets.json".text = builtins.toJSON piPresets;
-  xdg.configFile."pi/agent/AGENTS.md".text = piAgentsMd;
+  xdg.configFile = superPowersSkillFiles // {
+    "pi/agent/settings.json".text = builtins.toJSON piSettings;
+    "pi/agent/keybindings.json".text = builtins.toJSON piKeybindings;
+    "pi/agent/presets.json".text = builtins.toJSON piPresets;
+    "pi/agent/AGENTS.md".text = piAgentsMd;
 
-  xdg.configFile."pi/agent/extensions" = {
-    source = ./pi/extensions;
-    recursive = true;
-  };
+    "pi/agent/extensions" = {
+      source = ./pi/extensions;
+      recursive = true;
+    };
 
-  xdg.configFile."pi/agent/themes" = {
-    source = ./pi/themes;
-    recursive = true;
-  };
+    "pi/agent/themes" = {
+      source = ./pi/themes;
+      recursive = true;
+    };
 
-  xdg.configFile."pi/agent/prompts" = {
-    source = ./../../commands;
-    recursive = true;
-  };
+    "pi/agent/prompts" = {
+      source = ./../../commands;
+      recursive = true;
+    };
 
-  xdg.configFile."pi/agent/skills" = {
-    source = ./../../skills;
-    recursive = true;
+    "pi/agent/skills" = {
+      source = ./../../skills;
+      recursive = true;
+    };
   };
 }

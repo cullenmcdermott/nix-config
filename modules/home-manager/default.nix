@@ -159,6 +159,29 @@ in
         scrollback-limit = 2147483648
       '';
     };
+    # cmux reads terminal theme/font/colors from ghostty's config above; this
+    # file controls cmux-app-level settings (telemetry, appearance, shortcuts).
+    configFile."cmux/settings.json" = lib.mkIf pkgs.stdenv.isDarwin {
+      text = builtins.toJSON {
+        "$schema" = "https://raw.githubusercontent.com/manaflow-ai/cmux/main/web/data/cmux-settings.schema.json";
+        app = {
+          appearance = "dark";
+          sendAnonymousTelemetry = false;
+        };
+        browser.theme = "dark";
+        shortcuts.bindings = {
+          # Ctrl+Shift+HJKL for split (pane) focus navigation
+          focusLeft = "ctrl+shift+h";
+          focusDown = "ctrl+shift+j";
+          focusUp = "ctrl+shift+k";
+          focusRight = "ctrl+shift+l";
+          # Cmd+Shift+JK for workspace (surface) navigation like vim
+          prevSurface = "cmd+shift+j";
+          nextSurface = "cmd+shift+k";
+          reloadConfiguration = "cmd+shift+r";
+        };
+      };
+    };
   };
   home.homeDirectory = lib.mkForce homeDirectory;
   home.sessionVariables = {
@@ -188,9 +211,58 @@ in
     append = true;
   };
   programs.zsh.syntaxHighlighting.enable = true;
-  programs.zsh.initContent = ''
-    ${builtins.readFile ./dotfiles/zshrc}
-  '';
+  programs.zsh.initContent = lib.mkMerge [
+    (lib.mkBefore ''
+      ${builtins.readFile ./dotfiles/zshrc}
+    '')
+    (lib.mkIf config.programs.claude-code-nix.homeAssistant.enable (
+      let
+        repo = config.programs.claude-code-nix.homeAssistant.repoPath;
+      in
+      lib.mkAfter ''
+        # ha-claude: launch Claude Code in the Home Assistant config repo.
+        # - cd's into the repo so its project-local .mcp.json (ha-mcp) loads
+        # - verifies HA_TOKEN is set (sourced from ~/.env earlier in this file)
+        # - prompts to refresh local config from HA if it's >1h stale
+        # - hands off to the `claude` alias (carries --plugin-dir and --model)
+        ha-claude() {
+          local repo="${repo}"
+          if [[ ! -d $repo ]]; then
+            echo "ha-claude: $repo does not exist" >&2
+            return 1
+          fi
+          cd "$repo" || return 1
+          if [[ -z $HA_TOKEN ]]; then
+            echo "ha-claude: HA_TOKEN is not set in env (expected from ~/.env)" >&2
+            return 1
+          fi
+          local now mtime age reply
+          now=$(date +%s)
+          mtime=$(stat -f %m config 2>/dev/null || echo 0)
+          age=$(( now - mtime ))
+          if (( age > 3600 )); then
+            printf "ha-claude: config is %dm stale — make pull? [Y/n] " $(( age / 60 ))
+            read -r reply
+            if [[ -z $reply || $reply == [Yy]* ]]; then
+              make pull || echo "ha-claude: make pull failed, continuing anyway" >&2
+            fi
+          fi
+
+          # HA-themed session: launch banner, terminal title, statusline flag.
+          local HA_BLUE=$'\033[38;2;24;188;242m'
+          local HA_DIM=$'\033[38;2;100;160;200m'
+          local RESET=$'\033[0m'
+          local BOLD=$'\033[1m'
+          printf '\033]0;HA Claude\007'
+          printf '%s%s════════════════════════════════════════════════════════%s\n' "$HA_BLUE" "$BOLD" "$RESET"
+          printf '%s🏠  Home Assistant Mode%s  %s·%s  ha-mcp + validation hooks  %s·%s  %s\n' \
+            "$HA_BLUE$BOLD" "$RESET" "$HA_DIM" "$RESET" "$HA_DIM" "$RESET" "$repo"
+          printf '%s%s════════════════════════════════════════════════════════%s\n\n' "$HA_BLUE" "$BOLD" "$RESET"
+          CLAUDE_HA_MODE=1 claude "$@"
+        }
+      ''
+    ))
+  ];
   programs.zsh.shellAliases = {
     brew = "op plugin run -- brew";
     ls = "ls --color=auto -F";
@@ -220,6 +292,9 @@ in
   programs.zsh.plugins = [ ];
   programs.zsh.oh-my-zsh.enable = false;
   programs.direnv.enable = true;
+  # Override to skip hanging shell-integration tests (go-1.26.2 + fish-4.6.0
+  # push this derivation past what hydra has cached; tests hang in the sandbox).
+  programs.direnv.package = pkgs.direnv.overrideAttrs (_: { doCheck = false; });
   programs.starship.enable = true;
   programs.starship.enableZshIntegration = true;
 
@@ -336,7 +411,6 @@ in
       frontend-design = "${claudeSkills}/skills/frontend-design";
 
       # Local custom skills
-      home-assistant = ./../../skills/home-assistant;
       llm-orchestrator = ./../../skills/llm-orchestrator;
       claude-code-config = ./../../skills/claude-code-config;
 
@@ -364,6 +438,8 @@ in
       sp-using-superpowers = "${superpowers}/skills/using-superpowers";
       sp-writing-skills = "${superpowers}/skills/writing-skills";
       sp-verification-before-completion = "${superpowers}/skills/verification-before-completion";
+    } // lib.optionalAttrs config.programs.claude-code-nix.homeAssistant.enable {
+      home-assistant = ./../../skills/home-assistant;
     };
 
     # Agents: local reviewers + superpowers code-reviewer
@@ -442,4 +518,5 @@ in
       '')
     ];
   };
+
 }

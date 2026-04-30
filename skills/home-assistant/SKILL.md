@@ -182,18 +182,6 @@ uv run scripts/ha_get_config_entries.py mqtt         # Just MQTT entries
 
 **When to use:** When you need to get config_entry_id for services like Telegram notifications, or to discover what integrations are configured.
 
-### Service Calling
-
-#### `ha_call_service.py <domain> <service> <json_data>`
-Call a Home Assistant service (use with caution).
-
-**Usage:**
-```bash
-uv run scripts/ha_call_service.py light turn_on '{"entity_id": "light.living_room"}'
-```
-
-**When to use:** Rarely. Generally only for testing or when the user explicitly asks to control something.
-
 ## Typical Workflows
 
 ### Creating a New Automation
@@ -314,10 +302,6 @@ The user must manually copy/paste generated YAML into Home Assistant. Make this 
 ### Browser Automation for Screenshots
 
 If the user asks for screenshots of dashboards or wants to see the current UI state, the Playwright browser automation tools can be used to navigate to the HA instance and capture screenshots. The user will need to handle authentication.
-
-### Service Calls
-
-Be cautious about calling services that change state. Generally only do this when explicitly requested by the user or for testing purposes.
 
 ### Entity Naming
 
