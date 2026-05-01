@@ -34,12 +34,12 @@ in {
           users.${username}.imports = [
             self.homeManagerModules.full
             self.homeManagerModules.agenticSkills
-            self.homeManagerModules.pi
+            self.homeManagerModules.omp
             inputs.mac-app-util.homeManagerModules.default
             ({...}: {
               home.homeDirectory = "/Users/${username}";
               cullen.agenticSkills.enable = true;
-              cullen.pi.enable = true;
+              cullen.omp.enable = true;
               programs.zwift-media.enable = true;
             })
             ({...}: {
@@ -57,6 +57,16 @@ in {
                 model = "MiniMax-M2.7";
                 opSecretRef = "op://Private/MiniMax/credential";
                 groupId = "op://Private/MiniMax/groupId";
+              };
+            })
+            ({...}: {
+              # Personal-laptop-only: OpenCode Go via their Anthropic-compatible endpoint.
+              # Provides go-claude launcher + opencode-go CLI for second-opinion calls.
+              # To activate: add the API key to 1Password at op://Private/OpenCode/credential,
+              # then nixswitch.
+              programs.claude-code-nix.opencodeGo = {
+                enable = true;
+                opSecretRef = "op://Private/OpenCode/credential";
               };
             })
           ];

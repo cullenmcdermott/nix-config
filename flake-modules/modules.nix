@@ -78,6 +78,11 @@
       imports = [ ../modules/home-manager/pi.nix ];
     };
 
+    omp = { lib, ... }: {
+      _module.args.superpowers = inputs.superpowers;
+      imports = [ ../modules/home-manager/omp.nix ];
+    };
+
     agenticSkills = { config, lib, ... }: {
       options.cullen.agenticSkills.enable = lib.mkEnableOption "Flox and Superpowers agentic skills for Claude Code";
       config = lib.mkIf config.cullen.agenticSkills.enable {

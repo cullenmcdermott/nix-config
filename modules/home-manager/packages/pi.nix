@@ -7,5 +7,5 @@
 pkgs.writeShellScriptBin "pi" ''
   export PI_TELEMETRY=0
   export PI_CODING_AGENT_DIR="''${XDG_CONFIG_HOME:-$HOME/.config}/pi/agent"
-  exec ${pkgs.nodejs}/bin/npx --yes @mariozechner/pi-coding-agent@0.68.1 "$@"
+  exec ${pkgs.nodejs}/bin/npx --yes @mariozechner/pi-coding-agent@0.71.1 "$@"
 ''

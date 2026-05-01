@@ -107,12 +107,18 @@ let
 
     context_bar=$(build_context_bar $used_pct)
 
-    # Extract session cost (only show for non-MiniMax providers)
+    # Detect alternative providers
+    opencode_go_provider=""
+    if [[ "''${ANTHROPIC_BASE_URL:-}" == *"opencode.ai"* ]]; then
+        opencode_go_provider="1"
+    fi
+
+    # Extract session cost (only show for non-MiniMax, non-OpenCode Go providers)
     session_cost=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.cost.total_cost_usd // 0')
 
-    # Format cost display (only show if > 0 and not MiniMax)
+    # Format cost display (subscription providers show no cost)
     cost_display=""
-    if [ "$CLAUDE_PROVIDER" != "minimax" ] && [ "$session_cost" != "0" ] && [ "$session_cost" != "null" ] && [ "$session_cost" != "0.0" ]; then
+    if [ "$CLAUDE_PROVIDER" != "minimax" ] && [ -z "$opencode_go_provider" ] && [ "$session_cost" != "0" ] && [ "$session_cost" != "null" ] && [ "$session_cost" != "0.0" ]; then
         cost_fmt=$(printf "%.4f" "$session_cost" 2>/dev/null || echo "0.0000")
         cost_display=" ''${DIM}|''${RESET} ''${YELLOW}\$''${RESET}''${YELLOW}''${cost_fmt}''${RESET}"
     fi
@@ -133,6 +139,8 @@ let
     # Cache configuration — provider-specific to avoid cross-contamination
     if [ "$CLAUDE_PROVIDER" = "minimax" ]; then
         CACHE_FILE="/tmp/claude-statusline-usage-cache-minimax.json"
+    elif [ -n "$opencode_go_provider" ]; then
+        CACHE_FILE="/tmp/claude-statusline-usage-cache-opencode-go.json"
     else
         CACHE_FILE="/tmp/claude-statusline-usage-cache.json"
     fi
@@ -151,6 +159,10 @@ let
     fetch_usage_data() {
         if [ "$CLAUDE_PROVIDER" = "minimax" ]; then
             fetch_minimax_usage_data
+            return
+        fi
+        if [ -n "$opencode_go_provider" ]; then
+            fetch_opencode_go_usage_data
             return
         fi
 
@@ -200,6 +212,61 @@ let
                 return 1
             fi
         fi
+        return 1
+    }
+
+    fetch_opencode_go_usage_data() {
+        local api_key="''${ANTHROPIC_AUTH_TOKEN:-}"
+        if [ -z "$api_key" ]; then
+            return 1
+        fi
+        # Probe the models endpoint — many OpenAI-compatible APIs return
+        # x-ratelimit-* headers even on GET requests.
+        local headers
+        headers=$(${pkgs.curl}/bin/curl -sI \
+            "https://opencode.ai/zen/go/v1/models" \
+            -H "Authorization: Bearer $api_key" 2>/dev/null)
+        if [ $? -ne 0 ] || [ -z "$headers" ]; then
+            return 1
+        fi
+        # Extract a header value (case-insensitive, strips trailing \r)
+        extract_header() {
+            printf '%s' "$headers" | grep -i "^$1:" | head -1 | awk '{print $2}' | tr -d '\r\n'
+        }
+        local req_limit req_remaining req_reset tok_limit tok_remaining tok_reset
+        req_limit=$(extract_header "x-ratelimit-limit-requests")
+        req_remaining=$(extract_header "x-ratelimit-remaining-requests")
+        req_reset=$(extract_header "x-ratelimit-reset-requests")
+        tok_limit=$(extract_header "x-ratelimit-limit-tokens")
+        tok_remaining=$(extract_header "x-ratelimit-remaining-tokens")
+        tok_reset=$(extract_header "x-ratelimit-reset-tokens")
+        if [ -n "$req_limit" ] || [ -n "$tok_limit" ]; then
+            local json
+            json=$(${pkgs.jq}/bin/jq -n \
+                --arg rl "''${req_limit:-0}" \
+                --arg rr "''${req_remaining:-0}" \
+                --arg rrt "''${req_reset:-}" \
+                --arg tl "''${tok_limit:-0}" \
+                --arg tr "''${tok_remaining:-0}" \
+                --arg trt "''${tok_reset:-}" \
+                '{
+                    "opencode_go": {
+                        "requests": {
+                            "limit":      ($rl  | tonumber),
+                            "remaining":  ($rr  | tonumber),
+                            "reset_at":   $rrt
+                        },
+                        "tokens": {
+                            "limit":      ($tl  | tonumber),
+                            "remaining":  ($tr  | tonumber),
+                            "reset_at":   $trt
+                        }
+                    }
+                }')
+            printf '%s' "$json" > "$CACHE_FILE"
+            return 0
+        fi
+        rm -f "$CACHE_FILE"
         return 1
     }
 
@@ -277,6 +344,11 @@ except:
         if [ "$CLAUDE_PROVIDER" = "minimax" ]; then
             has_minimax_data=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.model_remains // empty' 2>/dev/null)
         fi
+        has_opencode_data=""
+        if [ -n "$opencode_go_provider" ]; then
+            has_opencode_data=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.opencode_go // empty' 2>/dev/null)
+        fi
+
         if [ -n "$has_minimax_data" ]; then
             display_minimax_usage() {
                 local total_tokens used_tokens remaining_tokens reset_at_ms reset_at_sec
@@ -330,6 +402,59 @@ except:
                     "$reset_fmt" "$weekly_reset_fmt"
             }
             display_minimax_usage
+
+        elif [ -n "$has_opencode_data" ]; then
+            display_opencode_go_usage() {
+                local req_limit req_remaining req_used req_pct req_bar req_reset
+                local tok_limit tok_remaining tok_used tok_pct tok_bar tok_reset
+
+                req_limit=$(printf '%s' "$usage_data" | ${pkgs.jq}/bin/jq -r '.opencode_go.requests.limit // 0')
+                req_remaining=$(printf '%s' "$usage_data" | ${pkgs.jq}/bin/jq -r '.opencode_go.requests.remaining // 0')
+                req_used=$((req_limit - req_remaining))
+                req_reset=$(printf '%s' "$usage_data" | ${pkgs.jq}/bin/jq -r '.opencode_go.requests.reset_at // ""')
+
+                tok_limit=$(printf '%s' "$usage_data" | ${pkgs.jq}/bin/jq -r '.opencode_go.tokens.limit // 0')
+                tok_remaining=$(printf '%s' "$usage_data" | ${pkgs.jq}/bin/jq -r '.opencode_go.tokens.remaining // 0')
+                tok_used=$((tok_limit - tok_remaining))
+                tok_reset=$(printf '%s' "$usage_data" | ${pkgs.jq}/bin/jq -r '.opencode_go.tokens.reset_at // ""')
+
+                req_pct=0
+                if [ "$req_limit" -gt 0 ] 2>/dev/null; then
+                    req_pct=$(echo "scale=0; $req_used * 100 / $req_limit" | ${pkgs.bc}/bin/bc)
+                fi
+                tok_pct=0
+                if [ "$tok_limit" -gt 0 ] 2>/dev/null; then
+                    tok_pct=$(echo "scale=0; $tok_used * 100 / $tok_limit" | ${pkgs.bc}/bin/bc)
+                fi
+
+                req_bar=$(build_bar $req_pct)
+                tok_bar=$(build_bar $tok_pct)
+
+                # Show whichever limits we actually got back
+                if [ "$req_limit" -gt 0 ] 2>/dev/null && [ "$tok_limit" -gt 0 ] 2>/dev/null; then
+                    printf "''${DIM}Requests:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET} ''${DIM}|''${RESET} ''${DIM}Tokens:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
+                        "$req_used" "$req_limit" "$req_bar" "$req_pct" \
+                        "$(format_tokens $tok_used)" "$(format_tokens $tok_limit)" "$tok_bar" "$tok_pct"
+                    local reset_str="''${req_reset:-''${tok_reset}}"
+                    if [ -n "$reset_str" ]; then
+                        printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET}\n" "$reset_str"
+                    fi
+                elif [ "$req_limit" -gt 0 ] 2>/dev/null; then
+                    printf "''${DIM}Requests:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
+                        "$req_used" "$req_limit" "$req_bar" "$req_pct"
+                    if [ -n "$req_reset" ]; then
+                        printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET}\n" "$req_reset"
+                    fi
+                elif [ "$tok_limit" -gt 0 ] 2>/dev/null; then
+                    printf "''${DIM}Tokens:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
+                        "$(format_tokens $tok_used)" "$(format_tokens $tok_limit)" "$tok_bar" "$tok_pct"
+                    if [ -n "$tok_reset" ]; then
+                        printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET}\n" "$tok_reset"
+                    fi
+                fi
+            }
+            display_opencode_go_usage
+
         else
             has_valid_data=$(echo "$usage_data" | ${pkgs.jq}/bin/jq -r '.five_hour // empty' 2>/dev/null)
             if [ -n "$has_valid_data" ]; then
@@ -470,6 +595,40 @@ in
       };
     };
 
+    # --- OpenCode Go ---
+
+    opencodeGo = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether to enable OpenCode Go integration (go-claude alias + CLI wrapper).";
+      };
+
+      model = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Default model (e.g. 'opencode-go/claude-sonnet-4-5'). Null uses the server default.";
+      };
+
+      opSecretRef = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "1Password reference for the OpenCode Go API key.";
+      };
+
+      aliasName = lib.mkOption {
+        type = lib.types.str;
+        default = "go-claude";
+        description = "Shell function name for launching Claude Code via OpenCode Go.";
+      };
+
+      enableCliTool = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Install opencode-go CLI wrapper for use by second-opinion and other commands.";
+      };
+    };
+
     # --- Home Assistant ---
 
     homeAssistant = {
@@ -494,7 +653,23 @@ in
 
     home.packages = [
       pkgs.bc # For arithmetic in statusline script
-    ] ++ cfg.extraPackages;
+    ] ++ cfg.extraPackages
+      ++ lib.optionals (cfg.opencodeGo.enable && cfg.opencodeGo.enableCliTool) [
+        (pkgs.writeShellScriptBin "opencode-go" ''
+          # Short-circuit version discovery probes without hitting 1Password.
+          [[ "''${1:-}" == "--version" ]] && { echo "opencode-go (OpenCode Go wrapper)"; exit 0; }
+          set -euo pipefail
+          if [[ -z "''${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+            ANTHROPIC_AUTH_TOKEN=$(op read "${cfg.opencodeGo.opSecretRef}" 2>/dev/null) || {
+              echo "opencode-go: could not read API key from 1Password (${cfg.opencodeGo.opSecretRef})" >&2
+              exit 1
+            }
+            export ANTHROPIC_AUTH_TOKEN
+          fi
+          export ANTHROPIC_BASE_URL="https://opencode.ai/zen/go/v1"
+          exec claude -p "$@"
+        '')
+      ];
 
     home.file = {
       # Statusline scripts
@@ -542,34 +717,79 @@ in
       };
     };
 
-    # Alternative-provider launcher shell function
-    programs.zsh.initContent = lib.mkIf cfg.alternativeProvider.enable (
-      let
-        altCfg = cfg.alternativeProvider;
-        modelFlag = lib.optionalString (altCfg.model != null) " --model ${altCfg.model}";
-      in
-      lib.mkAfter ''
-        # alt-claude: launch Claude Code against an alternative LLM provider.
-        # API key is fetched from 1Password at call time (Touch ID, cached by desktop app).
-        ${altCfg.aliasName}() {
-          local api_key group_id
-          api_key=$(op read "${altCfg.opSecretRef}" 2>/dev/null) || {
-            echo "${altCfg.aliasName}: could not read API key from 1Password (${altCfg.opSecretRef})" >&2
-            return 1
-          }
-          if [ -n "${altCfg.groupId}" ]; then
-            group_id=$(op read "${altCfg.groupId}" 2>/dev/null) || {
-              echo "${altCfg.aliasName}: could not read GroupId from 1Password (${altCfg.groupId})" >&2
+    # Alternative-provider launcher shell functions
+    programs.zsh.initContent = lib.mkAfter (
+      lib.optionalString cfg.alternativeProvider.enable (
+        let
+          altCfg = cfg.alternativeProvider;
+          modelFlag = lib.optionalString (altCfg.model != null) " --model ${altCfg.model}";
+        in
+        ''
+          # alt-claude: launch Claude Code against an alternative LLM provider.
+          # API key is fetched from 1Password at call time (Touch ID, cached by desktop app).
+          ${altCfg.aliasName}() {
+            local api_key group_id
+            api_key=$(op read "${altCfg.opSecretRef}" 2>/dev/null) || {
+              echo "${altCfg.aliasName}: could not read API key from 1Password (${altCfg.opSecretRef})" >&2
               return 1
             }
-          fi
-          CLAUDE_PROVIDER=minimax \
-          MINIMAX_GROUP_ID="$group_id" \
-          ANTHROPIC_AUTH_TOKEN="$api_key" \
-          ANTHROPIC_BASE_URL="${altCfg.baseUrl}" \
-          command claude --plugin-dir ${lspPluginDir}${modelFlag} "$@"
-        }
-      ''
+            if [ -n "${altCfg.groupId}" ]; then
+              group_id=$(op read "${altCfg.groupId}" 2>/dev/null) || {
+                echo "${altCfg.aliasName}: could not read GroupId from 1Password (${altCfg.groupId})" >&2
+                return 1
+              }
+            fi
+            CLAUDE_PROVIDER=minimax \
+            MINIMAX_GROUP_ID="$group_id" \
+            ANTHROPIC_AUTH_TOKEN="$api_key" \
+            ANTHROPIC_BASE_URL="${altCfg.baseUrl}" \
+            command claude --plugin-dir ${lspPluginDir}${modelFlag} "$@"
+          }
+        ''
+      ) +
+      lib.optionalString cfg.opencodeGo.enable (
+        let
+          goCfg = cfg.opencodeGo;
+        in
+        if goCfg.model != null then
+          # Static model pinned in Nix config — skip the picker.
+          ''
+            # go-claude: launch Claude Code via OpenCode Go API (pinned model: ${goCfg.model}).
+            ${goCfg.aliasName}() {
+              local api_key
+              api_key=$(op read "${goCfg.opSecretRef}" 2>/dev/null) || {
+                echo "${goCfg.aliasName}: could not read API key from 1Password (${goCfg.opSecretRef})" >&2
+                return 1
+              }
+              ANTHROPIC_AUTH_TOKEN="$api_key" \
+              ANTHROPIC_BASE_URL="https://opencode.ai/zen/go/v1" \
+              command claude --plugin-dir ${lspPluginDir} --model "${goCfg.model}" "$@"
+            }
+          ''
+        else
+          # No model pinned — fetch live model list from API and pick with fzf.
+          ''
+            # go-claude: launch Claude Code via OpenCode Go API with interactive model selection.
+            ${goCfg.aliasName}() {
+              local api_key models_json selected_model
+              api_key=$(op read "${goCfg.opSecretRef}" 2>/dev/null) || {
+                echo "${goCfg.aliasName}: could not read API key from 1Password (${goCfg.opSecretRef})" >&2
+                return 1
+              }
+              models_json=$(curl -sf "https://opencode.ai/zen/go/v1/models" \
+                -H "Authorization: Bearer ''${api_key}") || {
+                echo "${goCfg.aliasName}: failed to fetch model list from OpenCode Go API" >&2
+                return 1
+              }
+              selected_model=$(printf '%s' "''${models_json}" \
+                | jq -r '.data[].id' \
+                | fzf --prompt="${goCfg.aliasName} model > " --height=40% --reverse) || return 1
+              ANTHROPIC_AUTH_TOKEN="''${api_key}" \
+              ANTHROPIC_BASE_URL="https://opencode.ai/zen/go/v1" \
+              command claude --plugin-dir ${lspPluginDir} --model "''${selected_model}" "$@"
+            }
+          ''
+      )
     );
   };
 }

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+import { getAgentDir } from "@oh-my-pi/pi-utils";
 
 const STATE_FILE = join(getAgentDir(), "model-memory.json");
 
@@ -13,7 +13,7 @@ interface ModelMemory {
 function readPersistedModel(): ModelMemory | undefined {
   try {
     if (!existsSync(STATE_FILE)) return undefined;
-    const data = JSON.parse(readFileSync(STATE_FILE, "utf-8")) as ModelMemory;
+    const data = JSON.parse(readFileSync(STATE_FILE, "utf-8") as string) as ModelMemory;
     if (data.provider && data.id) return data;
   } catch {
     // Corrupt or missing file — treat as no prior model
