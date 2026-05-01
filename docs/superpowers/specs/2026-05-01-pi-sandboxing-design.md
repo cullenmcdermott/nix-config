@@ -89,7 +89,7 @@ pi start
 - The project directory lives on the laptop and syncs bidirectionally via Mutagen.
 - VM Manager hooks `session_start` and `session_shutdown` for lifecycle.
 - Replaces `read`/`write`/`edit`/`bash` tools with SSH-delegated versions using `createReadTool`/`createWriteTool`/`createEditTool`/`createBashTool` factory functions (following pi's `ssh.ts` example pattern).
-- A `--no-vm` flag or `/vm` command toggles between local and VM execution so pi still works without the VM when desired.
+- A `--no-vm` flag or `/vm` command toggles between local and VM execution so pi still works without the VM when desired. When `--no-vm` is active, tools run locally with no sandboxing — the VM Manager simply delegates to the default local tool backends. (Future: when sandbox-runtime is layered in, `--no-vm` could still apply in-VM process sandboxing.)
 
 ### SSH Transport
 
@@ -157,7 +157,7 @@ Intercepts `tool_call` events and classifies each invocation as **auto** (run wi
 
 1. **`read`, `ls`, `grep`, `find`** → always auto (inherently read-only)
 2. **`write`, `edit`** → always prompt (files are being mutated)
-3. **`bash`** → pattern matching:
+3. **`bash`** → pattern matching (glob syntax: `*` matches any chars, `?` matches one char):
    - Check `autoPatterns` first — if any pattern matches → auto
    - Then check `promptPatterns` — if any pattern matches → prompt
    - If neither matches → **prompt by default** (deny-by-default for unknowns)
