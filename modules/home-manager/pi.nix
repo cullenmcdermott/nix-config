@@ -2,6 +2,7 @@
   config,
   lib,
   superpowers,
+  pkgs,
   ...
 }:
 let
@@ -73,17 +74,44 @@ let
     - `rg` (ripgrep), `fd`, `bat`, `jq`, `curl`, `gh` (GitHub CLI)
   '';
 
+  opencodeGoModels = [
+    { id = "kimi-k2.6";     name = "Kimi K2.6";     contextWindow = 128000; maxTokens = 16384; reasoning = true;  cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "kimi-k2.5";     name = "Kimi K2.5";     contextWindow = 128000; maxTokens = 16384; reasoning = true;  cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "glm-5.1";       name = "GLM-5.1";       contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "glm-5";         name = "GLM-5";         contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "deepseek-v4-pro";  name = "DeepSeek V4 Pro";  contextWindow = 128000; maxTokens = 16384; reasoning = true;  cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "deepseek-v4-flash"; name = "DeepSeek V4 Flash"; contextWindow = 128000; maxTokens = 16384; reasoning = true;  cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "qwen3.6-plus";  name = "Qwen 3.6 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "qwen3.5-plus";  name = "Qwen 3.5 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "mimo-v2-pro";   name = "MiMo V2 Pro";   contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "mimo-v2-omni";  name = "MiMo V2 Omni";  contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "mimo-v2.5-pro"; name = "MiMo V2.5 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "mimo-v2.5";     name = "MiMo V2.5";     contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "minimax-m2.7"; name = "MiniMax M2.7";  contextWindow = 100000; maxTokens = 16384; reasoning = true;  cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+    { id = "minimax-m2.5"; name = "MiniMax M2.5";  contextWindow = 100000; maxTokens = 16384; reasoning = true;  cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+  ];
+
   piSettings = {
     sessionDir = piSessionDir;
     theme = "tokyonight-storm";
     enableInstallTelemetry = false;
     enableSkillCommands = true;
     defaultThinkingLevel = "high";
+    defaultProvider = "github-copilot";
+    defaultModel = "claude-sonnet-4.6";
+    packages = [ "npm:pi-web-access@0.10.6" ];
     enabledModels = [
-      "claude-*"
-      "gpt-*"
-      "gemini-*"
+      "github-copilot/*"
+      "opencode-go/*"
     ];
+
+    providers.opencode-go = {
+      name = "OpenCode Go";
+      baseUrl = "https://opencode.ai/zen/go/v1";
+      apiKey = "!op read op://Private/OpenCode/credential";
+      api = "openai-completions";
+      models = opencodeGoModels;
+    };
   };
 
   piKeybindings = {
@@ -159,7 +187,10 @@ in
     };
 
     xdg.configFile = superPowersSkillFiles // {
-      "pi/agent/settings.json".text = builtins.toJSON piSettings;
+      "pi/agent/settings.json".text = builtins.toJSON (builtins.removeAttrs piSettings [ "providers" ]);
+      "pi/agent/models.json".text = builtins.toJSON {
+        providers = piSettings.providers;
+      };
       "pi/agent/keybindings.json".text = builtins.toJSON piKeybindings;
       "pi/agent/presets.json".text = builtins.toJSON piPresets;
       "pi/agent/AGENTS.md".text = piAgentsMd;
