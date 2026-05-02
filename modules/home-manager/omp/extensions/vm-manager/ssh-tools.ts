@@ -1,0 +1,129 @@
+import { spawn } from "node:child_process";
+import type {
+  BashOperations,
+  EditOperations,
+  ReadOperations,
+  WriteOperations,
+} from "@oh-my-pi/pi-coding-agent";
+
+const VM_NAME = "pi-vm";
+
+const LOCAL_CWD = process.cwd();
+const REMOTE_CWD = "/home/user/project";
+
+function toRemote(p: string): string {
+  return p.replace(LOCAL_CWD, REMOTE_CWD);
+}
+
+function sshExec(command: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      "limactl",
+      ["shell", VM_NAME, "bash", "-c", command],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
+    const chunks: Buffer[] = [];
+    const errChunks: Buffer[] = [];
+    child.stdout.on("data", (data) => chunks.push(data));
+    child.stderr.on("data", (data) => errChunks.push(data));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(
+          new Error(
+            `SSH failed (${code}): ${Buffer.concat(errChunks).toString()}`,
+          ),
+        );
+      } else {
+        resolve(Buffer.concat(chunks));
+      }
+    });
+  });
+}
+
+export function createRemoteReadOps(): ReadOperations {
+  return {
+    readFile: (p) => sshExec(`cat ${JSON.stringify(toRemote(p))}`),
+    access: (p) =>
+      sshExec(`test -r ${JSON.stringify(toRemote(p))}`).then(
+        () => {},
+        () => {},
+      ),
+    detectImageMimeType: async (p) => {
+      try {
+        const r = await sshExec(
+          `file --mime-type -b ${JSON.stringify(toRemote(p))}`,
+        );
+        const m = r.toString().trim();
+        return ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(m)
+          ? m
+          : null;
+      } catch {
+        return null;
+      }
+    },
+  };
+}
+
+export function createRemoteWriteOps(): WriteOperations {
+  return {
+    writeFile: async (p, content) => {
+      const b64 = Buffer.from(content).toString("base64");
+      await sshExec(
+        `echo ${JSON.stringify(b64)} | base64 -d > ${JSON.stringify(toRemote(p))}`,
+      );
+    },
+    mkdir: (dir) =>
+      sshExec(`mkdir -p ${JSON.stringify(toRemote(dir))}`).then(() => {}),
+  };
+}
+
+export function createRemoteEditOps(): EditOperations {
+  const r = createRemoteReadOps();
+  const w = createRemoteWriteOps();
+  return { readFile: r.readFile, access: r.access, writeFile: w.writeFile };
+}
+
+export function createRemoteBashOps(): BashOperations {
+  return {
+    exec(command, cwd, { onData, signal, timeout }) {
+      const remoteCwd = toRemote(cwd);
+      const wrappedCommand = `cd ${JSON.stringify(remoteCwd)} && flox activate -- ${command}`;
+      return new Promise((resolve, reject) => {
+        const child = spawn(
+          "limactl",
+          ["shell", VM_NAME, "bash", "-c", wrappedCommand],
+          { stdio: ["ignore", "pipe", "pipe"], detached: true },
+        );
+        let timedOut = false;
+        const timer = timeout
+          ? setTimeout(() => {
+              timedOut = true;
+              child.kill("SIGKILL");
+            }, timeout * 1000)
+          : undefined;
+        child.stdout.on("data", onData);
+        child.stderr.on("data", onData);
+        child.on("error", (e) => {
+          if (timer) clearTimeout(timer);
+          reject(e);
+        });
+        const onAbort = () => {
+          try {
+            process.kill(-child.pid!, "SIGKILL");
+          } catch {
+            child.kill("SIGKILL");
+          }
+        };
+        signal?.addEventListener("abort", onAbort, { once: true });
+        child.on("close", (code) => {
+          if (timer) clearTimeout(timer);
+          signal?.removeEventListener("abort", onAbort);
+          if (signal?.aborted) reject(new Error("aborted"));
+          else if (timedOut) reject(new Error(`timeout:${timeout}`));
+          else resolve({ exitCode: code });
+        });
+      });
+    },
+  };
+}
