@@ -1,0 +1,13 @@
+{
+  "name": "omp-extension-secret-forwarder",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "echo 'nothing to clean'",
+    "build": "echo 'nothing to build'",
+    "check": "echo 'nothing to check'"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}

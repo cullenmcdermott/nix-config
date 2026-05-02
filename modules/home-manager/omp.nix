@@ -185,6 +185,8 @@ in
   options.cullen.omp.enable = lib.mkEnableOption "oh-my-pi (omp) agent with Superpowers skills";
 
   config = lib.mkIf config.cullen.omp.enable {
+    home.packages = [ pkgs.mutagen ];
+
     home.sessionVariables = {
       PI_CODING_AGENT_DIR = ompAgentDir;
       PI_TELEMETRY = lib.mkDefault "0";
@@ -202,6 +204,50 @@ in
       "omp/agent/extensions" = {
         source = ./omp/extensions;
         recursive = true;
+      };
+
+      "omp/agent/extensions/vm-manager.json".text = builtins.toJSON {
+        enabled = true;
+        vmType = "vz";
+        cpus = 4;
+        memory = "8GiB";
+        disk = "50GiB";
+        image = "https://cloud-images.ubuntu.com/minimal/releases/24.04/release/ubuntu-24.04-minimal-cloudimg-arm64.img";
+        nixStorePath = "~/.omp/agent/vm/nix-store";
+        mutagenBin = "mutagen";
+        projectSyncPath = ".";
+      };
+
+      "omp/agent/extensions/permission-gate.json".text = builtins.toJSON {
+        enabled = true;
+        rules = {
+          bash = {
+            autoPatterns = [
+              "git status*" "git log*" "git diff*" "git branch*"
+              "kubectl get *" "kubectl describe *" "kubectl logs *"
+              "rg *" "fd *" "cat *" "ls *" "find *"
+              "head *" "tail *" "wc *" "file *" "which *"
+              "flox list*" "flox search*"
+            ];
+            promptPatterns = [
+              "kubectl apply *" "kubectl delete *" "kubectl patch *"
+              "kubectl create *" "git push*" "rm *" "sudo *"
+            ];
+          };
+          write = { mode = "prompt"; };
+          edit = { mode = "prompt"; };
+        };
+      };
+
+      "omp/agent/extensions/secret-forwarder.json".text = builtins.toJSON {
+        envVars = [];
+        sockets = [];
+        files = [];
+        forwardPorts = {
+          auto = true;
+          static = [];
+          ranges = [];
+        };
       };
 
       "omp/agent/themes" = {
