@@ -51,24 +51,35 @@ export default function secretForwarderExtension(pi: ExtensionAPI) {
 
   pi.on("tool_result", async (event, ctx) => {
     if (!ctx.hasUI) return;
-
     for (const content of event.content) {
       if (content.type !== "text") continue;
       const urls = content.text.match(URL_PATTERN);
       if (!urls) continue;
 
       for (const url of urls) {
+        let parsed: URL;
+        try {
+          parsed = new URL(url);
+        } catch {
+          continue;
+        }
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          ctx.ui.notify(`Blocked non-http URL scheme: ${parsed.protocol}`, "error");
+          continue;
+        }
+
         const choice = await ctx.ui.select(
           `🔗 Browser auth URL detected:\n\n  ${url}\n\n`,
           ["Open in browser", "Copy to clipboard", "Skip"],
         );
 
+        const { spawn } = await import("node:child_process");
         if (choice === "Open in browser") {
-          const { exec } = await import("node:child_process");
-          exec(`open "${url}"`);
+          spawn("open", [url]);
         } else if (choice === "Copy to clipboard") {
-          const { exec } = await import("node:child_process");
-          exec(`echo "${url}" | pbcopy`);
+          const p = spawn("pbcopy", [], { stdio: ["pipe", "ignore", "ignore"] });
+          p.stdin!.write(url);
+          p.stdin!.end();
           ctx.ui.notify("URL copied to clipboard", "info");
         }
       }
