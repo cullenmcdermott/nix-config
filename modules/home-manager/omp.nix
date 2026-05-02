@@ -7,6 +7,7 @@
 }:
 let
   ompAgentDir = "${config.xdg.configHome}/omp/agent";
+  omp = pkgs.callPackage ./packages/omp.nix { };
 
   superPowersSkillNames = [
     "brainstorming"
@@ -106,8 +107,18 @@ let
     enabledModels = [
       "github-copilot/*"
       "opencode-go/*"
+      "minimax/*"
     ];
     providers = {
+      minimax = {
+        name = "MiniMax";
+        baseUrl = "https://api.minimax.io/anthropic";
+        apiKey = "!op read op://Private/MiniMax/credential";
+        api = "anthropic-messages";
+        models = [
+          { id = "minimax-m2.7"; name = "MiniMax M2.7"; contextWindow = 100000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+        ];
+      };
       opencode-go = {
         name = "OpenCode Go";
         baseUrl = "https://opencode.ai/zen/go/v1";
@@ -185,10 +196,14 @@ in
   options.cullen.omp.enable = lib.mkEnableOption "oh-my-pi (omp) agent with Superpowers skills";
 
   config = lib.mkIf config.cullen.omp.enable {
-    home.packages = [ pkgs.mutagen ];
+    home.packages = [ omp pkgs.mutagen ];
 
     home.sessionVariables = {
       PI_CODING_AGENT_DIR = ompAgentDir;
+      # PI_CONFIG_DIR makes getConfigDirName() return ".config/omp" so that native
+      # extension discovery scans ~/.config/omp/agent/extensions/ instead of the
+      # default ~/.omp/agent/extensions/ which does not exist on this system.
+      PI_CONFIG_DIR = lib.strings.removePrefix "${config.home.homeDirectory}/" "${config.xdg.configHome}/omp";
       PI_TELEMETRY = lib.mkDefault "0";
     };
 
