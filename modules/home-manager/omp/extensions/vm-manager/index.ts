@@ -42,7 +42,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
     ...localRead,
     label: "read (VM)",
     async execute(id, params, signal, onUpdate, _ctx) {
-      if (!vmStatus?.running || pi.getFlag("--no-vm")) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
         return localRead.execute(id, params, signal, onUpdate);
       }
       const tool = createReadToolDefinition(localCwd, {
@@ -56,7 +56,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
     ...localWrite,
     label: "write (VM)",
     async execute(id, params, signal, onUpdate, _ctx) {
-      if (!vmStatus?.running || pi.getFlag("--no-vm")) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
         return localWrite.execute(id, params, signal, onUpdate);
       }
       const tool = createWriteToolDefinition(localCwd, {
@@ -70,7 +70,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
     ...localEdit,
     label: "edit (VM)",
     async execute(id, params, signal, onUpdate, _ctx) {
-      if (!vmStatus?.running || pi.getFlag("--no-vm")) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
         return localEdit.execute(id, params, signal, onUpdate);
       }
       const tool = createEditToolDefinition(localCwd, {
@@ -84,7 +84,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
     ...localBash,
     label: "bash (VM)",
     async execute(id, params, signal, onUpdate, _ctx) {
-      if (!vmStatus?.running || pi.getFlag("--no-vm")) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
         return localBash.execute(id, params, signal, onUpdate);
       }
       const tool = createBashToolDefinition(localCwd, {
@@ -96,36 +96,40 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
 
   // Handle user bash commands via SSH too
   pi.on("user_bash", () => {
-    if (!vmStatus?.running || pi.getFlag("--no-vm")) return;
+    if (!vmStatus?.running || pi.getFlag("no-vm")) return;
     return { operations: createRemoteBashOps() };
   });
-
   // Lifecycle
   pi.on("session_start", async (_event, ctx) => {
     config = loadConfig(ctx.cwd);
 
-    if (!config.enabled || pi.getFlag("--no-vm")) {
+    if (!config.enabled || pi.getFlag("no-vm")) {
       ctx.ui.notify("VM Manager: disabled", "info");
       return;
     }
 
+    ctx.ui.setStatus("vm", ctx.ui.theme.fg("accent", "🖥️ Starting VM..."));
+    let vmStarted = false;
     try {
-      ctx.ui.setStatus("vm", ctx.ui.theme.fg("accent", "🖥️ Starting VM..."));
       vmStatus = await startVm(config);
+      vmStarted = true;
       await startSync(ctx.cwd, config.mutagenBin);
       await startStaticForwards(config.forwardPorts, vmStatus.sshTarget);
       ctx.ui.setStatus("vm", ctx.ui.theme.fg("success", "🖥️ VM ready"));
       ctx.ui.notify(`VM running: ${vmStatus.name}`, "info");
     } catch (err) {
-      vmStatus = null;
       const msg = err instanceof Error ? err.message : String(err);
       ctx.ui.setStatus("vm", ctx.ui.theme.fg("error", "🖥️ VM failed"));
       ctx.ui.notify(`VM startup failed: ${msg}`, "error");
+      if (vmStarted) {
+        try { await stopVm(); } catch {}
+      }
+      vmStatus = null;
+      throw new Error(`Sandbox initialization failed: ${msg}`);
     }
   });
-
   pi.on("session_shutdown", async () => {
-    if (vmStatus?.running) {
+    if (vmStatus) {
       await stopSync(config!.mutagenBin);
       await stopAllForwards();
       await stopVm();
