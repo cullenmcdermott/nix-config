@@ -55,6 +55,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         operations: createRemoteReadOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
+    },
   });
 
   pi.registerTool({
@@ -68,6 +69,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         operations: createRemoteWriteOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
+    },
   });
 
   pi.registerTool({
@@ -81,6 +83,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         operations: createRemoteEditOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
+    },
   });
 
   pi.registerTool({
@@ -94,6 +97,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         operations: createRemoteBashOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
+    },
   });
 
   // Handle user bash commands via SSH too

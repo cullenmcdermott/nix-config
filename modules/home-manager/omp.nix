@@ -215,7 +215,7 @@ in
         image = "https://cloud-images.ubuntu.com/minimal/releases/24.04/release/ubuntu-24.04-minimal-cloudimg-arm64.img";
         nixStorePath = "~/.omp/agent/vm/nix-store";
         mutagenBin = "${pkgs.mutagen}/bin/mutagen";
-        projectSyncPath = ".",
+        projectSyncPath = ".";
       };
 
       "omp/agent/extensions/permission-gate.json".text = builtins.toJSON {
