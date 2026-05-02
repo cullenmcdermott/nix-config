@@ -77,21 +77,23 @@ function buildPromptOptions(
   ];
 
   if (toolName === "bash" && command) {
-    // Always offer exact command allow
-    options.push({
-      label: `Yes (always allow: ${command})`,
-      action: "always-exact",
-      pattern: command,
-    });
+    const blockedByGlobal = config.rules.bash.promptPatterns.some((p) => minimatch(command, p));
 
-    // Offer pattern allow only if a known promptPattern matched
-    const matchedPattern = config.rules.bash.promptPatterns.find((p) => minimatch(command, p));
-    if (matchedPattern) {
+    if (!blockedByGlobal) {
       options.push({
-        label: `Yes (always allow: ${matchedPattern})`,
-        action: "always-pattern",
-        pattern: matchedPattern,
+        label: `Yes (always allow: ${command})`,
+        action: "always-exact",
+        pattern: command,
       });
+
+      const matchedPattern = config.rules.bash.promptPatterns.find((p) => minimatch(command, p));
+      if (matchedPattern) {
+        options.push({
+          label: `Yes (always allow: ${matchedPattern})`,
+          action: "always-pattern",
+          pattern: matchedPattern,
+        });
+      }
     }
   }
 
@@ -104,6 +106,5 @@ function buildPromptOptions(
   }
 
   options.push({ label: "No", action: "block" });
-
   return options;
 }
