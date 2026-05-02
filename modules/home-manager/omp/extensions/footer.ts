@@ -10,12 +10,25 @@ interface RateLimitInfo {
   provider: string;
 }
 
+interface RateLimitDimension {
+  remaining: number | null;
+  limit: number | null;
+  resetAt: number | null;
+}
+
+interface OpenCodeGoRateLimit {
+  requests: RateLimitDimension;
+  tokens: RateLimitDimension;
+}
+
 let rateLimit: RateLimitInfo = {
   remaining: null,
   limit: null,
   resetAt: null,
   provider: "",
 };
+
+let ocGoRateLimit: OpenCodeGoRateLimit | null = null;
 
 function fmtCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -58,6 +71,23 @@ function cleanStatus(status: string): string {
   return status.replace(/^preset:/, "").trim();
 }
 
+function fmtResetTime(resetAt: number | null): string | null {
+  if (resetAt === null) return null;
+  const secondsLeft = Math.max(0, resetAt - Math.floor(Date.now() / 1000));
+  if (secondsLeft <= 0) return null;
+  if (secondsLeft >= 3600) return `${Math.ceil(secondsLeft / 3600)}h`;
+  if (secondsLeft >= 60) return `${Math.ceil(secondsLeft / 60)}m`;
+  return `${secondsLeft}s`;
+}
+
+function parseResetTimestamp(resetStr: string | undefined): number | null {
+  if (!resetStr) return null;
+  const parsed = parseFloat(resetStr);
+  if (isNaN(parsed)) return null;
+  if (parsed > 1577836800) return parsed;
+  return Math.floor(Date.now() / 1000) + parsed;
+}
+
 function fmtRateLimit(info: RateLimitInfo): string | null {
   if (info.remaining === null && info.limit === null) return null;
 
@@ -71,20 +101,48 @@ function fmtRateLimit(info: RateLimitInfo): string | null {
     parts.push(`limit:${info.limit}`);
   }
 
-  if (info.resetAt !== null) {
-    const secondsLeft = Math.max(0, info.resetAt - Math.floor(Date.now() / 1000));
-    if (secondsLeft > 0) {
-      if (secondsLeft >= 3600) {
-        parts.push(`resets ${Math.ceil(secondsLeft / 3600)}h`);
-      } else if (secondsLeft >= 60) {
-        parts.push(`resets ${Math.ceil(secondsLeft / 60)}m`);
-      } else {
-        parts.push(`resets ${secondsLeft}s`);
-      }
-    }
+  const resetTime = fmtResetTime(info.resetAt);
+  if (resetTime) {
+    parts.push(`↺${resetTime}`);
   }
 
   return parts.join(" ");
+}
+
+function fmtOcGoRateLimit(info: OpenCodeGoRateLimit): string | null {
+  const { requests, tokens } = info;
+  const reqHasData = requests.remaining !== null || requests.limit !== null;
+  const tokHasData = tokens.remaining !== null || tokens.limit !== null;
+  if (!reqHasData && !tokHasData) return null;
+
+  const parts: string[] = [];
+
+  if (reqHasData) {
+    if (requests.remaining !== null && requests.limit !== null) {
+      parts.push(`${requests.remaining}/${requests.limit}req`);
+    } else if (requests.remaining !== null) {
+      parts.push(`${requests.remaining}req left`);
+    } else if (requests.limit !== null) {
+      parts.push(`${requests.limit}req limit`);
+    }
+  }
+
+  if (tokHasData) {
+    if (tokens.remaining !== null && tokens.limit !== null) {
+      parts.push(`${fmtCount(tokens.remaining)}/${fmtCount(tokens.limit)}tok`);
+    } else if (tokens.remaining !== null) {
+      parts.push(`${fmtCount(tokens.remaining)}tok left`);
+    } else if (tokens.limit !== null) {
+      parts.push(`${fmtCount(tokens.limit)}tok limit`);
+    }
+  }
+
+  const resetTime = fmtResetTime(requests.resetAt ?? tokens.resetAt);
+  if (resetTime) {
+    parts.push(`↺${resetTime}`);
+  }
+
+  return parts.join(" · ");
 }
 
 function parseRateLimitHeaders(headers: Record<string, string>, provider: string): RateLimitInfo {
@@ -120,6 +178,36 @@ function parseRateLimitHeaders(headers: Record<string, string>, provider: string
   }
 
   return { remaining, limit, resetAt, provider };
+}
+
+function parseOpenCodeGoHeaders(headers: Record<string, string>): OpenCodeGoRateLimit | null {
+  const get = (name: string): string | undefined =>
+    headers[name] ?? headers[name.toLowerCase()] ?? undefined;
+
+  const reqRemaining = parseInt(get("x-ratelimit-remaining-requests") ?? "", 10);
+  const reqLimit = parseInt(get("x-ratelimit-limit-requests") ?? "", 10);
+  const reqReset = parseResetTimestamp(get("x-ratelimit-reset-requests"));
+  const tokRemaining = parseInt(get("x-ratelimit-remaining-tokens") ?? "", 10);
+  const tokLimit = parseInt(get("x-ratelimit-limit-tokens") ?? "", 10);
+  const tokReset = parseResetTimestamp(get("x-ratelimit-reset-tokens"));
+
+  const reqHasData = !isNaN(reqRemaining) || !isNaN(reqLimit);
+  const tokHasData = !isNaN(tokRemaining) || !isNaN(tokLimit);
+
+  if (!reqHasData && !tokHasData) return null;
+
+  return {
+    requests: {
+      remaining: isNaN(reqRemaining) ? null : reqRemaining,
+      limit: isNaN(reqLimit) ? null : reqLimit,
+      resetAt: reqReset,
+    },
+    tokens: {
+      remaining: isNaN(tokRemaining) ? null : tokRemaining,
+      limit: isNaN(tokLimit) ? null : tokLimit,
+      resetAt: tokReset,
+    },
+  };
 }
 
 function installFooter(pi: ExtensionAPI, ctx: ExtensionContext) {
@@ -172,7 +260,11 @@ function installFooter(pi: ExtensionAPI, ctx: ExtensionContext) {
           rightParts.push(theme.fg("dim", `$${totalCost.toFixed(totalCost < 0.001 ? 4 : 3)}`));
         }
 
-        const rlText = fmtRateLimit(rateLimit);
+        // Show OpenCode Go rate limits (requests + tokens) when available,
+        // otherwise fall back to generic rate limit display
+        const rlText = ocGoRateLimit
+          ? fmtOcGoRateLimit(ocGoRateLimit)
+          : fmtRateLimit(rateLimit);
         if (rlText) {
           rightParts.push(theme.fg("dim", `ℹ${rlText}`));
         }
@@ -197,9 +289,22 @@ export default function footerExtension(pi: ExtensionAPI) {
 
   pi.on("after_provider_response", async (event, ctx) => {
     const provider = ctx.model?.provider ?? "unknown";
+
+    // Parse generic rate limit headers (all providers)
     const newInfo = parseRateLimitHeaders(event.headers, provider);
     if (newInfo.remaining !== null || newInfo.limit !== null) {
       rateLimit = newInfo;
+    }
+
+    // Parse OpenCode Go-specific rate limit headers (requests + tokens)
+    if (provider === "opencode-go") {
+      const ocGo = parseOpenCodeGoHeaders(event.headers);
+      if (ocGo) {
+        ocGoRateLimit = ocGo;
+      }
+    } else {
+      // Clear OpenCode Go data when switching away from that provider
+      ocGoRateLimit = null;
     }
   });
 }

@@ -238,6 +238,26 @@ in
           nixpkgs = { expr = "import <nixpkgs> {}"; };
         };
       };
+      yaml = {
+        command = "${pkgs.yaml-language-server}/bin/yaml-language-server";
+        args = [ "--stdio" ];
+        extensionToLanguage = { ".yml" = "yaml"; ".yaml" = "yaml"; };
+      };
+      bash = {
+        command = "${pkgs.bash-language-server}/bin/bash-language-server";
+        args = [ "start" ];
+        extensionToLanguage = { ".sh" = "shellscript"; ".bash" = "shellscript"; };
+      };
+      dockerfile = {
+        command = "${pkgs.dockerfile-language-server}/bin/docker-langserver";
+        args = [ "--stdio" ];
+        extensionToLanguage = { "Dockerfile" = "dockerfile"; ".dockerfile" = "dockerfile"; };
+      };
+      json = {
+        command = "${pkgs.vscode-langservers-extracted}/bin/vscode-json-language-server";
+        args = [ "--stdio" ];
+        extensionToLanguage = { ".json" = "json"; ".jsonc" = "jsonc"; };
+      };
     };
 
     extraPackages = [

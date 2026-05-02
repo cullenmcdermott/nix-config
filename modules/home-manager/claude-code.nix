@@ -23,23 +23,43 @@ let
   # Plugin directory for LSP servers
   lspPluginDir = "${config.home.homeDirectory}/.claude/custom-plugins";
 
-  # Default rich 3-line statusline script
+  # Default starship-style statusline script
+  # Line 1: model ─ branch ─ tokens ctx-bar · $cost
+  # Line 2: usage bars (5h / weekly) with · separators
+  # Line 3: reset times (5h / weekly)
   defaultStatusLineScript = ''
     #!${pkgs.bash}/bin/bash
-    # Rich 3-line statusline for Claude Code on macOS
+    # Starship-style statusline for Claude Code
 
     # Error handling - always output something
     trap 'echo "Claude"' ERR
 
-    # Color definitions
-    BLUE='\033[38;2;0;153;255m'
+    # ── Color definitions (starship-inspired palette) ──────────────────
+    BLUE='\033[38;2;82;139;255m'
+    PURPLE='\033[38;2;187;154;255m'
+    CYAN='\033[38;2;86;211;232m'
+    GREEN='\033[38;2;80;250;123m'
     ORANGE='\033[38;2;255;176;85m'
-    GREEN='\033[38;2;0;160;0m'
-    CYAN='\033[38;2;46;149;153m'
     RED='\033[38;2;255;85;85m'
-    YELLOW='\033[38;2;230;200;0m'
-    DIM='\033[2m'
+    YELLOW='\033[38;2;241;250;140m'
+    DIM='\033[38;2;118;118;118m'
     RESET='\033[0m'
+    BOLD='\033[1m'
+
+    # ── Nerd Font icons ────────────────────────────────────────────────
+    ICON_MODEL=""
+    ICON_DIR="\033[38;2;82;139;255m"
+    ICON_GIT="\033[38;2;187;154;255m"
+    ICON_CTX=""
+    ICON_COST="\033[38;2;241;250;140m"
+    ICON_USAGE="\033[38;2;86;211;232m"
+    ICON_RESET="\033[38;2;86;211;232m"
+    ICON_INTERVAL="\033[38;2;86;211;232m"
+    ICON_WEEKLY="\033[38;2;187;154;255m"
+
+    # ── Segment separators ──────────────────────────────────────────────
+    SEG="''${DIM} · ''${RESET}"
+    SEGD="''${DIM} ─ ''${RESET}"
 
     # Read JSON from stdin
     input=$(cat)
@@ -117,24 +137,24 @@ let
     session_cost=$(echo "$input" | ${pkgs.jq}/bin/jq -r '.cost.total_cost_usd // 0')
 
     # Format cost display (subscription providers show no cost)
-    cost_display=""
+    cost_segment=""
     if [ "$CLAUDE_PROVIDER" != "minimax" ] && [ -z "$opencode_go_provider" ] && [ "$session_cost" != "0" ] && [ "$session_cost" != "null" ] && [ "$session_cost" != "0.0" ]; then
         cost_fmt=$(printf "%.4f" "$session_cost" 2>/dev/null || echo "0.0000")
-        cost_display=" ''${DIM}|''${RESET} ''${YELLOW}\$''${RESET}''${YELLOW}''${cost_fmt}''${RESET}"
+        cost_segment="''${SEG}''${ICON_COST}\$''${RESET}''${YELLOW}''${cost_fmt}''${RESET}"
     fi
 
     # Get git branch if in a repo
-    git_info=""
+    git_segment=""
     if ${pkgs.git}/bin/git -C "$current_dir" rev-parse --git-dir > /dev/null 2>&1; then
         branch=$(${pkgs.git}/bin/git -C "$current_dir" branch --show-current 2>/dev/null)
         if [ -n "$branch" ]; then
-            git_info=" ''${GREEN}($branch)''${RESET}"
+            git_segment="''${DIM} ─ ''${RESET}''${ICON_GIT}''${PURPLE}''${BOLD}''${branch}''${RESET}"
         fi
     fi
 
-    # Line 1: Model | dir (branch) | Tokens | Context Bar | $cost
-    printf "''${BLUE}%s''${RESET} ''${DIM}|''${RESET} ''${CYAN}%s''${RESET}%b ''${DIM}|''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}/''${RESET} ''${ORANGE}%s''${RESET} ''${DIM}|''${RESET} %b%b\n" \
-        "$model" "$dir_name" "$git_info" "$current_display" "$total_display" "$context_bar" "$cost_display"
+    # ── LINE 1: model ─ branch ─ tokens  ctx-bar  · $cost ─────────────
+    printf "''${ICON_MODEL}''${BLUE}''${BOLD}%s''${RESET}%b''${SEGD}%s/''${ORANGE}%s''${RESET} %b%b\n" \
+        "$model" "$git_segment" "$current_display" "$total_display" "$context_bar" "$cost_segment"
 
     # Cache configuration — provider-specific to avoid cross-contamination
     if [ "$CLAUDE_PROVIDER" = "minimax" ]; then
@@ -395,10 +415,10 @@ except:
                 weekly_used_display=$(format_tokens $weekly_used)
                 weekly_total_display=$(format_tokens $weekly_total)
 
-                printf "''${DIM}Interval:''${RESET} ''${CYAN}%s''${RESET} ''${DIM}/''${RESET} ''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET} ''${DIM}|''${RESET} ''${DIM}Weekly:''${RESET} ''${CYAN}%s''${RESET} ''${DIM}/''${RESET} ''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
+                printf "''${ICON_INTERVAL}''${DIM}interval:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}''${SEG}''${ICON_WEEKLY}''${DIM}weekly:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
                     "$used_display" "$total_display" "$current_bar" "$current_pct" \
                     "$weekly_used_display" "$weekly_total_display" "$weekly_bar" "$weekly_pct"
-                printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET} ''${DIM}|''${RESET} ''${DIM}Weekly Resets:''${RESET} ''${CYAN}%s''${RESET}\n" \
+                printf "''${ICON_RESET}''${DIM}resets:''${RESET} ''${CYAN}%s''${RESET}''${SEG}''${ICON_RESET}''${DIM}weekly:''${RESET} ''${CYAN}%s''${RESET}\n" \
                     "$reset_fmt" "$weekly_reset_fmt"
             }
             display_minimax_usage
@@ -431,25 +451,26 @@ except:
                 tok_bar=$(build_bar $tok_pct)
 
                 # Show whichever limits we actually got back
+                local reset_str
                 if [ "$req_limit" -gt 0 ] 2>/dev/null && [ "$tok_limit" -gt 0 ] 2>/dev/null; then
-                    printf "''${DIM}Requests:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET} ''${DIM}|''${RESET} ''${DIM}Tokens:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
+                    printf "''${ICON_USAGE}''${DIM}reqs:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}''${SEG}''${ICON_USAGE}''${DIM}tokens:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
                         "$req_used" "$req_limit" "$req_bar" "$req_pct" \
                         "$(format_tokens $tok_used)" "$(format_tokens $tok_limit)" "$tok_bar" "$tok_pct"
-                    local reset_str="''${req_reset:-''${tok_reset}}"
+                    reset_str="''${req_reset:-''${tok_reset}}"
                     if [ -n "$reset_str" ]; then
-                        printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET}\n" "$reset_str"
+                        printf "''${ICON_RESET}''${CYAN}%s''${RESET}\n" "$reset_str"
                     fi
                 elif [ "$req_limit" -gt 0 ] 2>/dev/null; then
-                    printf "''${DIM}Requests:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
+                    printf "''${ICON_USAGE}''${DIM}reqs:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
                         "$req_used" "$req_limit" "$req_bar" "$req_pct"
                     if [ -n "$req_reset" ]; then
-                        printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET}\n" "$req_reset"
+                        printf "''${ICON_RESET}''${CYAN}%s''${RESET}\n" "$req_reset"
                     fi
                 elif [ "$tok_limit" -gt 0 ] 2>/dev/null; then
-                    printf "''${DIM}Tokens:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
+                    printf "''${ICON_USAGE}''${DIM}tokens:''${RESET} ''${CYAN}%s''${RESET}''${DIM}/''${RESET}''${CYAN}%s''${RESET} %s ''${CYAN}%s%%''${RESET}\n" \
                         "$(format_tokens $tok_used)" "$(format_tokens $tok_limit)" "$tok_bar" "$tok_pct"
                     if [ -n "$tok_reset" ]; then
-                        printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET}\n" "$tok_reset"
+                        printf "''${ICON_RESET}''${CYAN}%s''${RESET}\n" "$tok_reset"
                     fi
                 fi
             }
@@ -469,11 +490,11 @@ except:
                 weekly_reset_fmt=$(format_reset_time "$weekly_reset")
 
                 # Line 2: Usage bars
-                printf "''${DIM}5h:''${RESET} %s ''${CYAN}%.0f%%''${RESET} ''${DIM}|''${RESET} ''${DIM}Weekly:''${RESET} %s ''${CYAN}%.0f%%''${RESET}\n" \
+                printf "''${ICON_INTERVAL}''${DIM}5h:''${RESET} %s ''${CYAN}%.0f%%''${RESET}''${SEG}''${ICON_WEEKLY}''${DIM}weekly:''${RESET} %s ''${CYAN}%.0f%%''${RESET}\n" \
                     "$current_bar" "$current_pct" "$weekly_bar" "$weekly_pct"
 
                 # Line 3: Reset times
-                printf "''${DIM}Resets:''${RESET} ''${CYAN}%s''${RESET} ''${DIM}|''${RESET} ''${DIM}Weekly Resets:''${RESET} ''${CYAN}%s''${RESET}\n" \
+                printf "''${ICON_RESET}''${CYAN}%s''${RESET}''${SEG}''${ICON_RESET}''${DIM}weekly:''${RESET} ''${CYAN}%s''${RESET}\n" \
                     "$current_reset_fmt" "$weekly_reset_fmt"
             fi
         fi
@@ -522,7 +543,7 @@ in
       scriptText = lib.mkOption {
         type = lib.types.nullOr lib.types.lines;
         default = null;
-        description = "Custom statusline script. null uses the built-in rich 3-line statusline.";
+        description = "Custom statusline script. null uses the built-in starship-style statusline.";
       };
     };
 

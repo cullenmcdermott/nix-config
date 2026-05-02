@@ -71,12 +71,6 @@
 
     editor = ../modules/home-manager/nvim;
     claudeCode = ../modules/home-manager/claude-code.nix;
-    zwiftMedia = ../modules/home-manager/zwift-media.nix;
-
-    pi = { lib, ... }: {
-      _module.args.superpowers = inputs.superpowers;
-      imports = [ ../modules/home-manager/pi.nix ];
-    };
 
     omp = { lib, ... }: {
       _module.args.superpowers = inputs.superpowers;
