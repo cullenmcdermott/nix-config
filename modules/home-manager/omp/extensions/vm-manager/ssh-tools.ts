@@ -1,3 +1,4 @@
+import { resolve as pathResolve, relative as pathRelative, join as pathJoin } from "node:path";
 import { spawn } from "node:child_process";
 import type {
   BashOperations,
@@ -11,8 +12,16 @@ const VM_NAME = "pi-vm";
 const LOCAL_CWD = process.cwd();
 const REMOTE_CWD = "/home/user/project";
 
+function sq(s: string): string {
+  // single-quote escape — JSON.stringify is unsafe; bash double-quotes expand $() and backticks
+  return `'${s.replace(/'/g, "'\\''")}'`;
+}
+
 function toRemote(p: string): string {
-  return p.replace(LOCAL_CWD, REMOTE_CWD);
+  const abs = pathResolve(p);
+  const rel = pathRelative(LOCAL_CWD, abs);
+  if (rel.startsWith("..")) throw new Error(`Path traversal blocked: ${p}`);
+  return pathJoin(REMOTE_CWD, rel);
 }
 
 function sshExec(command: string): Promise<Buffer> {
@@ -43,16 +52,16 @@ function sshExec(command: string): Promise<Buffer> {
 
 export function createRemoteReadOps(): ReadOperations {
   return {
-    readFile: (p) => sshExec(`cat ${JSON.stringify(toRemote(p))}`),
+    readFile: (p) => sshExec(`cat ${sq(toRemote(p))}`),
     access: (p) =>
-      sshExec(`test -r ${JSON.stringify(toRemote(p))}`).then(
+      sshExec(`test -r ${sq(toRemote(p))}`).then(
         () => {},
         () => {},
       ),
     detectImageMimeType: async (p) => {
       try {
         const r = await sshExec(
-          `file --mime-type -b ${JSON.stringify(toRemote(p))}`,
+          `file --mime-type -b ${sq(toRemote(p))}`,
         );
         const m = r.toString().trim();
         return ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(m)
@@ -70,11 +79,11 @@ export function createRemoteWriteOps(): WriteOperations {
     writeFile: async (p, content) => {
       const b64 = Buffer.from(content).toString("base64");
       await sshExec(
-        `echo ${JSON.stringify(b64)} | base64 -d > ${JSON.stringify(toRemote(p))}`,
+        `echo ${sq(b64)} | base64 -d > ${sq(toRemote(p))}`,
       );
     },
     mkdir: (dir) =>
-      sshExec(`mkdir -p ${JSON.stringify(toRemote(dir))}`).then(() => {}),
+      sshExec(`mkdir -p ${sq(toRemote(dir))}`).then(() => {}),
   };
 }
 
@@ -88,7 +97,7 @@ export function createRemoteBashOps(): BashOperations {
   return {
     exec(command, cwd, { onData, signal, timeout }) {
       const remoteCwd = toRemote(cwd);
-      const wrappedCommand = `cd ${JSON.stringify(remoteCwd)} && flox activate -- ${command}`;
+      const wrappedCommand = `cd ${sq(remoteCwd)} && flox activate -- ${sq(command)}`;
       return new Promise((resolve, reject) => {
         const child = spawn(
           "limactl",

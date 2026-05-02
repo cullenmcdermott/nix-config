@@ -1,4 +1,4 @@
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { getAgentDir } from "@oh-my-pi/pi-utils";
@@ -73,22 +73,27 @@ export async function waitForSsh(
   throw new Error(`VM SSH not ready after ${maxRetries} retries`);
 }
 
+function sq(s: string): string {
+  return `'${s.replace(/'/g, "'\\''")}'`;
+}
+
 export async function runInVm(
   command: string,
   _config: VmManagerConfig,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const wrappedCommand = `cd /home/user/project && flox activate -- ${command}`;
-  try {
-    const { stdout, stderr } = await execAsync(
-      `limactl shell ${VM_NAME} /bin/bash -c ${JSON.stringify(wrappedCommand)}`,
-      { timeout: 120000 },
+  const wrappedCommand = `cd /home/user/project && flox activate -- ${sq(command)}`;
+  return new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+    const child = spawn(
+      "limactl",
+      ["shell", VM_NAME, "/bin/bash", "-c", wrappedCommand],
+      { stdio: ["ignore", "pipe", "pipe"], timeout: 120000 },
     );
-    return { stdout, stderr, exitCode: 0 };
-  } catch (err: any) {
-    return {
-      stdout: err.stdout ?? "",
-      stderr: err.stderr ?? "",
-      exitCode: err.code ?? 1,
-    };
-  }
+    const out: string[] = [];
+    const err: string[] = [];
+    child.stdout.on("data", (d) => out.push(d.toString()));
+    child.stderr.on("data", (d) => err.push(d.toString()));
+    child.on("close", (code) => {
+      resolve({ stdout: out.join(""), stderr: err.join(""), exitCode: code ?? 1 });
+    });
+  });
 }
