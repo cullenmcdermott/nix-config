@@ -38,7 +38,12 @@ function loadPresets(cwd: string): PresetsConfig {
     projectPresets = JSON.parse(readFileSync(projectPath, "utf-8") as string) as PresetsConfig;
   }
 
-  return { ...globalPresets, ...projectPresets };
+  const namespacedProject: PresetsConfig = {};
+  for (const [name, preset] of Object.entries(projectPresets)) {
+    namespacedProject[`project:${name}`] = preset;
+  }
+
+  return { ...globalPresets, ...namespacedProject };
 }
 
 export default function presetExtension(pi: ExtensionAPI) {
