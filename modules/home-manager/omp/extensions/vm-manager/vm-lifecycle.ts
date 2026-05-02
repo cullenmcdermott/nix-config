@@ -1,4 +1,4 @@
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { getAgentDir } from "@oh-my-pi/pi-utils";
@@ -17,7 +17,11 @@ export interface VmStatus {
 export async function checkVmStatus(): Promise<VmStatus> {
   try {
     const { stdout } = await execAsync("limactl list --json");
-    const vms = stdout.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+    const vms = stdout
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
     const vm = vms.find((v: any) => v.name === VM_NAME);
     if (vm && vm.status === "Running") {
       return { running: true, name: VM_NAME, sshTarget: `lima-${VM_NAME}` };
@@ -32,11 +36,15 @@ export async function startVm(config: VmManagerConfig): Promise<VmStatus> {
   const status = await checkVmStatus();
   if (status.running) return status;
 
-  // Generate Lima config from template with dynamic values
-  const templatePath = join(getAgentDir(), "extensions", "vm-manager", "lima-template.yaml");
-  // For now, use the template directly — lima can interpolate some values
-  // In a more complete implementation, we'd render the template with config values
-  await execAsync(`limactl start --name=${VM_NAME} --tty=false ${templatePath}`);
+  const templatePath = join(
+    getAgentDir(),
+    "extensions",
+    "vm-manager",
+    "lima-template.yaml",
+  );
+  await execAsync(
+    `limactl start --name=${VM_NAME} --tty=false ${templatePath}`,
+  );
   await waitForSsh();
   return checkVmStatus();
 }
@@ -48,10 +56,15 @@ export async function stopVm(): Promise<void> {
   await execAsync(`limactl delete ${VM_NAME}`);
 }
 
-export async function waitForSsh(maxRetries = 30, delayMs = 1000): Promise<void> {
+export async function waitForSsh(
+  maxRetries = 30,
+  delayMs = 1000,
+): Promise<void> {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      await execAsync(`limactl shell ${VM_NAME} echo ok`, { timeout: 5000 });
+      await execAsync(`limactl shell ${VM_NAME} echo ok`, {
+        timeout: 5000,
+      });
       return;
     } catch {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -60,14 +73,27 @@ export async function waitForSsh(maxRetries = 30, delayMs = 1000): Promise<void>
   throw new Error(`VM SSH not ready after ${maxRetries} retries`);
 }
 
-export async function runInVm(command: string, config: VmManagerConfig): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const wrappedCommand = `cd /home/user/project && flox activate -- ${command}`;
-  try {
-    const { stdout, stderr } = await execAsync(`limactl shell ${VM_NAME} /bin/bash -c ${JSON.stringify(wrappedCommand)}`, {
-      timeout: 120000,
+function sq(s: string): string {
+  return `'${s.replace(/'/g, "'\\''")}'`;
+}
+
+export async function runInVm(
+  command: string,
+  _config: VmManagerConfig,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const wrappedCommand = `cd /home/user/project && flox activate -- ${sq(command)}`;
+  return new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+    const child = spawn(
+      "limactl",
+      ["shell", VM_NAME, "/bin/bash", "-c", wrappedCommand],
+      { stdio: ["ignore", "pipe", "pipe"], timeout: 120000 },
+    );
+    const out: string[] = [];
+    const err: string[] = [];
+    child.stdout.on("data", (d) => out.push(d.toString()));
+    child.stderr.on("data", (d) => err.push(d.toString()));
+    child.on("close", (code) => {
+      resolve({ stdout: out.join(""), stderr: err.join(""), exitCode: code ?? 1 });
     });
-    return { stdout, stderr, exitCode: 0 };
-  } catch (err: any) {
-    return { stdout: err.stdout ?? "", stderr: err.stderr ?? "", exitCode: err.code ?? 1 };
-  }
+  });
 }

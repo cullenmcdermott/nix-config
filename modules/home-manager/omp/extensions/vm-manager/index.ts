@@ -1,0 +1,182 @@
+import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+import {
+  createBashToolDefinition,
+  createEditToolDefinition,
+  createReadToolDefinition,
+  createWriteToolDefinition,
+} from "@oh-my-pi/pi-coding-agent";
+import { loadConfig } from "./config.js";
+import {
+  startVm,
+  stopVm,
+  checkVmStatus,
+  type VmStatus,
+} from "./vm-lifecycle.js";
+import {
+  createRemoteBashOps,
+  createRemoteEditOps,
+  createRemoteReadOps,
+  createRemoteWriteOps,
+} from "./ssh-tools.js";
+import { startSync, stopSync } from "./mutagen-sync.js";
+import {
+  loadConfig as loadSecretConfig,
+  copyFilesToVm,
+  getForwardedEnvRecord,
+} from "../secret-forwarder/ssh-config.js";
+import { startStaticForwards, stopAllForwards } from "./port-forward.js";
+
+export default function vmManagerExtension(pi: ExtensionAPI) {
+  pi.registerFlag("no-vm", {
+    description: "Disable VM isolation (run locally)",
+    type: "boolean",
+    default: false,
+  });
+
+  const localCwd = process.cwd();
+  const localRead = createReadToolDefinition(localCwd);
+  const localWrite = createWriteToolDefinition(localCwd);
+  const localEdit = createEditToolDefinition(localCwd);
+  const localBash = createBashToolDefinition(localCwd);
+
+  let vmStatus: VmStatus | null = null;
+  let config: ReturnType<typeof loadConfig> | null = null;
+  let extraEnv: Record<string, string> | undefined;
+
+  // Replace built-in tools with SSH-delegated versions
+  pi.registerTool({
+    ...localRead,
+    label: "read (VM)",
+    async execute(id, params, signal, onUpdate, _ctx) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
+        return localRead.execute(id, params, signal, onUpdate);
+      }
+      const tool = createReadToolDefinition(localCwd, {
+        operations: createRemoteReadOps(extraEnv),
+      });
+      return tool.execute(id, params, signal, onUpdate);
+    },
+  });
+
+  pi.registerTool({
+    ...localWrite,
+    label: "write (VM)",
+    async execute(id, params, signal, onUpdate, _ctx) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
+        return localWrite.execute(id, params, signal, onUpdate);
+      }
+      const tool = createWriteToolDefinition(localCwd, {
+        operations: createRemoteWriteOps(extraEnv),
+      });
+      return tool.execute(id, params, signal, onUpdate);
+    },
+  });
+
+  pi.registerTool({
+    ...localEdit,
+    label: "edit (VM)",
+    async execute(id, params, signal, onUpdate, _ctx) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
+        return localEdit.execute(id, params, signal, onUpdate);
+      }
+      const tool = createEditToolDefinition(localCwd, {
+        operations: createRemoteEditOps(extraEnv),
+      });
+      return tool.execute(id, params, signal, onUpdate);
+    },
+  });
+
+  pi.registerTool({
+    ...localBash,
+    label: "bash (VM)",
+    async execute(id, params, signal, onUpdate, _ctx) {
+      if (!vmStatus?.running || pi.getFlag("no-vm")) {
+        return localBash.execute(id, params, signal, onUpdate);
+      }
+      const tool = createBashToolDefinition(localCwd, {
+        operations: createRemoteBashOps(extraEnv),
+      });
+      return tool.execute(id, params, signal, onUpdate);
+    },
+  });
+
+  // Handle user bash commands via SSH too
+  pi.on("user_bash", () => {
+    if (!vmStatus?.running || pi.getFlag("no-vm")) return;
+    return { operations: createRemoteBashOps(extraEnv) };
+  });
+  // Lifecycle
+  pi.on("session_start", async (_event, ctx) => {
+    config = loadConfig(ctx.cwd);
+
+    if (!config.enabled || pi.getFlag("no-vm")) {
+      ctx.ui.notify("VM Manager: disabled", "info");
+      return;
+    }
+
+    ctx.ui.setStatus("vm", ctx.ui.theme.fg("accent", "🖥️ Starting VM..."));
+    let vmStarted = false;
+    try {
+      vmStatus = await startVm(config);
+      vmStarted = true;
+      await startSync(ctx.cwd, config.mutagenBin);
+      await startStaticForwards(config.forwardPorts, vmStatus.sshTarget);
+
+      // Wire secret forwarder: copy files and record forwarded env vars.
+      // Env var forwarding is best-effort: lima/sshd may not propagate vars
+      // set on the host limactl spawn to the guest without AcceptEnv config.
+      // Unix socket forwarding (-R socket:socket) requires switching sshExec
+      // from limactl shell to raw ssh -F ~/.lima/pi-vm/ssh.config — a follow-up.
+      const sfConfig = loadSecretConfig();
+      await copyFilesToVm(sfConfig, vmStatus.name);
+      extraEnv = getForwardedEnvRecord(sfConfig);
+
+      ctx.ui.setStatus("vm", ctx.ui.theme.fg("success", "🖥️ VM ready"));
+      ctx.ui.notify(`VM running: ${vmStatus.name}`, "info");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      ctx.ui.setStatus("vm", ctx.ui.theme.fg("error", "🖥️ VM failed"));
+      ctx.ui.notify(`VM startup failed: ${msg}`, "error");
+      if (vmStarted) {
+        try { await stopVm(); } catch {}
+      }
+      vmStatus = null;
+      throw new Error(`Sandbox initialization failed: ${msg}`);
+    }
+  });
+  pi.on("session_shutdown", async () => {
+    if (vmStatus) {
+      await stopSync(config!.mutagenBin);
+      await stopAllForwards();
+      await stopVm();
+      vmStatus = null;
+    }
+  });
+
+  // Replace local cwd with VM cwd in system prompt
+  pi.on("before_agent_start", async (event) => {
+    if (vmStatus?.running) {
+      const modified = event.systemPrompt.replace(
+        `Current working directory: ${localCwd}`,
+        `Current working directory: /home/user/project (via VM: ${vmStatus.name})`,
+      );
+      return {
+        systemPrompt:
+          modified +
+          "\n\nYou are running inside an isolated VM. Use `flox install <package>` to install new tools. The Flox environment is activated automatically.",
+      };
+    }
+  });
+
+  // /vm command to check status or toggle
+  pi.registerCommand("vm", {
+    description: "Show VM status",
+    handler: async (_args, ctx) => {
+      if (!vmStatus?.running) {
+        ctx.ui.notify("VM not running", "info");
+        return;
+      }
+      ctx.ui.notify(`VM: ${vmStatus.name} (running)`, "info");
+    },
+  });
+}

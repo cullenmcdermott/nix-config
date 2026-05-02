@@ -19,6 +19,7 @@ export interface VmManagerConfig {
   };
 }
 
+const GLOBAL_ONLY = new Set(["mutagenBin", "nixStorePath", "image"]);
 const DEFAULT_CONFIG: VmManagerConfig = {
   enabled: true,
   vmType: "vz",
@@ -30,7 +31,7 @@ const DEFAULT_CONFIG: VmManagerConfig = {
   mutagenBin: "mutagen",
   projectSyncPath: ".",
   forwardPorts: {
-    auto: true,
+    auto: false,
     static: [],
     ranges: [],
   },
@@ -45,14 +46,24 @@ function loadJsonFile(path: string): Partial<VmManagerConfig> | undefined {
   }
 }
 
-function deepMerge<T extends Record<string, unknown>>(base: T, ...overlays: (Partial<T> | undefined)[]): T {
+function deepMerge<T extends Record<string, unknown>>(
+  base: T,
+  ...overlays: (Partial<T> | undefined)[]
+): T {
   const result = { ...base };
   for (const overlay of overlays) {
     if (!overlay) continue;
     for (const [key, value] of Object.entries(overlay)) {
       if (value !== undefined && value !== null) {
-        if (typeof value === "object" && !Array.isArray(value) && typeof result[key] === "object") {
-          result[key] = deepMerge(result[key] as Record<string, unknown>, value as Record<string, unknown>) as T[Extract<keyof T, string>];
+        if (
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          typeof result[key] === "object"
+        ) {
+          result[key] = deepMerge(
+            result[key] as Record<string, unknown>,
+            value as Record<string, unknown>,
+          ) as T[Extract<keyof T, string>];
         } else {
           result[key] = value as T[Extract<keyof T, string>];
         }
@@ -65,5 +76,10 @@ function deepMerge<T extends Record<string, unknown>>(base: T, ...overlays: (Par
 export function loadConfig(cwd: string): VmManagerConfig {
   const globalPath = join(getAgentDir(), "extensions", "vm-manager.json");
   const projectPath = join(cwd, ".omp", "vm-manager.json");
-  return deepMerge(DEFAULT_CONFIG, loadJsonFile(globalPath), loadJsonFile(projectPath));
+  const projectConfig = loadJsonFile(projectPath);
+  const { mutagenBin: _mb, nixStorePath: _nsp, image: _img, ...projectOverridable } = projectConfig ?? {};
+  if (_mb !== undefined || _nsp !== undefined || _img !== undefined) {
+    console.warn("vm-manager: global-only keys (mutagenBin, nixStorePath, image) in project config were ignored");
+  }
+  return deepMerge(DEFAULT_CONFIG, loadJsonFile(globalPath), projectOverridable);
 }

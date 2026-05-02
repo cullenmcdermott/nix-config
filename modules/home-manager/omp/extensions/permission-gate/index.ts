@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { loadConfig, savePattern } from "./config.js";
-import { classifyTool, Classification } from "./classifier.js";
+import { classifyTool } from "./classifier.js";
 import type { PermissionGateConfig } from "./config.js";
 import { minimatch } from "./config.js";
 
@@ -53,12 +53,7 @@ export default function permissionGateExtension(pi: ExtensionAPI) {
     }
 
     if (selected.action === "always-exact" || selected.action === "always-pattern") {
-      // For bash, use the list based on what the user selected
-      // For write/edit, always save as autoPatterns (allowing the tool)
-      const list: "autoPatterns" | "promptPatterns" = event.toolName === "bash"
-        ? (selected.action === "always-pattern" ? "autoPatterns" : "autoPatterns")
-        : "autoPatterns";
-      savePattern(ctx.cwd, event.toolName, selected.pattern ?? "", list);
+      savePattern(ctx.cwd, event.toolName, selected.pattern ?? "", "autoPatterns");
       config = loadConfig(ctx.cwd); // Reload config
     }
 
@@ -82,21 +77,23 @@ function buildPromptOptions(
   ];
 
   if (toolName === "bash" && command) {
-    // Always offer exact command allow
-    options.push({
-      label: `Yes (always allow: ${command})`,
-      action: "always-exact",
-      pattern: command,
-    });
+    const blockedByGlobal = config.rules.bash.promptPatterns.some((p) => minimatch(command, p));
 
-    // Offer pattern allow only if a known promptPattern matched
-    const matchedPattern = config.rules.bash.promptPatterns.find((p) => minimatch(command, p));
-    if (matchedPattern) {
+    if (!blockedByGlobal) {
       options.push({
-        label: `Yes (always allow: ${matchedPattern})`,
-        action: "always-pattern",
-        pattern: matchedPattern,
+        label: `Yes (always allow: ${command})`,
+        action: "always-exact",
+        pattern: command,
       });
+
+      const matchedPattern = config.rules.bash.promptPatterns.find((p) => minimatch(command, p));
+      if (matchedPattern) {
+        options.push({
+          label: `Yes (always allow: ${matchedPattern})`,
+          action: "always-pattern",
+          pattern: matchedPattern,
+        });
+      }
     }
   }
 
@@ -109,6 +106,5 @@ function buildPromptOptions(
   }
 
   options.push({ label: "No", action: "block" });
-
   return options;
 }
