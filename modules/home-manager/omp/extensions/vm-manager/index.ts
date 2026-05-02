@@ -19,6 +19,11 @@ import {
   createRemoteWriteOps,
 } from "./ssh-tools.js";
 import { startSync, stopSync } from "./mutagen-sync.js";
+import {
+  loadConfig as loadSecretConfig,
+  copyFilesToVm,
+  getForwardedEnvRecord,
+} from "../secret-forwarder/ssh-config.js";
 import { startStaticForwards, stopAllForwards } from "./port-forward.js";
 
 export default function vmManagerExtension(pi: ExtensionAPI) {
@@ -36,6 +41,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
 
   let vmStatus: VmStatus | null = null;
   let config: ReturnType<typeof loadConfig> | null = null;
+  let extraEnv: Record<string, string> | undefined;
 
   // Replace built-in tools with SSH-delegated versions
   pi.registerTool({
@@ -46,10 +52,9 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         return localRead.execute(id, params, signal, onUpdate);
       }
       const tool = createReadToolDefinition(localCwd, {
-        operations: createRemoteReadOps(),
+        operations: createRemoteReadOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
-    },
   });
 
   pi.registerTool({
@@ -60,10 +65,9 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         return localWrite.execute(id, params, signal, onUpdate);
       }
       const tool = createWriteToolDefinition(localCwd, {
-        operations: createRemoteWriteOps(),
+        operations: createRemoteWriteOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
-    },
   });
 
   pi.registerTool({
@@ -74,10 +78,9 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         return localEdit.execute(id, params, signal, onUpdate);
       }
       const tool = createEditToolDefinition(localCwd, {
-        operations: createRemoteEditOps(),
+        operations: createRemoteEditOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
-    },
   });
 
   pi.registerTool({
@@ -88,16 +91,15 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
         return localBash.execute(id, params, signal, onUpdate);
       }
       const tool = createBashToolDefinition(localCwd, {
-        operations: createRemoteBashOps(),
+        operations: createRemoteBashOps(extraEnv),
       });
       return tool.execute(id, params, signal, onUpdate);
-    },
   });
 
   // Handle user bash commands via SSH too
   pi.on("user_bash", () => {
     if (!vmStatus?.running || pi.getFlag("no-vm")) return;
-    return { operations: createRemoteBashOps() };
+    return { operations: createRemoteBashOps(extraEnv) };
   });
   // Lifecycle
   pi.on("session_start", async (_event, ctx) => {
@@ -115,6 +117,16 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
       vmStarted = true;
       await startSync(ctx.cwd, config.mutagenBin);
       await startStaticForwards(config.forwardPorts, vmStatus.sshTarget);
+
+      // Wire secret forwarder: copy files and record forwarded env vars.
+      // Env var forwarding is best-effort: lima/sshd may not propagate vars
+      // set on the host limactl spawn to the guest without AcceptEnv config.
+      // Unix socket forwarding (-R socket:socket) requires switching sshExec
+      // from limactl shell to raw ssh -F ~/.lima/pi-vm/ssh.config — a follow-up.
+      const sfConfig = loadSecretConfig();
+      await copyFilesToVm(sfConfig, vmStatus.name);
+      extraEnv = getForwardedEnvRecord(sfConfig);
+
       ctx.ui.setStatus("vm", ctx.ui.theme.fg("success", "🖥️ VM ready"));
       ctx.ui.notify(`VM running: ${vmStatus.name}`, "info");
     } catch (err) {

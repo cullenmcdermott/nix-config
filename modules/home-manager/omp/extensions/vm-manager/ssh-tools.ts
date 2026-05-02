@@ -24,12 +24,12 @@ function toRemote(p: string): string {
   return pathJoin(REMOTE_CWD, rel);
 }
 
-function sshExec(command: string): Promise<Buffer> {
+function sshExec(command: string, extraEnv?: Record<string, string>): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const child = spawn(
       "limactl",
       ["shell", VM_NAME, "bash", "-c", command],
-      { stdio: ["ignore", "pipe", "pipe"] },
+      { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...extraEnv } },
     );
     const chunks: Buffer[] = [];
     const errChunks: Buffer[] = [];
@@ -50,18 +50,18 @@ function sshExec(command: string): Promise<Buffer> {
   });
 }
 
-export function createRemoteReadOps(): ReadOperations {
+export function createRemoteReadOps(extraEnv?: Record<string, string>): ReadOperations {
   return {
-    readFile: (p) => sshExec(`cat ${sq(toRemote(p))}`),
+    readFile: (p) => sshExec(`cat ${sq(toRemote(p))}`, extraEnv),
     access: (p) =>
-      sshExec(`test -r ${sq(toRemote(p))}`).then(
+      sshExec(`test -r ${sq(toRemote(p))}`, extraEnv).then(
         () => {},
         () => {},
       ),
     detectImageMimeType: async (p) => {
       try {
         const r = await sshExec(
-          `file --mime-type -b ${sq(toRemote(p))}`,
+          `file --mime-type -b ${sq(toRemote(p))}`, extraEnv,
         );
         const m = r.toString().trim();
         return ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(m)
@@ -74,26 +74,26 @@ export function createRemoteReadOps(): ReadOperations {
   };
 }
 
-export function createRemoteWriteOps(): WriteOperations {
+export function createRemoteWriteOps(extraEnv?: Record<string, string>): WriteOperations {
   return {
     writeFile: async (p, content) => {
       const b64 = Buffer.from(content).toString("base64");
       await sshExec(
-        `echo ${sq(b64)} | base64 -d > ${sq(toRemote(p))}`,
+        `echo ${sq(b64)} | base64 -d > ${sq(toRemote(p))}`, extraEnv,
       );
     },
     mkdir: (dir) =>
-      sshExec(`mkdir -p ${sq(toRemote(dir))}`).then(() => {}),
+      sshExec(`mkdir -p ${sq(toRemote(dir))}`, extraEnv).then(() => {}),
   };
 }
 
-export function createRemoteEditOps(): EditOperations {
-  const r = createRemoteReadOps();
-  const w = createRemoteWriteOps();
+export function createRemoteEditOps(extraEnv?: Record<string, string>): EditOperations {
+  const r = createRemoteReadOps(extraEnv);
+  const w = createRemoteWriteOps(extraEnv);
   return { readFile: r.readFile, access: r.access, writeFile: w.writeFile };
 }
 
-export function createRemoteBashOps(): BashOperations {
+export function createRemoteBashOps(extraEnv?: Record<string, string>): BashOperations {
   return {
     exec(command, cwd, { onData, signal, timeout }) {
       const remoteCwd = toRemote(cwd);
@@ -102,7 +102,7 @@ export function createRemoteBashOps(): BashOperations {
         const child = spawn(
           "limactl",
           ["shell", VM_NAME, "bash", "-c", wrappedCommand],
-          { stdio: ["ignore", "pipe", "pipe"], detached: true },
+          { stdio: ["ignore", "pipe", "pipe"], detached: true, env: { ...process.env, ...extraEnv } },
         );
         let timedOut = false;
         const timer = timeout

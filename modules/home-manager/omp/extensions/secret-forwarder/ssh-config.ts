@@ -86,6 +86,15 @@ export function buildSshPortForwardArgs(config: SecretForwarderConfig): string[]
   }
   return args;
 }
+export function getForwardedEnvRecord(config: SecretForwarderConfig): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const varName of config.envVars) {
+    if (!VAR_NAME_RE.test(varName)) continue;
+    const value = process.env[varName];
+    if (value !== undefined) result[varName] = value;
+  }
+  return result;
+}
 
 export async function copyFilesToVm(
   config: SecretForwarderConfig,
