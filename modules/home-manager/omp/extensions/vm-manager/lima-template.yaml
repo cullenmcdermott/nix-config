@@ -1,13 +1,16 @@
 vmType: vz
-arch: aarch64
 cpus: 4
 memory: 8GiB
 disk: 50GiB
 
 images:
-  - location: "https://cloud-images.ubuntu.com/minimal/releases/24.04/release/ubuntu-24.04-minimal-cloudimg-arm64.img"
+  - location: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-arm64.img"
     arch: aarch64
-    digest: "sha256:<PINNED_HASH>"  # fetched from https://cloud-images.ubuntu.com/minimal/releases/24.04/release/SHA256SUMS
+    digest: "sha256:0cc0a529a52109b52bf697a0d90bdd0f252e7ad91b3a67f70879d56d1f64e240"
+  - location: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
+    arch: x86_64
+    digest: "sha256:7cbfa215a3774c46c6dc29b457f4e9667acda85fc04c7971e1e592b5056e7573"
+
 mounts:
   - location: "~/.omp/agent/vm/nix-store"
     mountPoint: "/nix"
@@ -18,18 +21,18 @@ provision:
     script: |
       #!/bin/bash
       set -euo pipefail
-      FLOX_VERSION="<VERSION>"
-      FLOX_SHA256="<PINNED_SHA256>"
-      curl -fSL "https://github.com/flox/flox/releases/download/v${FLOX_VERSION}/flox-${FLOX_VERSION}-linux-aarch64.tar.gz" \
-        -o /tmp/flox.tar.gz
-      echo "${FLOX_SHA256}  /tmp/flox.tar.gz" | sha256sum -c -
-      tar xzf /tmp/flox.tar.gz -C /usr/local/bin flox
-      rm /tmp/flox.tar.gz
+      FLOX_VERSION="1.11.4"
+      ARCH="{{ .Arch }}-linux"
+      curl -fSL "https://downloads.flox.dev/by-env/stable/deb/flox-${FLOX_VERSION}.${ARCH}.deb" \
+        -o /tmp/flox.deb
+      dpkg -i /tmp/flox.deb
+      rm /tmp/flox.deb
       # Install Docker
       apt-get update -qq
       apt-get install -y docker.io
       systemctl enable docker
       systemctl start docker
       usermod -aG docker {{ .User }}
+
 ssh:
   localForward: []
