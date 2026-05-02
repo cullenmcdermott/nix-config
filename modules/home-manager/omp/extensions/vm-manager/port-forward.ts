@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { spawn, type ChildProcess } from "node:child_process";
 
 interface ForwardedPort {
@@ -25,10 +27,13 @@ export async function forwardPort(
 ): Promise<void> {
   if (forwardedPorts.has(localPort)) return;
 
-  // Use SSH -L to forward local port to VM port
+  // Run SSH from the host directly against the lima VM's SSH target.
+  // lima writes the VM's SSH config to ~/.lima/<name>/ssh.config
+  const sshConfig = join(homedir(), ".lima", "pi-vm", "ssh.config");
+
   const proc = spawn(
-    "limactl",
-    ["shell", "pi-vm", "--", "ssh", "-N", "-L", `${localPort}:localhost:${remotePort}`],
+    "ssh",
+    ["-F", sshConfig, "-N", "-L", `${localPort}:localhost:${remotePort}`, "lima-pi-vm"],
     { stdio: "ignore" },
   );
 
