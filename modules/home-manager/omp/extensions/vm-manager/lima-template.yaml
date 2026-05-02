@@ -1,0 +1,31 @@
+vmType: vz
+arch: aarch64
+cpus: 4
+memory: 8GiB
+disk: 50GiB
+
+images:
+  - location: "https://cloud-images.ubuntu.com/minimal/releases/24.04/release/ubuntu-24.04-minimal-cloudimg-arm64.img"
+    arch: aarch64
+
+mounts:
+  - location: "~/.omp/agent/vm/nix-store"
+    mountPoint: "/nix"
+    writable: true
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -euo pipefail
+      # Install Flox
+      sh <(curl -L https://flox.dev/install) || true
+      # Install Docker
+      apt-get update
+      apt-get install -y docker.io
+      systemctl enable docker
+      systemctl start docker
+      usermod -aG docker {{ .User }}
+
+ssh:
+  localForward: []
