@@ -29,7 +29,7 @@ const DEFAULT_CONFIG: SecretForwarderConfig = {
   sockets: [],
   files: [],
   forwardPorts: {
-    auto: true,
+    auto: false,
     static: [],
     ranges: [],
   },

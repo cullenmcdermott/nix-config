@@ -214,8 +214,8 @@ in
         disk = "50GiB";
         image = "https://cloud-images.ubuntu.com/minimal/releases/24.04/release/ubuntu-24.04-minimal-cloudimg-arm64.img";
         nixStorePath = "~/.omp/agent/vm/nix-store";
-        mutagenBin = "mutagen";
-        projectSyncPath = ".";
+        mutagenBin = "${pkgs.mutagen}/bin/mutagen";
+        projectSyncPath = ".",
       };
 
       "omp/agent/extensions/permission-gate.json".text = builtins.toJSON {
@@ -244,7 +244,7 @@ in
         sockets = [];
         files = [];
         forwardPorts = {
-          auto = true;
+          auto = false;
           static = [];
           ranges = [];
         };
