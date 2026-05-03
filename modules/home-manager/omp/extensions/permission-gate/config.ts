@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getAgentDir } from "@oh-my-pi/pi-utils";
 
 export interface PatternRules {
   autoPatterns: string[];
@@ -142,8 +141,8 @@ function deepMergeConfig(
   };
 }
 
-export function loadConfig(cwd: string): PermissionGateConfig {
-  const globalPath = join(getAgentDir(), "extensions", "permission-gate.json");
+export function loadConfig(cwd: string, agentDir: string): PermissionGateConfig {
+  const globalPath = join(agentDir, "extensions", "permission-gate.json");
   const projectPath = join(cwd, ".omp", "permission-gate.json");
 
   const globalRaw = readConfig(globalPath);

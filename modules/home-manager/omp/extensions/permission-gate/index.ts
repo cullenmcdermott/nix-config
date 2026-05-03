@@ -8,7 +8,7 @@ export default function permissionGateExtension(pi: ExtensionAPI) {
   let config: PermissionGateConfig | null = null;
 
   pi.on("session_start", async (_event, ctx) => {
-    config = loadConfig(ctx.cwd);
+    config = loadConfig(ctx.cwd, pi.pi.getAgentDir());
     if (!config.enabled) {
       ctx.ui.notify("Permission Gate: disabled", "info");
     } else {
@@ -54,7 +54,7 @@ export default function permissionGateExtension(pi: ExtensionAPI) {
 
     if (selected.action === "always-exact" || selected.action === "always-pattern") {
       savePattern(ctx.cwd, event.toolName, selected.pattern ?? "", "autoPatterns");
-      config = loadConfig(ctx.cwd); // Reload config
+      config = loadConfig(ctx.cwd, pi.pi.getAgentDir()); // Reload config
     }
 
     return undefined; // Allow
