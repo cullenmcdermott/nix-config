@@ -21,8 +21,22 @@ provision:
     script: |
       #!/bin/bash
       set -euo pipefail
-      FLOX_VERSION="1.11.4"
+
+      # Install mutagen-agent (needed for host<->VM sync)
+      MUTAGEN_VERSION="0.18.1"
       ARCH="{{ .Arch }}-linux"
+      curl -fSL "https://github.com/mutagen-io/mutagen/releases/download/v${MUTAGEN_VERSION}/mutagen_${MUTAGEN_VERSION}_${ARCH}.tar.gz" \
+        -o /tmp/mutagen.tar.gz
+      tar -xzf /tmp/mutagen.tar.gz -C /usr/local/bin --wildcards '*/mutagen-agent' --strip-components=1
+      chmod +x /usr/local/bin/mutagen-agent
+      rm /tmp/mutagen.tar.gz
+
+      # Start mutagen-agent as a background service
+      nohup mutagen-agent synchronizer > /var/log/mutagen-agent.log 2>&1 &
+      sleep 1
+      pgrep mutagen-agent && echo "mutagen-agent started" || echo "mutagen-agent failed to start"
+
+      FLOX_VERSION="1.11.4"
       curl -fSL "https://downloads.flox.dev/by-env/stable/deb/flox-${FLOX_VERSION}.${ARCH}.deb" \
         -o /tmp/flox.deb
       dpkg -i /tmp/flox.deb
