@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { getAgentDir } from "@oh-my-pi/pi-utils";
 
 export interface VmManagerConfig {
   enabled: boolean;
@@ -73,8 +72,8 @@ function deepMerge<T extends Record<string, unknown>>(
   return result;
 }
 
-export function loadConfig(cwd: string): VmManagerConfig {
-  const globalPath = join(getAgentDir(), "extensions", "vm-manager.json");
+export function loadConfig(cwd: string, agentDir: string): VmManagerConfig {
+  const globalPath = join(agentDir, "extensions", "vm-manager.json");
   const projectPath = join(cwd, ".omp", "vm-manager.json");
   const projectConfig = loadJsonFile(projectPath);
   const { mutagenBin: _mb, nixStorePath: _nsp, image: _img, ...projectOverridable } = projectConfig ?? {};

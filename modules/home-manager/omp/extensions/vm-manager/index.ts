@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
 import { loadConfig } from "./config.js";
 import {
   startVm,
@@ -17,6 +16,8 @@ import {
 import { startStaticForwards, stopAllForwards } from "./port-forward.js";
 
 export default function vmManagerExtension(pi: ExtensionAPI) {
+  const { Type } = pi.typebox;
+  const agentDir = pi.pi.getAgentDir();
   pi.registerFlag("no-vm", {
     description: "Disable VM isolation (run locally)",
     type: "boolean",
@@ -139,7 +140,7 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
 
   // Lifecycle
   pi.on("session_start", async (_event, ctx) => {
-    config = loadConfig(ctx.cwd);
+    config = loadConfig(ctx.cwd, agentDir);
 
     if (!config.enabled || pi.getFlag("no-vm")) {
       ctx.ui.notify("VM Manager: disabled", "info");
@@ -149,12 +150,12 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
     ctx.ui.setStatus("vm", ctx.ui.theme.fg("accent", "🖥️ Starting VM..."));
     let vmStarted = false;
     try {
-      vmStatus = await startVm(config);
+      vmStatus = await startVm(config, agentDir);
       vmStarted = true;
       await startSync(ctx.cwd, config.mutagenBin);
       await startStaticForwards(config.forwardPorts, vmStatus.sshTarget);
 
-      const sfConfig = loadSecretConfig();
+      const sfConfig = loadSecretConfig(agentDir);
       await copyFilesToVm(sfConfig, vmStatus.name);
       extraEnv = getForwardedEnvRecord(sfConfig);
 

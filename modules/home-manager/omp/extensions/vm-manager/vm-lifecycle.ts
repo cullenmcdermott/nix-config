@@ -1,7 +1,6 @@
 import { exec, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
-import { getAgentDir } from "@oh-my-pi/pi-utils";
 import type { VmManagerConfig } from "./config.js";
 
 const execAsync = promisify(exec);
@@ -32,12 +31,12 @@ export async function checkVmStatus(): Promise<VmStatus> {
   }
 }
 
-export async function startVm(config: VmManagerConfig): Promise<VmStatus> {
+export async function startVm(config: VmManagerConfig, agentDir: string): Promise<VmStatus> {
   const status = await checkVmStatus();
   if (status.running) return status;
 
   const templatePath = join(
-    getAgentDir(),
+    agentDir,
     "extensions",
     "vm-manager",
     "lima-template.yaml",

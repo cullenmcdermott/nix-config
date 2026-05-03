@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { getAgentDir } from "@oh-my-pi/pi-utils";
 
 export interface PortForward {
   from: number;
@@ -35,8 +34,8 @@ const DEFAULT_CONFIG: SecretForwarderConfig = {
   },
 };
 
-export function loadConfig(): SecretForwarderConfig {
-  const configPath = join(getAgentDir(), "extensions", "secret-forwarder.json");
+export function loadConfig(agentDir: string): SecretForwarderConfig {
+  const configPath = join(agentDir, "extensions", "secret-forwarder.json");
   if (!existsSync(configPath)) return DEFAULT_CONFIG;
   try {
     const raw = JSON.parse(readFileSync(configPath, "utf-8"));

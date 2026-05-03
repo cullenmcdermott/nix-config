@@ -11,7 +11,7 @@ export default function secretForwarderExtension(pi: ExtensionAPI) {
   let config: ReturnType<typeof loadConfig> | null = null;
 
   pi.on("session_start", async (_event, ctx) => {
-    config = loadConfig();
+    config = loadConfig(pi.pi.getAgentDir());
 
     const parts: string[] = [];
     if (config.envVars.length > 0) parts.push(`${config.envVars.length} env vars`);
