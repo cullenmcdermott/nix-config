@@ -219,12 +219,14 @@ in
       "omp/agent/presets.json".text = builtins.toJSON ompPresets;
       "omp/agent/AGENTS.md".text = ompAgentsMd;
 
-      # vm-manager is intentionally excluded — VM orchestration is being moved to
-      # an out-of-process wrapper (see plan). The on-disk extension code stays
-      # in the repo for reference until the wrapper lands and we delete it.
+      # VM sandboxing handled by pomp wrapper (programs.pomp)
       "omp/agent/extensions/footer.ts".source = ./omp/extensions/footer.ts;
       "omp/agent/extensions/model-memory.ts".source = ./omp/extensions/model-memory.ts;
       "omp/agent/extensions/presets.ts".source = ./omp/extensions/presets.ts;
+      "omp/agent/extensions/host-bridge" = {
+        source = ./omp/extensions/host-bridge;
+        recursive = true;
+      };
 
 
       "omp/agent/themes" = {
