@@ -28,6 +28,8 @@ in
     ./packages
     ./claude-code.nix
     ./zwift-media.nix
+    ./omp.nix
+    ./pomp.nix
   ];
 
   home.homeDirectory = lib.mkForce homeDirectory;

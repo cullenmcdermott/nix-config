@@ -76,26 +76,11 @@ let
     - `rg` (ripgrep), `fd`, `bat`, `jq`, `curl`, `gh` (GitHub CLI)
   '';
 
-  opencodeGoModels = [
-    { id = "kimi-k2.6"; name = "Kimi K2.6"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "kimi-k2.5"; name = "Kimi K2.5"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "glm-5.1"; name = "GLM-5.1"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "glm-5"; name = "GLM-5"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "deepseek-v4-pro"; name = "DeepSeek V4 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "deepseek-v4-flash"; name = "DeepSeek V4 Flash"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "qwen3.6-plus"; name = "Qwen 3.6 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "qwen3.5-plus"; name = "Qwen 3.5 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "mimo-v2-pro"; name = "MiMo V2 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "mimo-v2-omni"; name = "MiMo V2 Omni"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "mimo-v2.5-pro"; name = "MiMo V2.5 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-    { id = "minimax-m2.7"; name = "MiniMax M2.7"; contextWindow = 100000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-  ];
 
   # Settings for omp — note: omp uses nested style (theme.dark, theme.light) instead of flat "theme"
   # pi-web-access is NOT needed — omp has built-in web_search, fetch, and browser tools
   ompSettings = {
     sessionDir = ompSessionDir;
-    # omp uses nested theme config: { dark = "tokyonight-storm"; light = "..."; }
     theme = {
       dark = "tokyonight-storm";
     };
@@ -103,11 +88,11 @@ let
     enableSkillCommands = true;
     defaultThinkingLevel = "high";
     defaultProvider = "github-copilot";
-    defaultModel = "claude-sonnet-4.6";
+    defaultModel = "claude-sonnet-4-6";
     enabledModels = [
       "github-copilot/*"
+      "minimax-code/*"
       "opencode-go/*"
-      "minimax/*"
     ];
     providers = {
       minimax = {
@@ -124,7 +109,19 @@ let
         baseUrl = "https://opencode.ai/zen/go/v1";
         apiKey = "!op read op://Private/OpenCode/credential";
         api = "openai-completions";
-        models = opencodeGoModels;
+        models = [
+          { id = "kimi-k2.6"; name = "Kimi K2.6"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "kimi-k2.5"; name = "Kimi K2.5"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "glm-5.1"; name = "GLM-5.1"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "glm-5"; name = "GLM-5"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "deepseek-v4-pro"; name = "DeepSeek V4 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "deepseek-v4-flash"; name = "DeepSeek V4 Flash"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "qwen3.6-plus"; name = "Qwen 3.6 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "qwen3.5-plus"; name = "Qwen 3.5 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "mimo-v2-pro"; name = "MiMo V2 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "mimo-v2-omni"; name = "MiMo V2 Omni"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+          { id = "mimo-v2.5-pro"; name = "MiMo V2.5 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
+        ];
       };
     };
   };
@@ -196,7 +193,7 @@ in
   options.cullen.omp.enable = lib.mkEnableOption "oh-my-pi (omp) agent with Superpowers skills";
 
   config = lib.mkIf config.cullen.omp.enable {
-    home.packages = [ omp pkgs.mutagen ];
+    home.packages = [ omp ];
 
     home.sessionVariables = {
       PI_CODING_AGENT_DIR = ompAgentDir;
@@ -207,63 +204,28 @@ in
       PI_TELEMETRY = lib.mkDefault "0";
     };
 
+    home.activation.ompConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      # omp writes runtime YAML caches from our nix-managed JSON files.
+      # Delete them on every switch so the JSON files remain authoritative.
+      rm -f "${config.xdg.configHome}/omp/agent/config.yml"
+      rm -f "${config.xdg.configHome}/omp/agent/models.yml"
+    '';
+
     xdg.configFile = superPowersSkillFiles // {
       # omp reads settings from $PI_CODING_AGENT_DIR/settings.json
       # Providers go in models.json (same as pi)
       "omp/agent/settings.json".text = builtins.toJSON (builtins.removeAttrs ompSettings [ "providers" ]);
-      "omp/agent/models.json".text = builtins.toJSON ompSettings.providers;
       "omp/agent/keybindings.json".text = builtins.toJSON ompKeybindings;
       "omp/agent/presets.json".text = builtins.toJSON ompPresets;
       "omp/agent/AGENTS.md".text = ompAgentsMd;
 
-      "omp/agent/extensions" = {
-        source = ./omp/extensions;
-        recursive = true;
-      };
+      # vm-manager is intentionally excluded — VM orchestration is being moved to
+      # an out-of-process wrapper (see plan). The on-disk extension code stays
+      # in the repo for reference until the wrapper lands and we delete it.
+      "omp/agent/extensions/footer.ts".source = ./omp/extensions/footer.ts;
+      "omp/agent/extensions/model-memory.ts".source = ./omp/extensions/model-memory.ts;
+      "omp/agent/extensions/presets.ts".source = ./omp/extensions/presets.ts;
 
-      "omp/agent/extensions/vm-manager.json".text = builtins.toJSON {
-        enabled = true;
-        vmType = "vz";
-        cpus = 4;
-        memory = "8GiB";
-        disk = "50GiB";
-        image = "https://cloud-images.ubuntu.com/minimal/releases/24.04/release/ubuntu-24.04-minimal-cloudimg-arm64.img";
-        nixStorePath = "~/.omp/agent/vm/nix-store";
-        mutagenBin = "${pkgs.mutagen}/bin/mutagen";
-        projectSyncPath = ".";
-      };
-
-      "omp/agent/extensions/permission-gate.json".text = builtins.toJSON {
-        enabled = true;
-        rules = {
-          bash = {
-            autoPatterns = [
-              "git status*" "git log*" "git diff*" "git branch*"
-              "kubectl get *" "kubectl describe *" "kubectl logs *"
-              "rg *" "fd *" "cat *" "ls *" "find *"
-              "head *" "tail *" "wc *" "file *" "which *"
-              "flox list*" "flox search*"
-            ];
-            promptPatterns = [
-              "kubectl apply *" "kubectl delete *" "kubectl patch *"
-              "kubectl create *" "git push*" "rm *" "sudo *"
-            ];
-          };
-          write = { mode = "prompt"; };
-          edit = { mode = "prompt"; };
-        };
-      };
-
-      "omp/agent/extensions/secret-forwarder.json".text = builtins.toJSON {
-        envVars = [];
-        sockets = [];
-        files = [];
-        forwardPorts = {
-          auto = false;
-          static = [];
-          ranges = [];
-        };
-      };
 
       "omp/agent/themes" = {
         source = ./omp/themes;
