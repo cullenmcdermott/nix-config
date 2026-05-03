@@ -204,6 +204,8 @@ in
       PI_TELEMETRY = lib.mkDefault "0";
     };
 
+    programs.pomp.enable = true;
+
     home.activation.ompConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       # omp writes runtime YAML caches from our nix-managed JSON files.
       # Delete them on every switch so the JSON files remain authoritative.
