@@ -38,11 +38,6 @@ KNOWN_CLIS = {
         "version_flag": "--version",
         "description": "Aider AI pair programming",
     },
-    "opencode-go": {
-        "command": "opencode-go",
-        "version_flag": "--version",
-        "description": "OpenCode Go API wrapper (non-Claude models via opencode.ai)",
-    },
 }
 
 

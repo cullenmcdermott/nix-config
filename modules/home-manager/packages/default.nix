@@ -3,7 +3,6 @@
 let
   ccusage = pkgs.callPackage ./ccusage.nix { };
   depot-cli = pkgs.callPackage ./depot-cli.nix { };
-  omp = pkgs.callPackage ./omp.nix { };
 in
 {
   # Custom packages available to home-manager
@@ -11,7 +10,6 @@ in
   home.packages = [
     ccusage
     depot-cli
-    omp
     pkgs.cursor-cli # Cursor CLI (cursor-agent binary) for multi-LLM orchestration
   ];
 }

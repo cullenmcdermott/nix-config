@@ -47,28 +47,6 @@ in {
               # (registers home-assistant skill + ha-claude launcher + statusline badge)
               programs.claude-code-nix.homeAssistant.enable = true;
             })
-            ({...}: {
-              # Personal-laptop-only: MiniMax via their native Anthropic-compatible endpoint.
-              # To activate: add the API key to 1Password at op://Personal/MiniMax/credential,
-              # then flip enable to true and nixswitch.
-              programs.claude-code-nix.alternativeProvider = {
-                enable = true;
-                baseUrl = "https://api.minimax.io/anthropic";
-                model = "MiniMax-M2.7";
-                opSecretRef = "op://Private/MiniMax/credential";
-                groupId = "op://Private/MiniMax/groupId";
-              };
-            })
-            ({...}: {
-              # Personal-laptop-only: OpenCode Go via their Anthropic-compatible endpoint.
-              # Provides go-claude launcher + opencode-go CLI for second-opinion calls.
-              # To activate: add the API key to 1Password at op://Private/OpenCode/credential,
-              # then nixswitch.
-              programs.claude-code-nix.opencodeGo = {
-                enable = true;
-                opSecretRef = "op://Private/OpenCode/credential";
-              };
-            })
           ];
         };
       }
