@@ -149,11 +149,15 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
 
     ctx.ui.setStatus("vm", ctx.ui.theme.fg("accent", "🖥️ Starting VM..."));
     let vmStarted = false;
+    let syncStarted = false;
+    let forwardsStarted = false;
     try {
       vmStatus = await startVm(config, agentDir);
       vmStarted = true;
       await startSync(ctx.cwd, config.mutagenBin);
+      syncStarted = true;
       await startStaticForwards(config.forwardPorts, vmStatus.sshTarget);
+      forwardsStarted = true;
 
       const sfConfig = loadSecretConfig(agentDir);
       await copyFilesToVm(sfConfig, vmStatus.name);
@@ -163,13 +167,16 @@ export default function vmManagerExtension(pi: ExtensionAPI) {
       ctx.ui.notify(`VM running: ${vmStatus.name}`, "info");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      ctx.ui.setStatus("vm", ctx.ui.theme.fg("error", "🖥️ VM failed"));
-      ctx.ui.notify(`VM startup failed: ${msg}`, "error");
-      if (vmStarted) {
-        try { await stopVm(); } catch {}
-      }
+      ctx.ui.setStatus("vm", ctx.ui.theme.fg("error", "🖥️ VM unavailable — local mode"));
+      ctx.ui.notify(`VM startup failed (running locally): ${msg}`, "warn");
+      pi.logger?.warn?.("vm-manager: startup failed, falling back to local execution", { error: msg });
+
+      if (forwardsStarted) { try { await stopAllForwards(); } catch {} }
+      if (syncStarted)     { try { await stopSync(config!.mutagenBin); } catch {} }
+      if (vmStarted)       { try { await stopVm(); } catch {} }
+
       vmStatus = null;
-      throw new Error(`Sandbox initialization failed: ${msg}`);
+      extraEnv = undefined;
     }
   });
 
