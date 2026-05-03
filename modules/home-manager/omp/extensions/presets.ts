@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Api, Model } from "@oh-my-pi/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
-import { getAgentDir } from "@oh-my-pi/pi-utils";
 
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
@@ -23,8 +22,8 @@ interface OriginalState {
   tools: string[];
 }
 
-function loadPresets(cwd: string): PresetsConfig {
-  const globalPath = join(getAgentDir(), "presets.json");
+function loadPresets(cwd: string, agentDir: string): PresetsConfig {
+  const globalPath = join(agentDir, "presets.json");
   const projectPath = join(cwd, ".omp", "presets.json");
 
   let globalPresets: PresetsConfig = {};
@@ -184,7 +183,7 @@ export default function presetExtension(pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
-    presets = loadPresets(ctx.cwd);
+    presets = loadPresets(ctx.cwd, pi.pi.getAgentDir());
     // omp uses .omp for project-local config (with .pi as legacy fallback)
     updateStatus(ctx);
   });

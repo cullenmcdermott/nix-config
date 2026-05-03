@@ -1,19 +1,21 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
-import { getAgentDir } from "@oh-my-pi/pi-utils";
 
-const STATE_FILE = join(getAgentDir(), "model-memory.json");
+function stateFile(pi: ExtensionAPI): string {
+  return join(pi.pi.getAgentDir(), "model-memory.json");
+}
 
 interface ModelMemory {
   provider: string;
   id: string;
 }
 
-function readPersistedModel(): ModelMemory | undefined {
+function readPersistedModel(pi: ExtensionAPI): ModelMemory | undefined {
   try {
-    if (!existsSync(STATE_FILE)) return undefined;
-    const data = JSON.parse(readFileSync(STATE_FILE, "utf-8") as string) as ModelMemory;
+    const stateFile = stateFile(pi);
+    if (!existsSync(stateFile)) return undefined;
+    const data = JSON.parse(readFileSync(stateFile, "utf-8") as string) as ModelMemory;
     if (data.provider && data.id) return data;
   } catch {
     // Corrupt or missing file — treat as no prior model
@@ -21,9 +23,10 @@ function readPersistedModel(): ModelMemory | undefined {
   return undefined;
 }
 
-function persistModel(provider: string, id: string): void {
+function persistModel(pi: ExtensionAPI, provider: string, id: string): void {
   try {
-    writeFileSync(STATE_FILE, JSON.stringify({ provider, id }), "utf-8");
+    const stateFile = stateFile(pi);
+    writeFileSync(stateFile, JSON.stringify({ provider, id }), "utf-8");
   } catch {
     // Best effort — if we can't write, the next session will just use the default
   }
@@ -41,14 +44,14 @@ function persistModel(provider: string, id: string): void {
  */
 export default function modelMemoryExtension(pi: ExtensionAPI) {
   pi.on("model_select", async (event) => {
-    persistModel(event.model.provider, event.model.id);
+    persistModel(pi, event.model.provider, event.model.id);
   });
 
   pi.on("session_start", async (event, ctx) => {
     // Only restore for "new" sessions (not startup, reload, resume, or fork)
     if (event.reason !== "new") return;
 
-    const remembered = readPersistedModel();
+    const remembered = readPersistedModel(pi);
     if (!remembered) return;
 
     // If the newly created session already has a model that matches our remembered one, skip

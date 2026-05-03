@@ -1,6 +1,5 @@
 import type { AssistantMessage } from "@oh-my-pi/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@oh-my-pi/pi-tui";
 
 // --- Rate limit state ---
 interface RateLimitInfo {
@@ -270,9 +269,9 @@ function installFooter(pi: ExtensionAPI, ctx: ExtensionContext) {
         }
 
         const right = rightParts.join("  ");
-        const pad = " ".repeat(Math.max(1, width - visibleWidth(left) - visibleWidth(right)));
+        const pad = " ".repeat(Math.max(1, width - pi.pi.visibleWidth(left) - pi.pi.visibleWidth(right)));
 
-        return [truncateToWidth(`${left}${pad}${right}`, width)];
+        return [pi.pi.truncateToWidth(`${left}${pad}${right}`, width)];
       },
     };
   });
