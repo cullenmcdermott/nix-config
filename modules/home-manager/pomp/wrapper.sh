@@ -23,9 +23,10 @@ die() { log "error: $*"; exit 1; }
 # ── VM lifecycle helpers ─────────────────────────────────────────────────────
 
 vm_status() {
-  limactl list --json 2>/dev/null \
-    | "$JQ" -r "select(.name == \"$VM_NAME\") | .status" 2>/dev/null \
-    || echo "NotFound"
+  local status
+  status=$(limactl list --json 2>/dev/null \
+    | "$JQ" -r "select(.name == \"$VM_NAME\") | .status" 2>/dev/null)
+  printf '%s' "${status:-NotFound}"
 }
 
 vm_ensure_running() {
