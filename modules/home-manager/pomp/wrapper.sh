@@ -51,12 +51,16 @@ vm_ensure_running() {
 }
 
 vm_preflight() {
-  # Quick health check; handles post-sleep hangs
-  if ! timeout 5 limactl shell "$VM_NAME" true 2>/dev/null; then
+  # Use SSH directly — limactl shell cds to the host cwd which may not exist in the VM.
+  local ssh_config="$HOME/.lima/$VM_NAME/ssh.config"
+  local ssh_opts="-F $ssh_config -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=4"
+  # shellcheck disable=SC2086
+  if ! timeout 5 ssh $ssh_opts "lima-$VM_NAME" true 2>/dev/null; then
     log "VM unresponsive, bouncing..."
     limactl stop "$VM_NAME" 2>/dev/null || true
     limactl start "$VM_NAME" 2>&1 | while IFS= read -r line; do log "  $line"; done
-    if ! timeout 10 limactl shell "$VM_NAME" true 2>/dev/null; then
+    # shellcheck disable=SC2086
+    if ! timeout 10 ssh $ssh_opts "lima-$VM_NAME" true 2>/dev/null; then
       die "VM failed to recover after bounce"
     fi
   fi
@@ -83,14 +87,14 @@ stage_config() {
 
 sync_config_to_vm() {
   log "syncing config to VM..."
-  limactl shell "$VM_NAME" -- bash -c "rm -rf '$VM_AGENT_DIR' && mkdir -p '$VM_AGENT_DIR'"
+  limactl shell --workdir=/ "$VM_NAME" -- bash -c "rm -rf '$VM_AGENT_DIR' && mkdir -p '$VM_AGENT_DIR'"
   limactl copy --recursive "$STAGING_DIR/agent/" "$VM_NAME:$VM_AGENT_DIR/"
 }
 
 setup_state_symlinks() {
   log "linking state..."
   # shellcheck disable=SC2016  # $f and $d are intentionally literals for the remote shell
-  limactl shell "$VM_NAME" -- bash -c '
+  limactl shell --workdir=/ "$VM_NAME" -- bash -c '
     for f in agent.db agent.db-shm agent.db-wal \
              history.db history.db-shm history.db-wal \
              models.db models.db-shm models.db-wal; do
@@ -107,17 +111,17 @@ setup_state_symlinks() {
 
 ensure_agent_version() {
   local vm_ver
-  vm_ver=$(limactl shell "$VM_NAME" -- omp --version 2>/dev/null | tr -d '[:space:]' || echo "none")
+  vm_ver=$(limactl shell --workdir=/ "$VM_NAME" -- omp --version 2>/dev/null | tr -d '[:space:]' || echo "none")
   if [ "$vm_ver" != "$OMP_VERSION" ]; then
     log "updating omp in VM ($vm_ver → $OMP_VERSION)..."
     local arch_raw arch_suffix
-    arch_raw=$(limactl shell "$VM_NAME" -- uname -m)
+    arch_raw=$(limactl shell --workdir=/ "$VM_NAME" -- uname -m)
     case "$arch_raw" in
       aarch64) arch_suffix="arm64" ;;
       x86_64)  arch_suffix="x64" ;;
       *)        die "Unsupported VM arch: $arch_raw" ;;
     esac
-    limactl shell "$VM_NAME" -- sudo bash -c "
+    limactl shell --workdir=/ "$VM_NAME" -- sudo bash -c "
       curl -fsSL 'https://github.com/can1357/oh-my-pi/releases/download/v${OMP_VERSION}/omp-linux-${arch_suffix}' \
         -o /usr/local/bin/omp && chmod +x /usr/local/bin/omp
     "
@@ -227,7 +231,7 @@ cmd_status() {
   printf 'State:    %s\n' "$STATE_DIR"
   printf 'Staging:  %s\n' "$STAGING_DIR"
   if [ "$status" = "Running" ]; then
-    printf 'omp:      %s\n' "$(limactl shell "$VM_NAME" -- omp --version 2>/dev/null || echo 'not installed')"
+    printf 'omp:      %s\n' "$(limactl shell --workdir=/ "$VM_NAME" -- omp --version 2>/dev/null || echo 'not installed')"
     printf 'Mounts:\n'
     limactl list --json 2>/dev/null \
       | "$JQ" -r "select(.name == \"$VM_NAME\") | .config.mounts[] | \"  \\(.location) → \\(.mountPoint) (writable: \\(.writable))\"" 2>/dev/null || true
