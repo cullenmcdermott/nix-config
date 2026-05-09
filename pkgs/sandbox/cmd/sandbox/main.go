@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/cullenmcdermott/system-config/sandbox/internal/cli"
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "--version" {
-		fmt.Println("sandbox dev")
-		return
+	if err := cli.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, "sandbox:", err)
+		os.Exit(1)
 	}
-	fmt.Fprintln(os.Stderr, "sandbox: no subcommand wired yet (Phase 0 scaffolding)")
-	os.Exit(2)
 }
