@@ -1,0 +1,5 @@
+/sandbox
+/dist/
+*.test
+*.out
+.coverage/
