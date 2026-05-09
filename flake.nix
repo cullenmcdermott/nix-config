@@ -49,6 +49,7 @@
         ./flake-modules/modules.nix
         ./flake-modules/compat.nix
         ./flake-modules/per-system.nix
+        ./flake-modules/sandbox.nix
         ./hosts/cullens-macbook-pro
       ];
     };

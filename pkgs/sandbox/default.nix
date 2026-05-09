@@ -1,21 +1,20 @@
-{ lib, buildGoModule }:
+{ lib, buildGoModule, ... }:
 
-buildGoModule {
+let version = "0.0.1-dev";
+in buildGoModule {
   pname = "sandbox";
-  version = "0.0.1-dev";
+  inherit version;
 
   src = lib.cleanSource ./.;
 
-  # Set after the first `nix build` fails — copy the expected hash from the
-  # error message into the literal here.
-  vendorHash = lib.fakeHash;
+  vendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
 
   subPackages = [ "cmd/sandbox" ];
 
   ldflags = [
     "-s"
     "-w"
-    "-X github.com/cullenmcdermott/system-config/sandbox/internal/buildinfo.version=${self.version}"
+    "-X github.com/cullenmcdermott/system-config/sandbox/internal/buildinfo.version=${version}"
   ];
 
   doCheck = true;
