@@ -38,6 +38,7 @@
   system.defaults.NSGlobalDomain.AppleShowAllExtensions = true;
   system.defaults.NSGlobalDomain.InitialKeyRepeat = 14;
   system.defaults.NSGlobalDomain.KeyRepeat = 2;
+  system.defaults.screencapture.location = "/Users/${username}/Screenshots";
 
   system.stateVersion = 6;
 }

@@ -23,7 +23,7 @@ If the user provided a specific question, write it to a temp file and pipe it. I
    git diff --cached | cursor-agent -p "Review the following code change piped via stdin for issues:" --output-format json
    ```
 
-2. **`llm`**:
+2. **`llm`** (Simon Willison's LLM CLI):
    ```bash
    git diff --cached | llm "Review this code change for issues:"
    ```

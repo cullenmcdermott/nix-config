@@ -1,8 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Api, Model } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import type { Api, Model } from "@oh-my-pi/pi-ai";
+import type { ExtensionAPI, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
@@ -23,22 +22,27 @@ interface OriginalState {
   tools: string[];
 }
 
-function loadPresets(cwd: string): PresetsConfig {
-  const globalPath = join(getAgentDir(), "presets.json");
-  const projectPath = join(cwd, ".pi", "presets.json");
+function loadPresets(cwd: string, agentDir: string): PresetsConfig {
+  const globalPath = join(agentDir, "presets.json");
+  const projectPath = join(cwd, ".omp", "presets.json");
 
   let globalPresets: PresetsConfig = {};
   let projectPresets: PresetsConfig = {};
 
   if (existsSync(globalPath)) {
-    globalPresets = JSON.parse(readFileSync(globalPath, "utf-8")) as PresetsConfig;
+    globalPresets = JSON.parse(readFileSync(globalPath, "utf-8") as string) as PresetsConfig;
   }
 
   if (existsSync(projectPath)) {
-    projectPresets = JSON.parse(readFileSync(projectPath, "utf-8")) as PresetsConfig;
+    projectPresets = JSON.parse(readFileSync(projectPath, "utf-8") as string) as PresetsConfig;
   }
 
-  return { ...globalPresets, ...projectPresets };
+  const namespacedProject: PresetsConfig = {};
+  for (const [name, preset] of Object.entries(projectPresets)) {
+    namespacedProject[`project:${name}`] = preset;
+  }
+
+  return { ...globalPresets, ...namespacedProject };
 }
 
 export default function presetExtension(pi: ExtensionAPI) {
@@ -179,7 +183,8 @@ export default function presetExtension(pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
-    presets = loadPresets(ctx.cwd);
+    presets = loadPresets(ctx.cwd, pi.pi.getAgentDir());
+    // omp uses .omp for project-local config (with .pi as legacy fallback)
     updateStatus(ctx);
   });
 }

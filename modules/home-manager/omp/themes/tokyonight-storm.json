@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/modes/theme/theme-schema.json",
   "name": "tokyonight-storm",
   "vars": {
     "bg": "#24283b",
@@ -18,7 +18,12 @@
     "yellow": "#e0af68",
     "red": "#f7768e",
     "teal": "#1abc9c",
+    "gray": "#3b4261",
+    "dimGray": "#565f89",
+    "lightBlue": "#c0caf5",
+    "darkRed": "#db4b4b",
     "selectedBg": "#2f3549",
+    "statusBg": "#1a1b26",
     "userMsgBg": "#2a2f45",
     "toolPendingBg": "#21263a",
     "toolSuccessBg": "#1f2c2f",
@@ -65,6 +70,7 @@
     "toolDiffRemoved": "red",
     "toolDiffContext": "fgDark",
 
+    "link": "cyan",
     "syntaxComment": "comment",
     "syntaxKeyword": "magenta",
     "syntaxFunction": "blue",
@@ -82,7 +88,16 @@
     "thinkingHigh": "magenta",
     "thinkingXhigh": "red",
 
-    "bashMode": "teal"
+    "bashMode": "teal",
+    "pythonMode": "yellow",
+    "statusLineBg": "statusBg",
+    "statusLineSep": 238,
+    "statusLineModel": "blue",
+    "statusLinePath": "cyan",
+    "statusLineGitClean": "green",
+    "statusLineGitDirty": "yellow",
+    "statusLineContext": "blue",
+    "statusLineSpend": "teal"
   },
   "export": {
     "pageBg": "#1a1b26",
