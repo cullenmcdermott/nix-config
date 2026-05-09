@@ -118,5 +118,28 @@
         self.homeManagerModules.claudeCode
       ];
     };
+
+    profiles.vm = { pkgs, ... }: {
+      imports = [
+        self.homeManagerModules.profiles.workstation
+        self.homeManagerModules.agenticSkills
+      ];
+      home.packages = [
+        inputs.flox.packages.${pkgs.stdenv.hostPlatform.system}.default
+      ];
+      cullen.agenticSkills.enable = true;
+    };
+  };
+  flake.homeConfigurations.vm = inputs.home-manager.lib.homeManagerConfiguration {
+    pkgs = import inputs.nixpkgs { system = "aarch64-linux"; config.allowUnfree = true; };
+    modules = [
+      self.homeManagerModules.profiles.vm
+      {
+        home.username = "cullen";
+        home.homeDirectory = "/home/cullen";
+        programs.home-manager.enable = true;
+      }
+    ];
+    extraSpecialArgs = { username = "cullen"; };
   };
 }

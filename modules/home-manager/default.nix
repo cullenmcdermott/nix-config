@@ -30,8 +30,8 @@ in
     ./zwift-media.nix
     ./omp.nix
     ./pomp.nix
+    ./open-design.nix
   ];
-
   home.homeDirectory = lib.mkForce homeDirectory;
 
   # HA-specific zsh init — depends on programs.claude-code-nix.homeAssistant

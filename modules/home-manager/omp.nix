@@ -26,15 +26,20 @@ let
     "writing-skills"
   ];
 
-  superPowersSkillFiles = builtins.listToAttrs (
-    map (skill: {
-      name = "omp/agent/skills/${skill}";
-      value = {
-        source = "${superpowers}/skills/${skill}";
-        recursive = true;
-      };
-    }) superPowersSkillNames
-  );
+
+  # Build a single directory containing all skills (local + superpowers + flox-agentic)
+  # so that home-manager can symlink it cleanly without path collisions.
+  allSkills = pkgs.runCommand "omp-all-skills" { } ''
+    mkdir -p $out
+    # Local skills from this repo
+    for d in ${./../../skills}/*; do
+      [ -d "$d" ] && cp -r "$d" $out/
+    done
+    # Superpowers skills
+    for skill in ${lib.concatStringsSep " " (map (s: lib.escapeShellArg s) superPowersSkillNames)}; do
+      cp -r "${superpowers}/skills/$skill" $out/
+    done
+  '';
 
   ompSessionDir = "${config.xdg.stateHome}/omp/sessions";
 
@@ -213,7 +218,8 @@ in
       rm -f "${config.xdg.configHome}/omp/agent/models.yml"
     '';
 
-    xdg.configFile = superPowersSkillFiles // {
+    xdg.configFile = {
+
       # omp reads settings from $PI_CODING_AGENT_DIR/settings.json
       # Providers go in models.json (same as pi)
       "omp/agent/settings.json".text = builtins.toJSON (builtins.removeAttrs ompSettings [ "providers" ]);
@@ -242,7 +248,7 @@ in
       };
 
       "omp/agent/skills" = {
-        source = ./../../skills;
+        source = allSkills;
         recursive = true;
       };
     };

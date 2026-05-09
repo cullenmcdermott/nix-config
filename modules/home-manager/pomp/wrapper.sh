@@ -2,9 +2,9 @@
 # Not executed directly; sourced into the Nix-generated wrapper.
 # Variables available from Nix preamble:
 #   VM_NAME, LIMA_TEMPLATE, BRIDGE_HANDLER, OMP_VERSION, HOST_HOME,
-#   CONFIG_DIR, STATE_DIR, STAGING_DIR, VM_HOME, VM_AGENT_DIR,
-#   VM_STATE_MOUNT, LOCK_FILE, BRIDGE_SOCK, VM_BRIDGE_SOCK,
-#   JQ, SOCAT, FLOCK
+#   CONFIG_DIR, STATE_DIR, STAGING_DIR, VM_HOME, VM_USER, VM_AGENT_DIR,
+#   VM_STATE_MOUNT, VM_REPO_MOUNT, SCREENSHOTS_DIR, LOCK_FILE, BRIDGE_SOCK,
+#   VM_BRIDGE_SOCK, JQ, SOCAT, FLOCK
 
 BRIDGE_PID=""
 
@@ -64,6 +64,16 @@ vm_preflight() {
       die "VM failed to recover after bounce"
     fi
   fi
+}
+
+# ── VM env detection ─────────────────────────────────────────────────────────
+
+# Lima on macOS may append .linux to the username. Detect the actual
+# user/home at runtime so we work with both old and new VMs.
+vm_detect_env() {
+  VM_USER=$(limactl shell --workdir=/ "$VM_NAME" -- whoami 2>/dev/null || echo "$VM_USER")
+  VM_HOME=$(limactl shell --workdir=/ "$VM_NAME" -- printenv HOME 2>/dev/null || echo "$VM_HOME")
+  VM_AGENT_DIR="${VM_HOME}/.config/omp/agent"
 }
 
 # ── Config staging ───────────────────────────────────────────────────────────
@@ -128,6 +138,20 @@ ensure_agent_version() {
   fi
 }
 
+# ── Home Manager activation ────────────────────────────────────────────────
+
+ensure_home_manager() {
+  if limactl shell --workdir=/ "$VM_NAME" -- test -f ~/.pomp-hm-activated 2>/dev/null; then
+    return 0
+  fi
+  log "activating home-manager in VM (first run, may take a few minutes)..."
+  limactl shell --workdir=/ "$VM_NAME" -- bash -c '
+    . /etc/profile.d/nix.sh
+    nix run --extra-experimental-features "nix-command flakes" github:nix-community/home-manager -- switch --flake "'"${VM_REPO_MOUNT}"'#vm"
+  '
+  limactl shell --workdir=/ "$VM_NAME" -- touch ~/.pomp-hm-activated
+}
+
 # ── Host bridge ──────────────────────────────────────────────────────────────
 
 start_bridge() {
@@ -189,10 +213,13 @@ cmd_launch() {
   # Release lock — VM is up, other instances can proceed
   "$FLOCK" -u 9
 
+  vm_detect_env
+
   stage_config
   sync_config_to_vm
   setup_state_symlinks
   ensure_agent_version
+  ensure_home_manager
   start_bridge
 
   local env_args
@@ -208,6 +235,13 @@ cmd_launch() {
   esac
 
   log "launching omp..."
+
+  # Activate flox environment if the project has one
+  local flox_prefix=""
+  if limactl shell --workdir=/ "$VM_NAME" -- test -d "$work_dir/.flox" 2>/dev/null; then
+    flox_prefix="flox activate -- "
+  fi
+
   # shellcheck disable=SC2086
   ssh -F "$ssh_config" \
     -A \
@@ -217,7 +251,7 @@ cmd_launch() {
     -o LogLevel=ERROR \
     -t \
     "lima-$VM_NAME" \
-    -- "cd '$work_dir' && env $env_args omp"
+    -- ". /etc/profile.d/nix.sh && cd '$work_dir' && ${flox_prefix}env $env_args omp"
   exit $?
 }
 

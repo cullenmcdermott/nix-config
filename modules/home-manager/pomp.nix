@@ -11,11 +11,15 @@ let
   configDir = "${config.xdg.configHome}/omp";
   stateDir = "${homeDir}/.local/share/pomp/state/omp";
   stagingDir = "${homeDir}/.cache/pomp/staging/omp";
+  screenshotsDir = "${homeDir}/Screenshots";
+  repoDir = "${homeDir}/src/system-config";
 
-  # VM user home (Lima convention: /home/<username>.linux on macOS hosts)
-  vmHome = "/home/${config.home.username}.linux";
+  # VM user home (explicitly set in Lima template to match host username)
+  vmUser = config.home.username;
+  vmHome = "/home/${vmUser}";
   vmAgentDir = "${vmHome}/.config/omp/agent";
   vmStateMount = "/pomp-state";
+  vmRepoMount = "${vmHome}/src/system-config";
 
   # --- Lima template ---
   limaTemplate = pkgs.writeText "pomp-vm.yaml" ''
@@ -23,6 +27,9 @@ let
     cpus: 4
     memory: 8GiB
     disk: 50GiB
+
+    user:
+      name: "${vmUser}"
 
     images:
       - location: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-arm64.img"
@@ -36,6 +43,12 @@ let
       - location: "${homeDir}/git"
         mountPoint: "${homeDir}/git"
         writable: true
+      - location: "${repoDir}"
+        mountPoint: "${vmRepoMount}"
+        writable: false
+      - location: "${screenshotsDir}"
+        mountPoint: "${screenshotsDir}"
+        writable: true
       - location: "${stateDir}"
         mountPoint: "${vmStateMount}"
         writable: true
@@ -45,6 +58,12 @@ let
         script: |
           #!/bin/bash
           set -euo pipefail
+
+          # --- Nix package manager ---
+          if [ ! -d /nix ]; then
+            curl -L https://nixos.org/nix/install | sh -s -- --daemon
+          fi
+          . /etc/profile.d/nix.sh
 
           # --- omp binary ---
           ARCH=$(uname -m)
@@ -164,8 +183,11 @@ let
     STATE_DIR="${stateDir}"
     STAGING_DIR="${stagingDir}"
     VM_HOME="${vmHome}"
+    VM_USER="${vmUser}"
     VM_AGENT_DIR="${vmAgentDir}"
     VM_STATE_MOUNT="${vmStateMount}"
+    VM_REPO_MOUNT="${vmRepoMount}"
+    SCREENSHOTS_DIR="${screenshotsDir}"
     LOCK_FILE="''${TMPDIR:-/tmp}/pomp.lock"
     BRIDGE_SOCK="''${TMPDIR:-/tmp}/pomp-bridge-$$.sock"
     VM_BRIDGE_SOCK="/tmp/pomp-bridge.sock"

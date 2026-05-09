@@ -40,12 +40,14 @@ in {
               home.homeDirectory = "/Users/${username}";
               cullen.agenticSkills.enable = true;
               cullen.omp.enable = true;
+              cullen.open-design.enable = true;
               programs.zwift-media.enable = true;
             })
             ({...}: {
               # Personal-laptop-only: Home Assistant integrations
               # (registers home-assistant skill + ha-claude launcher + statusline badge)
               programs.claude-code-nix.homeAssistant.enable = true;
+              programs.claude-code-nix.homeAssistant.repoPath = "/Users/${username}/git/claude-homeassistant";
             })
           ];
         };
