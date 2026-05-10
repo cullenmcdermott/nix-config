@@ -34,8 +34,6 @@ func Run(f Form) (Form, error) {
 			huh.NewSelect[string]().Title("Agent").
 				Options(
 					huh.NewOption("claude", "claude"),
-					huh.NewOption("codex (coming soon)", "codex"),
-					huh.NewOption("omp (coming soon)", "omp"),
 				).Value(&agent),
 			huh.NewText().Title("Extra mounts (one absolute path per line; blank to skip)").
 				Value(&mountsText),
