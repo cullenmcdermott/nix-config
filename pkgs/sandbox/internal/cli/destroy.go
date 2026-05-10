@@ -15,8 +15,14 @@ import (
 	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
+type destroyStep struct {
+	id   string
+	desc string
+	fn   func(ctx context.Context) error
+}
+
 func newDestroyCmd(app *App) *cobra.Command {
-	var force bool
+	var force, recover bool
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Delete this project's VM and on-host state",
@@ -26,60 +32,112 @@ func newDestroyCmd(app *App) *cobra.Command {
 				return err
 			}
 			vp := app.Paths.VM(string(id))
-			persisted, err := state.Read(vp.StateFile)
+			rec, err := state.ReadRecord(vp.StateFile)
 			if err != nil {
 				return err
 			}
-			if persisted == state.StateRunning && !force {
-				return fmt.Errorf("VM is RUNNING — pass --force or run `sandbox stop` first")
-			}
-			if persisted == state.StateNew {
+
+			switch rec.State {
+			case state.StateRunning:
+				if !force {
+					return fmt.Errorf("VM is RUNNING — pass --force or run `sandbox stop` first")
+				}
+			case state.StateNew:
 				fmt.Fprintln(c.OutOrStdout(), "nothing to destroy.")
 				return nil
+			case state.StateDestroyFailed:
+				if !recover {
+					return fmt.Errorf("VM is DESTROY_FAILED at step %q — re-run with --recover to resume", rec.LastFailedStep)
+				}
 			}
-			if err := state.Write(vp.StateFile, state.StateDestroying); err != nil {
-				return err
+
+			steps := []destroyStep{
+				{
+					"vm-stop", "stop VM",
+					func(ctx context.Context) error {
+						if rec.State != state.StateRunning {
+							return nil
+						}
+						if app.Mutagen != nil {
+							if err := app.Mutagen.PauseAll(ctx, string(id)); err != nil {
+								fmt.Fprintf(c.ErrOrStderr(), "warning: mutagen pause failed (continuing): %v\n", err)
+							}
+						}
+						if err := mergeNixIntoWarm(ctx, app, id); err != nil {
+							return fmt.Errorf("merge /nix into warm template: %w", err)
+						}
+						return app.Backend.Stop(ctx, backend.VMID(id))
+					},
+				},
+				{
+					"bridge-stop", "stop bridge daemon",
+					func(ctx context.Context) error {
+						if app.Bridge != nil {
+							app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken)
+						}
+						return nil
+					},
+				},
+				{
+					"mutagen-terminate", "terminate Mutagen sessions",
+					func(ctx context.Context) error {
+						if app.Mutagen == nil {
+							return nil
+						}
+						return app.Mutagen.TerminateAll(ctx, string(id))
+					},
+				},
+				{
+					"backend-destroy", "delete Lima instance",
+					func(ctx context.Context) error {
+						return app.Backend.Destroy(ctx, backend.VMID(id))
+					},
+				},
+				{
+					"remove-host-state", "remove host state files",
+					func(ctx context.Context) error {
+						if err := os.RemoveAll(vp.DataDir); err != nil {
+							return err
+						}
+						return os.RemoveAll(vp.ConfigDir)
+					},
+				},
 			}
-			if persisted == state.StateRunning {
-				if app.Mutagen != nil {
-					if err := app.Mutagen.PauseAll(c.Context(), string(id)); err != nil {
-						return fmt.Errorf("mutagen pause: %w", err)
+
+			// Find resume point when recovering.
+			start := 0
+			if rec.State == state.StateDestroyFailed {
+				for i, s := range steps {
+					if s.id == rec.LastFailedStep {
+						start = i
+						break
 					}
 				}
-				// Merge VM's /nix/store back into the warm template while the VM is
-				// still reachable over SSH. This is done before Backend.Stop so the
-				// VM is still running and ssh is available.
-				if err := mergeNixIntoWarm(c.Context(), app, id); err != nil {
-					return fmt.Errorf("merge /nix into warm template: %w", err)
-				}
-				if err := app.Backend.Stop(c.Context(), backend.VMID(id)); err != nil {
-					return fmt.Errorf("stop before destroy: %w", err)
+			}
+
+			// Mark in-progress so interruptions leave a clear state.
+			if start == 0 {
+				if err := state.Write(vp.StateFile, state.StateDestroying); err != nil {
+					return err
 				}
 			}
-			// Terminate Mutagen sessions before destroying the backend.
-			if app.Mutagen != nil {
-				if err := app.Mutagen.TerminateAll(c.Context(), string(id)); err != nil {
-					return fmt.Errorf("mutagen terminate: %w", err)
+
+			for i := start; i < len(steps); i++ {
+				if err := steps[i].fn(c.Context()); err != nil {
+					_ = state.WriteRecord(vp.StateFile, state.Record{
+						State:          state.StateDestroyFailed,
+						LastFailedStep: steps[i].id,
+					})
+					return fmt.Errorf("destroy failed at step %q: %w", steps[i].id, err)
 				}
 			}
-			if err := app.Backend.Destroy(c.Context(), backend.VMID(id)); err != nil {
-				_ = state.Write(vp.StateFile, state.StateDestroyFailed)
-				return fmt.Errorf("destroy: %w", err)
-			}
-			if app.Bridge != nil {
-				app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken)
-			}
-			if err := os.RemoveAll(vp.DataDir); err != nil {
-				return err
-			}
-			if err := os.RemoveAll(vp.ConfigDir); err != nil {
-				return err
-			}
+
 			fmt.Fprintln(c.OutOrStdout(), "VM destroyed.")
 			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "destroy even if the VM is currently running")
+	cmd.Flags().BoolVar(&recover, "recover", false, "resume a DESTROY_FAILED sequence from where it left off")
 	return cmd
 }
 
@@ -97,7 +155,6 @@ func mergeNixIntoWarm(ctx context.Context, app *App, id vmid.ID) error {
 		return err
 	}
 	if !hasWarm {
-		// No warm content yet — nothing to merge.
 		return nil
 	}
 	release, err := warm.Lock(ctx)
@@ -110,18 +167,13 @@ func mergeNixIntoWarm(ctx context.Context, app *App, id vmid.ID) error {
 	if err != nil {
 		return err
 	}
-	// Skip if SSH config is not a usable file. The Fake backend used by tests
-	// returns "/dev/null" which rsync cannot read — skip merge in that case.
-	// Real Lima backends always return a real path inside ~/.lima/.
 	if ssh.ConfigFile == "" || ssh.ConfigFile == "/dev/null" {
 		return nil
 	}
 	if _, err := os.Stat(ssh.ConfigFile); err != nil {
-		// Config file doesn't exist — VM not reachable.
 		return nil
 	}
 
-	// rsync from VM:/nix/store/ -> warm/store/
 	cmd := exec.CommandContext(ctx, "rsync",
 		"-aH", "--delete-after",
 		"-e", fmt.Sprintf("ssh -F %s", ssh.ConfigFile),

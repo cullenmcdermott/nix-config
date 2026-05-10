@@ -52,6 +52,22 @@ func TestClear(t *testing.T) {
 	}
 }
 
+func TestRecord_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "s.json")
+	want := Record{State: StateDestroyFailed, LastFailedStep: "bridge-stop"}
+	if err := WriteRecord(p, want); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadRecord(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Errorf("round-trip: %+v", got)
+	}
+}
+
 func TestRead_BadFile(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "state.json")
