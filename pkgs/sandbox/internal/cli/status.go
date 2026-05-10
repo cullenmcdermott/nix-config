@@ -7,7 +7,6 @@ import (
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/state"
-	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
 func newStatusCmd(app *App) *cobra.Command {
@@ -15,7 +14,7 @@ func newStatusCmd(app *App) *cobra.Command {
 		Use:   "status",
 		Short: "Show this project's VM state and resolved config",
 		RunE: func(c *cobra.Command, _ []string) error {
-			id, err := vmid.ForCwd()
+			id, err := app.SelectedVMID(c)
 			if err != nil {
 				return err
 			}

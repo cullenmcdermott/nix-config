@@ -7,7 +7,6 @@ import (
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/state"
-	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
 func newShellCmd(app *App) *cobra.Command {
@@ -16,7 +15,7 @@ func newShellCmd(app *App) *cobra.Command {
 		Short:             "Open an interactive bash inside this project's VM",
 		DisableFlagParsing: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			id, err := vmid.ForCwd()
+			id, err := app.SelectedVMID(c)
 			if err != nil {
 				return err
 			}

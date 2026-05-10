@@ -32,7 +32,7 @@ func newConfigCmd(app *App) *cobra.Command {
 }
 
 func runConfigPrint(c *cobra.Command, app *App) error {
-	id, vp, r, err := loadResolved(app.Paths)
+	id, vp, r, err := loadResolved(c, app)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func runConfigPrint(c *cobra.Command, app *App) error {
 }
 
 func runConfigEdit(c *cobra.Command, app *App) error {
-	id, vp, r, err := loadResolved(app.Paths)
+	id, vp, r, err := loadResolved(c, app)
 	if err != nil {
 		return err
 	}
@@ -78,13 +78,13 @@ func runConfigEdit(c *cobra.Command, app *App) error {
 	return nil
 }
 
-func loadResolved(p *paths.Paths) (vmid.ID, paths.VMPaths, config.Resolved, error) {
-	id, err := vmid.ForCwd()
+func loadResolved(c *cobra.Command, app *App) (vmid.ID, paths.VMPaths, config.Resolved, error) {
+	id, err := app.SelectedVMID(c)
 	if err != nil {
 		return "", paths.VMPaths{}, config.Resolved{}, err
 	}
-	vp := p.VM(string(id))
-	r, err := config.LoadResolved(p.GlobalConfig, vp.ConfigFile)
+	vp := app.Paths.VM(string(id))
+	r, err := config.LoadResolved(app.Paths.GlobalConfig, vp.ConfigFile)
 	if err != nil {
 		return "", paths.VMPaths{}, config.Resolved{}, err
 	}

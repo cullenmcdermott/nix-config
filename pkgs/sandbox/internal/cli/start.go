@@ -63,7 +63,7 @@ func newStartCmd(app *App) *cobra.Command {
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx := withNoWizard(c.Context(), noWizardFlag)
 			c.SetContext(ctx)
-			id, err := vmid.ForCwd()
+			id, err := app.SelectedVMID(c)
 			if err != nil {
 				return err
 			}

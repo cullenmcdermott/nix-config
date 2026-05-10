@@ -35,6 +35,8 @@ func NewRootForApp(app *App) *cobra.Command {
 	cmd.SetVersionTemplate("sandbox {{.Version}}\n")
 	cmd.Version = buildinfo.Version()
 
+	cmd.PersistentFlags().String("vm", "", "operate on this VM id (default: derive from cwd)")
+
 	cmd.AddCommand(newStatusCmd(app))
 	cmd.AddCommand(newConfigCmd(app))
 	cmd.AddCommand(newStartCmd(app))
@@ -42,6 +44,8 @@ func NewRootForApp(app *App) *cobra.Command {
 	cmd.AddCommand(newDestroyCmd(app))
 	cmd.AddCommand(newShellCmd(app))
 	cmd.AddCommand(newClaudeCmd(app))
+	cmd.AddCommand(newMountCmd(app))
+	cmd.AddCommand(newVMCmd(app))
 	cmd.AddCommand(newBridgedCmd())
 	return cmd
 }

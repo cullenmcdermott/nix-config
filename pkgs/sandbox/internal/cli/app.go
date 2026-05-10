@@ -7,16 +7,28 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/spf13/cobra"
+
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/lima"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/mutagen"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/paths"
+	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/wizard"
 )
 
 // SSHExecer is the function signature for executing ssh into a VM.
 type SSHExecer func(configFile, host string, forwards, args []string) error
+
+// SelectedVMID returns the VM ID from the --vm flag when set, or derives it
+// from the current working directory.
+func (a *App) SelectedVMID(c *cobra.Command) (vmid.ID, error) {
+	if v, _ := c.Root().PersistentFlags().GetString("vm"); v != "" {
+		return vmid.ID(v), nil
+	}
+	return vmid.ForCwd()
+}
 
 // WizardFunc lets tests stub out the interactive form.
 type WizardFunc func(global config.Global) (config.PerVM, error)

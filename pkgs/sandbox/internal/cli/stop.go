@@ -7,7 +7,6 @@ import (
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/state"
-	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
 func newStopCmd(app *App) *cobra.Command {
@@ -15,7 +14,7 @@ func newStopCmd(app *App) *cobra.Command {
 		Use:   "stop",
 		Short: "Stop this project's VM",
 		RunE: func(c *cobra.Command, _ []string) error {
-			id, err := vmid.ForCwd()
+			id, err := app.SelectedVMID(c)
 			if err != nil {
 				return err
 			}

@@ -21,7 +21,7 @@ func newDestroyCmd(app *App) *cobra.Command {
 		Use:   "destroy",
 		Short: "Delete this project's VM and on-host state",
 		RunE: func(c *cobra.Command, _ []string) error {
-			id, err := vmid.ForCwd()
+			id, err := app.SelectedVMID(c)
 			if err != nil {
 				return err
 			}
