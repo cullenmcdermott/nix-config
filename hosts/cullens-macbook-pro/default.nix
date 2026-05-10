@@ -35,6 +35,7 @@ in {
             self.homeManagerModules.full
             self.homeManagerModules.agenticSkills
             self.homeManagerModules.omp
+            self.homeManagerModules.sandbox
             inputs.mac-app-util.homeManagerModules.default
             ({...}: {
               home.homeDirectory = "/Users/${username}";
@@ -42,6 +43,7 @@ in {
               cullen.omp.enable = true;
               cullen.open-design.enable = true;
               programs.zwift-media.enable = true;
+              programs.sandbox.enable = true;
             })
             ({...}: {
               # Personal-laptop-only: Home Assistant integrations

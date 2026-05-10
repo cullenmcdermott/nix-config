@@ -71,6 +71,7 @@
 
     editor = ../modules/home-manager/nvim;
     claudeCode = ../modules/home-manager/claude-code.nix;
+    sandbox = ../modules/home-manager/sandbox.nix;
 
     omp = { lib, ... }: {
       _module.args.superpowers = inputs.superpowers;
