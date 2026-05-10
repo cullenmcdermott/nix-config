@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
+	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
 func TestStart_WizardFires_OnFirstRun(t *testing.T) {
@@ -52,13 +53,20 @@ func TestStart_NoWizardFlag_BypassesWizard(t *testing.T) {
 
 func TestStart_WizardSkippedIfConfigExists(t *testing.T) {
 	app := newTestApp(t)
-	// Pre-create a per-VM config.
-	cmd := NewRootForApp(app)
-	cmd.SetArgs([]string{"config", "edit"})
-	t.Setenv("EDITOR", "true")
-	cmd.SetOut(os.Stderr)
-	cmd.SetErr(os.Stderr)
-	if err := cmd.Execute(); err != nil {
+
+	// Pre-create a per-VM config directly so the wizard is suppressed.
+	// Previously this used "config edit" which opens a real editor via
+	// $VISUAL/$EDITOR and hangs when VISUAL is set in the environment.
+	id, err := vmid.ForCwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	vp := app.Paths.VM(string(id))
+	if err := os.MkdirAll(vp.ConfigDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	v := config.PerVM{CPUs: 4, MemoryGiB: 8, DiskGiB: 50, Arch: "aarch64", Agent: "claude"}
+	if err := config.SavePerVM(vp.ConfigFile, v); err != nil {
 		t.Fatal(err)
 	}
 
