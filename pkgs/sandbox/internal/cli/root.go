@@ -2,8 +2,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/buildinfo"
@@ -24,15 +22,12 @@ func NewRoot() *cobra.Command {
 	}
 	cmd.SetVersionTemplate("sandbox {{.Version}}\n")
 	cmd.Version = buildinfo.Version()
+	cmd.AddCommand(newStatusCmd())
 	return cmd
 }
-
 // Execute is the canonical CLI entrypoint used by main.
 func Execute() error {
 	cmd := NewRoot()
 	return cmd.Execute()
 }
 
-// Compile-time check that fmt is referenced if we later need it; remove when
-// real subcommands land.
-var _ = fmt.Sprint
