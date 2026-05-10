@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"runtime"
 
 	"github.com/spf13/cobra"
 
+	"github.com/cullenmcdermott/system-config/sandbox/internal/agents"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/lima"
@@ -125,6 +127,13 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 	provision, err := lima.RenderProvision(lima.ProvisionConfig{
 		User:                currentUsername(),
 		HostClaudeMountRoot: HostClaudeMountRoot,
+		FloxVersion:        FloxVersion,
+		FloxURL:            FloxURL,
+		FloxSHA256:         FloxSHA256,
+		ClaudeVersion:      ClaudeVersion,
+		ClaudeURL:          BuildClaudeURL(ClaudeVersion, "linux-"+archToPlatform(defaultArch(r.Arch))),
+		ClaudeSHA256:       ClaudeSHA256,
+		AgentsMarkdown:     agents.MarkdownContent(),
 	})
 	if err != nil {
 		return err
@@ -223,4 +232,23 @@ func currentUsername() string {
 		return u.Username
 	}
 	return "user"
+}
+
+// archToPlatform maps our "aarch64"/"x86_64" arch string to the
+// platform key used in the GCS URL (e.g. "linux-arm64").
+func archToPlatform(arch string) string {
+	switch arch {
+	case "aarch64":
+		if runtime.GOOS == "darwin" {
+			return "darwin-arm64"
+		}
+		return "linux-arm64"
+	case "x86_64":
+		if runtime.GOOS == "darwin" {
+			return "darwin-x64"
+		}
+		return "linux-x64"
+	default:
+		return "linux-arm64"
+	}
 }

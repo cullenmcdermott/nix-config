@@ -34,7 +34,6 @@ func TestRenderProvision_FullStack(t *testing.T) {
 		"# ── AGENTS.md ──",
 		"/etc/sandbox/AGENTS.md",
 		"## Environment",
-		"# sandbox-helper unit",
 		"sandbox-helper.service",
 		"StreamLocalBindUnlink",
 	} {
@@ -44,7 +43,7 @@ func TestRenderProvision_FullStack(t *testing.T) {
 	}
 }
 
-func TestRenderProvision_BindsSubpathsAndInstallsUnit(t *testing.T) {
+func TestRenderProvision_OverlayMountsAllSubpaths(t *testing.T) {
 	got, err := RenderProvision(ProvisionConfig{
 		User:                "alice",
 		HostClaudeMountRoot: "/var/sandbox/host-claude",
@@ -52,18 +51,30 @@ func TestRenderProvision_BindsSubpathsAndInstallsUnit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, must := range []string{
-		"set -euo pipefail",
-		`USER_HOME="/home/alice"`,
-		"mkdir -p \"$USER_HOME/.claude\"",
-		"mount --bind -o ro /var/sandbox/host-claude/skills \"$USER_HOME/.claude/skills\"",
-		"mount --bind -o ro /var/sandbox/host-claude/CLAUDE.md \"$USER_HOME/.claude/CLAUDE.md\"",
-		"[Service]",
-		"sandbox-claude-overlay.service",
-	} {
-		if !strings.Contains(got, must) {
-			t.Errorf("missing %q in provision script:\n%s", must, got)
+	// Each subpath should appear as an if-block with mount --bind.
+	for _, sub := range []string{"skills", "commands", "agents", "hooks", "CLAUDE.md", "settings.json"} {
+		if !strings.Contains(got, "mount --bind -o ro \"$HOST_CLAUDE/"+sub+"\"") {
+			t.Errorf("missing mount for %s", sub)
 		}
+	}
+}
+
+func TestRenderProvision_SystemdUnitInstalled(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "carol",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "systemctl daemon-reload") {
+		t.Errorf("missing systemctl daemon-reload:\n%s", got)
+	}
+	if !strings.Contains(got, "systemctl enable sandbox-claude-overlay.service") {
+		t.Errorf("missing systemctl enable:\n%s", got)
+	}
+	if !strings.Contains(got, "After=local-fs.target lima-mounts.target") {
+		t.Errorf("missing systemd After= directive:\n%s", got)
 	}
 }
 
@@ -114,25 +125,6 @@ func TestRenderProvision_IdempotentViaMountpointCheck(t *testing.T) {
 	}
 }
 
-func TestRenderProvision_SystemdUnitInstalled(t *testing.T) {
-	got, err := RenderProvision(ProvisionConfig{
-		User:                "carol",
-		HostClaudeMountRoot: "/var/sandbox/host-claude",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(got, "systemctl daemon-reload") {
-		t.Errorf("missing systemctl daemon-reload:\n%s", got)
-	}
-	if !strings.Contains(got, "systemctl enable sandbox-claude-overlay.service") {
-		t.Errorf("missing systemctl enable:\n%s", got)
-	}
-	if !strings.Contains(got, "After=local-fs.target lima-mounts.target") {
-		t.Errorf("missing systemd After= directive:\n%s", got)
-	}
-}
-
 func TestRenderProvision_AgentsMarkdownSeeded(t *testing.T) {
 	got, err := RenderProvision(ProvisionConfig{
 		User:                "alice",
@@ -157,5 +149,20 @@ func TestRenderProvision_SSHDSocketForwarding(t *testing.T) {
 	}
 	if !strings.Contains(got, "StreamLocalBindUnlink") {
 		t.Errorf("sshd StreamLocalBindUnlink not configured:\n%s", got)
+	}
+}
+
+func TestRenderProvision_ApplyScriptUsesPrintfNotHeredoc(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{User: "alice", HostClaudeMountRoot: "/var/sandbox/host-claude"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The apply script uses printf (not a heredoc) so the template range
+	// can inline the per-subpath commands cleanly.
+	if !strings.Contains(got, "printf '#!/usr/bin/env bash") {
+		t.Errorf("apply script not using printf pattern:\n%s", got)
+	}
+	if !strings.Contains(got, "/etc/sandbox/apply-claude-overlay.sh") {
+		t.Errorf("apply script path not in template:\n%s", got)
 	}
 }
