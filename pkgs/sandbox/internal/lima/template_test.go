@@ -42,12 +42,12 @@ func TestRenderTemplate_Minimal(t *testing.T) {
 	}
 }
 
-func TestRenderTemplate_WithMounts(t *testing.T) {
+func TestRenderTemplate_WithMounts_FiltersMutagen(t *testing.T) {
 	spec := backend.VMSpec{
 		ID:   "test-123456",
 		CPUs: 4, MemoryMiB: 8192, DiskGiB: 50, Arch: "aarch64",
 		Mounts: []backend.Mount{
-			{HostPath: "/Users/alice/proj", VMPath: "/Users/alice/proj", Writable: true, SyncMode: backend.SyncVirtiofs},
+			{HostPath: "/Users/alice/proj", VMPath: "/Users/alice/proj", Writable: true, SyncMode: backend.SyncMutagen},
 			{HostPath: "/Users/alice/.claude/skills", VMPath: "/var/sandbox/host-claude/skills", Writable: false, SyncMode: backend.SyncVirtiofs},
 			{HostPath: "/Users/alice/.claude/CLAUDE.md", VMPath: "/var/sandbox/host-claude/CLAUDE.md", Writable: false, SyncMode: backend.SyncVirtiofs},
 		},
@@ -63,23 +63,16 @@ func TestRenderTemplate_WithMounts(t *testing.T) {
 	if !strings.Contains(got, "mountType: virtiofs") {
 		t.Errorf("yaml missing mountType: virtiofs")
 	}
-	if !strings.Contains(got, `location: "/Users/alice/proj"`) {
-		t.Errorf("missing project mount:\n%s", got)
+	// Project mount (Mutagen) must NOT appear in lima.yaml.
+	if strings.Contains(got, `location: "/Users/alice/proj"`) {
+		t.Errorf("project Mutagen mount should not appear in lima.yaml")
 	}
-	if !strings.Contains(got, `mountPoint: "/Users/alice/proj"`) {
-		t.Errorf("missing project mountPoint:\n%s", got)
-	}
-	if !strings.Contains(got, "writable: true") {
-		t.Errorf("project mount should be writable:\n%s", got)
-	}
+	// Skills and CLAUDE.md should still appear.
 	if !strings.Contains(got, `location: "/Users/alice/.claude/skills"`) {
-		t.Errorf("missing skills mount:\n%s", got)
-	}
-	if !strings.Contains(got, "writable: false") {
-		t.Errorf("skills mount should be readonly:\n%s", got)
+		t.Errorf("missing skills mount in rendered yaml")
 	}
 	if !strings.Contains(got, "mountPoint: \"/var/sandbox/host-claude/CLAUDE.md\"") {
-		t.Errorf("missing CLAUDE.md mount point:\n%s", got)
+		t.Errorf("missing CLAUDE.md mount point in rendered yaml")
 	}
 }
 

@@ -14,7 +14,7 @@ func newStatusCmd(app *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show this project's VM state and resolved config",
-		RunE: func(c *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, _ []string) error {
 			id, err := vmid.ForCwd()
 			if err != nil {
 				return err
@@ -44,6 +44,15 @@ func newStatusCmd(app *App) *cobra.Command {
 				fmt.Fprintf(out, "  mounts:\n")
 				for _, m := range r.Mounts {
 					fmt.Fprintf(out, "    - %s -> %s (writable=%t)\n", m.HostPath, m.VMPath, m.Writable)
+				}
+			}
+			if app.Mutagen != nil {
+				sessions, err := app.Mutagen.SessionsFor(c.Context(), string(id))
+				if err == nil && len(sessions) > 0 {
+					fmt.Fprintln(out, "Sync sessions:")
+					for _, sess := range sessions {
+						fmt.Fprintf(out, "  %s: %s\n", sess.Name, sess.Status)
+					}
 				}
 			}
 			return nil

@@ -76,11 +76,17 @@ func containsMount(ms []backend.Mount, host, vm string, writable bool) bool {
 	return false
 }
 
-func TestBuildMounts_AllVirtiofsInPhase5(t *testing.T) {
+func TestBuildMounts_ProjectIsMutagenExtraROBindsAreVirtiofs(t *testing.T) {
 	mounts := BuildMounts("/Users/alice/proj", "/Users/alice", nil)
 	for _, m := range mounts {
-		if m.SyncMode != backend.SyncVirtiofs {
-			t.Errorf("mount %+v expected virtiofs in phase 5", m)
+		if m.HostPath == "/Users/alice/proj" {
+			if m.SyncMode != backend.SyncMutagen {
+				t.Errorf("project mount expected mutagen, got %s", m.SyncMode)
+			}
+		} else {
+			if m.SyncMode != backend.SyncVirtiofs {
+				t.Errorf("RO claude subpath mount %+v expected virtiofs, got %s", m, m.SyncMode)
+			}
 		}
 	}
 	_ = reflect.DeepEqual // keep import alive for future use

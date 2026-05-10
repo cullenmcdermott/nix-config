@@ -36,7 +36,7 @@ func BuildMounts(projectPath, homeDir string, extra []config.Mount) []backend.Mo
 			HostPath: projectPath,
 			VMPath:   projectPath,
 			Writable: true,
-			SyncMode: backend.SyncVirtiofs,
+			SyncMode: backend.SyncMutagen,
 		},
 	}
 	for _, sub := range claudeSubpaths {

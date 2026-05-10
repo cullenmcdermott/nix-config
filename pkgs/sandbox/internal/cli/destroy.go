@@ -37,8 +37,19 @@ func newDestroyCmd(app *App) *cobra.Command {
 				return err
 			}
 			if persisted == state.StateRunning {
+				if app.Mutagen != nil {
+					if err := app.Mutagen.PauseAll(c.Context(), string(id)); err != nil {
+						return fmt.Errorf("mutagen pause: %w", err)
+					}
+				}
 				if err := app.Backend.Stop(c.Context(), backend.VMID(id)); err != nil {
 					return fmt.Errorf("stop before destroy: %w", err)
+				}
+			}
+			// Terminate Mutagen sessions before destroying the backend.
+			if app.Mutagen != nil {
+				if err := app.Mutagen.TerminateAll(c.Context(), string(id)); err != nil {
+					return fmt.Errorf("mutagen terminate: %w", err)
 				}
 			}
 			if err := app.Backend.Destroy(c.Context(), backend.VMID(id)); err != nil {

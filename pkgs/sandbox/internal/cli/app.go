@@ -4,6 +4,7 @@ import (
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/lima"
+	"github.com/cullenmcdermott/system-config/sandbox/internal/mutagen"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/paths"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/wizard"
 )
@@ -19,6 +20,7 @@ type WizardFunc func(global config.Global) (config.PerVM, error)
 type App struct {
 	Paths   *paths.Paths
 	Backend backend.Backend
+	Mutagen *mutagen.Manager
 	Wizard  WizardFunc
 	sshExec SSHExecer
 }
@@ -54,6 +56,7 @@ func NewProductionApp() (*App, error) {
 	return &App{
 		Paths:   p,
 		Backend: lima.New(lima.NewRunner(""), p.VMsConfigDir),
+		Mutagen: mutagen.New(mutagen.NewRunner("")),
 		Wizard:  productionWizard,
 	}, nil
 }

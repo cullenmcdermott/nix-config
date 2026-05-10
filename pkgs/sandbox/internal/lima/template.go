@@ -55,10 +55,18 @@ func RenderTemplate(s backend.VMSpec) (string, error) {
 	fmt.Fprintf(&b, "    digest: %q\n", img.Digest)
 	fmt.Fprintln(&b)
 
-	// Mounts — all use virtiofs in Phase 5.
-	if len(s.Mounts) > 0 {
+	// Mounts — filter out Mutagen-managed mounts (those are handled by the
+	// Mutagen daemon instead). Virtiofs mounts (claude RO subpaths, extra
+	// user mounts) appear in the Lima config.
+	var virtiofsMounts []backend.Mount
+	for _, m := range s.Mounts {
+		if m.SyncMode != backend.SyncMutagen {
+			virtiofsMounts = append(virtiofsMounts, m)
+		}
+	}
+	if len(virtiofsMounts) > 0 {
 		fmt.Fprintln(&b, "mounts:")
-		for _, m := range s.Mounts {
+		for _, m := range virtiofsMounts {
 			writable := false
 			if m.Writable {
 				writable = true
