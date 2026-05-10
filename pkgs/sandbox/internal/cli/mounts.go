@@ -11,6 +11,10 @@ import (
 // VM. The first-boot bind-mount unit then rebinds them onto ~/.claude/<sub>.
 const HostClaudeMountRoot = "/var/sandbox/host-claude"
 
+// WarmNixVMPath is where the host-side warm /nix template is RO-mounted inside
+// the VM during provisioning. The provision script rsyncs its store into /nix/store.
+const WarmNixVMPath = "/var/sandbox/warm-nix"
+
 // claudeSubpaths are the read-only paths from ~/.claude that Claude Code reads.
 // Anything not in this list is writable and lives on persistent VM state.
 var claudeSubpaths = []struct {
@@ -67,4 +71,17 @@ func BuildMounts(projectPath, homeDir string, extra []config.Mount) []backend.Mo
 		deduped = append(deduped, m)
 	}
 	return deduped
+}
+
+// BuildMountsWithWarm is like BuildMounts but also appends a read-only virtiofs
+// mount of the warm /nix template if warmHostDir is non-empty. The warm mount is
+// prepended to extra so BuildMounts' last-write-wins dedup lets user-specified
+// overrides at WarmNixVMPath take precedence.
+func BuildMountsWithWarm(projectPath, homeDir string, extra []config.Mount, warmHostDir string) []backend.Mount {
+	if warmHostDir == "" {
+		return BuildMounts(projectPath, homeDir, extra)
+	}
+	// Prepend the warm mount so user extras can override it via dedup.
+	autoExtra := append([]config.Mount{{HostPath: warmHostDir, VMPath: WarmNixVMPath, Writable: false}}, extra...)
+	return BuildMounts(projectPath, homeDir, autoExtra)
 }

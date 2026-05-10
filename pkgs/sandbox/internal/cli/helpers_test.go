@@ -29,6 +29,20 @@ func newTestApp(t *testing.T) *App {
 	if err := p.EnsureDirs(); err != nil {
 		t.Fatal(err)
 	}
+	// Seed the warm /nix template with a placeholder so mergeNixIntoWarm
+	// runs during destroy tests (it short-circuits when warm template is empty).
+	if err := os.MkdirAll(p.WarmNixDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(p.WarmNixDir+"/store", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Write a fake store entry so HasContent returns true.
+	f, err := os.Create(p.WarmNixDir + "/store/nixpkgs-placeholder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
 	return &App{Paths: p, Backend: backend.NewFake()}
 }
 

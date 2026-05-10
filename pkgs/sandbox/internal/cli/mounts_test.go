@@ -91,3 +91,52 @@ func TestBuildMounts_ProjectIsMutagenExtraROBindsAreVirtiofs(t *testing.T) {
 	}
 	_ = reflect.DeepEqual // keep import alive for future use
 }
+
+func TestBuildMountsWithWarm_AddsWarmMountWhenProvided(t *testing.T) {
+	mounts := BuildMountsWithWarm("/Users/alice/proj", "/Users/alice", nil, "/Users/alice/.local/share/sandbox/nix-warm")
+	if !containsMount(mounts, "/Users/alice/.local/share/sandbox/nix-warm", WarmNixVMPath, false) {
+		t.Errorf("warm mount missing: %+v", mounts)
+	}
+	// Verify warm mount is virtiofs.
+	for _, m := range mounts {
+		if m.VMPath == WarmNixVMPath {
+			if m.SyncMode != backend.SyncVirtiofs {
+				t.Errorf("warm mount expected virtiofs, got %s", m.SyncMode)
+			}
+			if m.Writable {
+				t.Errorf("warm mount expected read-only, got writable")
+			}
+		}
+	}
+}
+
+func TestBuildMountsWithWarm_NoWarmMountWhenEmpty(t *testing.T) {
+	mounts := BuildMountsWithWarm("/Users/alice/proj", "/Users/alice", nil, "")
+	for _, m := range mounts {
+		if m.VMPath == WarmNixVMPath {
+			t.Errorf("warm mount should not appear with empty warmHostDir: %+v", m)
+		}
+	}
+}
+
+func TestBuildMountsWithWarm_DedupesWithExtras(t *testing.T) {
+	// If an extra mount already maps WarmNixVMPath, user override wins.
+	mounts := BuildMountsWithWarm("/Users/alice/proj", "/Users/alice", []config.Mount{
+		{HostPath: "/custom/warm", VMPath: WarmNixVMPath, Writable: true},
+	}, "/Users/alice/.local/share/sandbox/nix-warm")
+	found := false
+	for _, m := range mounts {
+		if m.VMPath == WarmNixVMPath {
+			found = true
+			if m.HostPath != "/custom/warm" {
+				t.Errorf("expected user override to win, got host=%q", m.HostPath)
+			}
+			if !m.Writable {
+				t.Errorf("expected writable override")
+			}
+		}
+	}
+	if !found {
+		t.Errorf("warm mount missing entirely")
+	}
+}

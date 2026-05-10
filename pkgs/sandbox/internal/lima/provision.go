@@ -71,6 +71,12 @@ if [ ! -d /nix ]; then
 fi
 . /etc/profile.d/nix.sh
 
+# ── Seed /nix/store from warm template ──────────────────────────────────────
+if [ -d /var/sandbox/warm-nix/store ]; then
+  echo "seeding /nix/store from warm template…"
+  rsync -aH --ignore-existing /var/sandbox/warm-nix/store/ /nix/store/
+fi
+
 # ── Flox ──────────────────────────────────────────────────────────────────────
 if ! command -v flox >/dev/null 2>&1; then
   TMPF=$(mktemp -t flox.tar.gz.XXXXXX)
@@ -129,6 +135,7 @@ fi
 // RenderProvision produces the first-boot provision script. It installs:
 //   - ~/.claude RO overlay (bind-mounts from /var/sandbox/host-claude/)
 //   - Nix multi-user daemon
+//   - Seed /nix/store from warm template (if /var/sandbox/warm-nix/store exists)
 //   - Flox from .deb package
 //   - Claude Code standalone binary
 //   - /etc/sandbox/AGENTS.md and ~/.claude/AGENTS.md symlink

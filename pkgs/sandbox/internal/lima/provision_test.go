@@ -166,3 +166,22 @@ func TestRenderProvision_ApplyScriptUsesPrintfNotHeredoc(t *testing.T) {
 		t.Errorf("apply script path not in template:\n%s", got)
 	}
 }
+
+func TestRenderProvision_RsyncSeedFromWarmTemplate(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{User: "alice", HostClaudeMountRoot: "/var/sandbox/host-claude"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "/var/sandbox/warm-nix/store") {
+		t.Errorf("warm template mount path not in script:\n%s", got)
+	}
+	if !strings.Contains(got, "rsync") {
+		t.Errorf("rsync not in script:\n%s", got)
+	}
+	if !strings.Contains(got, "--ignore-existing") {
+		t.Errorf("rsync --ignore-existing not in script:\n%s", got)
+	}
+	if !strings.Contains(got, "# ── Seed /nix/store from warm template ─") {
+		t.Errorf("warm seed comment not in script:\n%s", got)
+	}
+}
