@@ -23,6 +23,7 @@ func NewRoot() *cobra.Command {
 	cmd.SetVersionTemplate("sandbox {{.Version}}\n")
 	cmd.Version = buildinfo.Version()
 	cmd.AddCommand(newStatusCmd())
+	cmd.AddCommand(newConfigCmd())
 	return cmd
 }
 // Execute is the canonical CLI entrypoint used by main.

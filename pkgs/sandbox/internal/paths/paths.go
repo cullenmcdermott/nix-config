@@ -79,3 +79,15 @@ func (p *Paths) VM(id string) VMPaths {
 		MutagenSessionsFile: filepath.Join(dat, "mutagen.sessions"),
 	}
 }
+
+
+// EnsureDirs creates the host-side directories the sandbox needs at startup.
+// Idempotent.
+func (p *Paths) EnsureDirs() error {
+	for _, d := range []string{p.ConfigDir, p.VMsConfigDir, p.DataDir, p.VMsDataDir, p.WarmNixDir, p.ImagesCacheDir} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			return fmt.Errorf("mkdir %s: %w", d, err)
+		}
+	}
+	return nil
+}

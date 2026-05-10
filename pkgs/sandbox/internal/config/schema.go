@@ -38,12 +38,11 @@ type PerVM struct {
 	Mounts    []Mount `toml:"mounts,omitempty"`
 }
 
-// Resolved is the merged view used by the rest of the CLI.
 type Resolved struct {
-	CPUs      int
-	MemoryGiB int
-	DiskGiB   int
-	Arch      string
-	Agent     string
-	Mounts    []Mount
+	CPUs      int     `toml:"cpus"`
+	MemoryGiB int     `toml:"memory_gib"`
+	DiskGiB   int     `toml:"disk_gib"`
+	Arch      string  `toml:"arch"`
+	Agent     string  `toml:"agent"`
+	Mounts    []Mount `toml:"mounts"`
 }
