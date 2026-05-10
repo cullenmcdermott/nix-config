@@ -6,6 +6,14 @@ import (
 	"testing"
 )
 
+func TestRoot_VMFlagOverridesCwd(t *testing.T) {
+	app := newTestApp(t)
+	out := runSubcommand(t, app, "--vm=fake-id-aaaaaa", "status")
+	if !strings.Contains(out, "VM ID: fake-id-aaaaaa") {
+		t.Errorf("expected --vm to override; got %q", out)
+	}
+}
+
 func TestRoot_VersionFlag_PrintsBuildVersion(t *testing.T) {
 	cmd := NewRoot()
 	var out bytes.Buffer
