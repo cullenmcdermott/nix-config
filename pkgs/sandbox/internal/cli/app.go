@@ -24,12 +24,13 @@ type WizardFunc func(global config.Global) (config.PerVM, error)
 // App holds shared dependencies for cobra subcommands. Tests build one with a
 // Fake backend; production wires a real lima.Backend.
 type App struct {
-	Paths   *paths.Paths
-	Backend backend.Backend
-	Mutagen *mutagen.Manager
-	Wizard  WizardFunc
-	Bridge  *BridgeSupervisor
-	sshExec SSHExecer
+	Paths             *paths.Paths
+	Backend           backend.Backend
+	Mutagen           *mutagen.Manager
+	Wizard            WizardFunc
+	Bridge            *BridgeSupervisor
+	WrapperBinaryPath string // path to sandbox-claude linux binary; set via SANDBOX_CLAUDE_WRAPPER env
+	sshExec           SSHExecer
 }
 
 // ExecSSH runs ssh into the VM, using the injectable sshExec if set.
@@ -107,10 +108,11 @@ func NewProductionApp() (*App, error) {
 		return nil, err
 	}
 	return &App{
-		Paths:   p,
-		Backend: lima.New(lima.NewRunner(""), p.VMsConfigDir),
-		Mutagen: mutagen.New(mutagen.NewRunner("")),
-		Wizard:  productionWizard,
-		Bridge:  &BridgeSupervisor{Self: self},
+		Paths:             p,
+		Backend:           lima.New(lima.NewRunner(""), p.VMsConfigDir),
+		Mutagen:           mutagen.New(mutagen.NewRunner("")),
+		Wizard:            productionWizard,
+		Bridge:            &BridgeSupervisor{Self: self},
+		WrapperBinaryPath: os.Getenv("SANDBOX_CLAUDE_WRAPPER"),
 	}, nil
 }

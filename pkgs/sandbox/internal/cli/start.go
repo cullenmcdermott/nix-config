@@ -148,6 +148,14 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 		warmDir = warm.Dir
 	}
 	mounts := BuildMountsWithWarm(projectPath, app.Paths.Home, r.Mounts, warmDir)
+	if app.WrapperBinaryPath != "" {
+		mounts = append(mounts, backend.Mount{
+			HostPath: filepath.Dir(app.WrapperBinaryPath),
+			VMPath:   "/var/sandbox/bin",
+			Writable: false,
+			SyncMode: backend.SyncVirtiofs,
+		})
+	}
 
 	provision, err := lima.RenderProvision(lima.ProvisionConfig{
 		User:                currentUsername(),

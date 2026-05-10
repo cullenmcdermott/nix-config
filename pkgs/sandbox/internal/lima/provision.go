@@ -108,6 +108,15 @@ mkdir -p "$USER_HOME/.claude"
 ln -sfn /etc/sandbox/AGENTS.md "$USER_HOME/.claude/AGENTS.md" 2>/dev/null || true
 chown -R {{.User}}:{{.User}} "$USER_HOME/.claude"
 
+# ── Claude wrapper ───────────────────────────────────────────────────────────
+if [ -x /var/sandbox/bin/sandbox-claude ]; then
+  # First time: rename the real claude binary so the wrapper can call it.
+  if [ -x /usr/local/bin/claude ] && [ ! -x /usr/local/bin/claude.real ]; then
+    mv /usr/local/bin/claude /usr/local/bin/claude.real
+  fi
+  install -m 0755 /var/sandbox/bin/sandbox-claude /usr/local/bin/claude
+fi
+
 # ── sandbox-helper unit (placeholder; Phase 9 fills the ExecStart) ───────────
 cat > /etc/systemd/system/sandbox-helper.service <<'HELPER_UNIT'
 [Unit]
