@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -11,12 +13,46 @@ import (
 	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
+type noWizardKey struct{}
+
+func withNoWizard(ctx context.Context, v bool) context.Context {
+	return context.WithValue(ctx, noWizardKey{}, v)
+}
+
+func noWizard(ctx context.Context) bool {
+	v, _ := ctx.Value(noWizardKey{}).(bool)
+	return v
+}
+
+func shouldShowWizard(c *cobra.Command, perVMPath string) bool {
+	if noWizard(c.Context()) {
+		return false
+	}
+	if !isTTY() && os.Getenv("SANDBOX_FORCE_WIZARD") != "1" {
+		return false
+	}
+	if _, err := os.Stat(perVMPath); err == nil {
+		return false
+	}
+	return true
+}
+
+func isTTY() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
 func newStartCmd(app *App) *cobra.Command {
-	return &cobra.Command{
+	var noWizardFlag bool
+	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Create or resume this project's VM",
 		RunE: func(c *cobra.Command, _ []string) error {
-			ctx := c.Context()
+			ctx := withNoWizard(c.Context(), noWizardFlag)
+			c.SetContext(ctx)
 			id, err := vmid.ForCwd()
 			if err != nil {
 				return err
@@ -48,11 +84,31 @@ func newStartCmd(app *App) *cobra.Command {
 			}
 		},
 	}
+	cmd.Flags().BoolVar(&noWizardFlag, "no-wizard", false, "skip the first-run wizard and accept current defaults")
+	return cmd
 }
 
-func doCreate(ctx interface{ Done() <-chan struct{} }, c *cobra.Command, app *App, id vmid.ID, statePath string) error {
+func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, statePath string) error {
 	p := app.Paths
 	vp := p.VM(string(id))
+
+	if app.Wizard != nil && shouldShowWizard(c, vp.ConfigFile) {
+		g, err := config.LoadGlobal(p.GlobalConfig)
+		if err != nil {
+			return err
+		}
+		v, err := app.Wizard(g)
+		if err != nil {
+			return fmt.Errorf("wizard: %w", err)
+		}
+		if err := os.MkdirAll(vp.ConfigDir, 0o755); err != nil {
+			return err
+		}
+		if err := config.SavePerVM(vp.ConfigFile, v); err != nil {
+			return err
+		}
+	}
+
 	r, err := config.LoadResolved(p.GlobalConfig, vp.ConfigFile)
 	if err != nil {
 		return err
@@ -79,7 +135,7 @@ func doCreate(ctx interface{ Done() <-chan struct{} }, c *cobra.Command, app *Ap
 	return nil
 }
 
-func doStart(_ interface{ Done() <-chan struct{} }, c *cobra.Command, app *App, id vmid.ID, statePath string) error {
+func doStart(_ context.Context, c *cobra.Command, app *App, id vmid.ID, statePath string) error {
 	fmt.Fprintln(c.OutOrStdout(), "starting VM…")
 	if err := app.Backend.Start(c.Context(), backend.VMID(id)); err != nil {
 		return fmt.Errorf("start: %w", err)
