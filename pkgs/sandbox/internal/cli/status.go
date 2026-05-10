@@ -6,12 +6,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
-	"github.com/cullenmcdermott/system-config/sandbox/internal/paths"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/state"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
-func newStatusCmd() *cobra.Command {
+func newStatusCmd(app *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show this project's VM state and resolved config",
@@ -20,10 +19,7 @@ func newStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			p, err := paths.Resolve()
-			if err != nil {
-				return err
-			}
+			p := app.Paths
 			vp := p.VM(string(id))
 			s, err := state.Read(vp.StateFile)
 			if err != nil {

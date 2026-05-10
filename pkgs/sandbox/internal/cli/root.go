@@ -1,4 +1,3 @@
-// Package cli wires the sandbox command tree.
 package cli
 
 import (
@@ -7,28 +6,36 @@ import (
 	"github.com/cullenmcdermott/system-config/sandbox/internal/buildinfo"
 )
 
-// NewRoot returns a fresh cobra root command. Each call returns a new tree so
-// tests can run independently.
+// NewRoot builds a tree wired to a production App. Tests should use
+// NewRootForApp directly.
 func NewRoot() *cobra.Command {
+	app, err := NewProductionApp()
+	if err != nil {
+		// Defer the error until command execution so callers can recover.
+		bad := &cobra.Command{
+			Use:  "sandbox",
+			RunE: func(*cobra.Command, []string) error { return err },
+		}
+		return bad
+	}
+	return NewRootForApp(app)
+}
+
+// NewRootForApp builds a tree using an injected App.
+func NewRootForApp(app *App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sandbox",
-		Short: "Run AI coding agents in per-project Lima VMs",
-		// Default behaviour with no subcommand: print help.
-		RunE: func(c *cobra.Command, args []string) error {
-			return c.Help()
-		},
+		Use:           "sandbox",
+		Short:         "Run AI coding agents in per-project Lima VMs",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE:          func(c *cobra.Command, _ []string) error { return c.Help() },
 	}
 	cmd.SetVersionTemplate("sandbox {{.Version}}\n")
 	cmd.Version = buildinfo.Version()
-	cmd.AddCommand(newStatusCmd())
-	cmd.AddCommand(newConfigCmd())
+
+	cmd.AddCommand(newStatusCmd(app))
+	cmd.AddCommand(newConfigCmd(app))
 	return cmd
 }
-// Execute is the canonical CLI entrypoint used by main.
-func Execute() error {
-	cmd := NewRoot()
-	return cmd.Execute()
-}
 
+func Execute() error { return NewRoot().Execute() }

@@ -13,32 +13,31 @@ import (
 	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
-func newConfigCmd() *cobra.Command {
+func newConfigCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Show the resolved per-VM config (or edit it)",
 		RunE: func(c *cobra.Command, args []string) error {
-			return runConfigPrint(c)
+			return runConfigPrint(c, app)
 		},
 	}
 	cmd.AddCommand(&cobra.Command{
 		Use:   "edit",
 		Short: "Open the per-VM config.toml in $EDITOR",
 		RunE: func(c *cobra.Command, args []string) error {
-			return runConfigEdit(c)
+			return runConfigEdit(c, app)
 		},
 	})
 	return cmd
 }
 
-func runConfigPrint(c *cobra.Command) error {
-	id, p, vp, r, err := loadResolved()
+func runConfigPrint(c *cobra.Command, app *App) error {
+	id, vp, r, err := loadResolved(app.Paths)
 	if err != nil {
 		return err
 	}
 	_ = id
 	_ = vp
-	_ = p
 	b, err := toml.Marshal(r)
 	if err != nil {
 		return err
@@ -47,8 +46,8 @@ func runConfigPrint(c *cobra.Command) error {
 	return nil
 }
 
-func runConfigEdit(c *cobra.Command) error {
-	id, _, vp, r, err := loadResolved()
+func runConfigEdit(c *cobra.Command, app *App) error {
+	id, vp, r, err := loadResolved(app.Paths)
 	if err != nil {
 		return err
 	}
@@ -79,24 +78,17 @@ func runConfigEdit(c *cobra.Command) error {
 	return nil
 }
 
-func loadResolved() (vmid.ID, *paths.Paths, paths.VMPaths, config.Resolved, error) {
+func loadResolved(p *paths.Paths) (vmid.ID, paths.VMPaths, config.Resolved, error) {
 	id, err := vmid.ForCwd()
 	if err != nil {
-		return "", nil, paths.VMPaths{}, config.Resolved{}, err
-	}
-	p, err := paths.Resolve()
-	if err != nil {
-		return "", nil, paths.VMPaths{}, config.Resolved{}, err
-	}
-	if err := p.EnsureDirs(); err != nil {
-		return "", nil, paths.VMPaths{}, config.Resolved{}, err
+		return "", paths.VMPaths{}, config.Resolved{}, err
 	}
 	vp := p.VM(string(id))
 	r, err := config.LoadResolved(p.GlobalConfig, vp.ConfigFile)
 	if err != nil {
-		return "", nil, paths.VMPaths{}, config.Resolved{}, err
+		return "", paths.VMPaths{}, config.Resolved{}, err
 	}
-	return id, p, vp, r, nil
+	return id, vp, r, nil
 }
 
 func firstNonEmpty(s ...string) string {
