@@ -6,16 +6,17 @@ const (
 	// Flox: https://downloads.flox.dev/by-env/stable/deb/flox-1.12.0.aarch64-linux.deb
 	FloxVersion = "1.12.0"
 	FloxURL     = "https://downloads.flox.dev/by-env/stable/deb/flox-1.12.0.aarch64-linux.deb"
-	// nix-prefetch-url https://downloads.flox.dev/by-env/stable/deb/flox-1.12.0.aarch64-linux.deb
-	FloxSHA256 = "03q5m2ighiq6fmd5bjqmj78g6ci9cxj4ndrk8kr0nlbpi7yiknah"
+	// hex sha256, NOT nix-prefetch-url base32.
+	// Computed via: nix hash convert --to base16 --hash-algo sha256 <base32>
+	FloxSHA256 = "50d919fd8977510bf24433374b64672932f3d09115cb555a750647f8a2a8050f"
 
 	// Claude Code: standalone binary from Anthropic's GCS bucket.
 	// URL pattern: https://storage.googleapis.com/claude-code-dist-<bucket>/claude-code-releases/<version>/<platform>/claude
-	// Platform key: aarch64-darwin→darwin-arm64, x86_64-darwin→darwin-x64, aarch64-linux→linux-arm64, x86_64-linux→linux-x64
+	// Platform key: aarch64-linux→linux-arm64, x86_64-linux→linux-x64
 	ClaudeVersion = "2.1.138"
-	// sha256 of the linux-arm64 binary (the VM image is Ubuntu 24.04 arm64).
-	// nix-prefetch-url https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.138/linux-arm64/claude
-	ClaudeSHA256 = "18rsc1p35v24wsp6x4yvwhw9cfssy5c8x9lxc7rxw3iz635nh7n0"
+	// hex sha256 of the linux-arm64 binary (the VM image is Ubuntu 24.04 arm64).
+	// NOT nix-prefetch-url base32. Computed via: nix hash convert --to base16 --hash-algo sha256 <base32>
+	ClaudeSHA256 = "c01e68cb303f0edef3619da68e58f15a3b9638e4db936eaee644ec326e603aa3"
 
 	// ClaudeGCSURL returns the GCS download URL for a given version and platform.
 	// Platform must be one of: darwin-arm64, darwin-x64, linux-arm64, linux-x64.
