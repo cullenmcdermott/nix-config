@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/buildinfo"
@@ -43,3 +45,7 @@ func NewRootForApp(app *App) *cobra.Command {
 }
 
 func Execute() error { return NewRoot().Execute() }
+
+// ExecuteContext runs the sandbox CLI with the given context, enabling
+// graceful cancellation (e.g. on SIGINT).
+func ExecuteContext(ctx context.Context) error { return NewRoot().ExecuteContext(ctx) }
