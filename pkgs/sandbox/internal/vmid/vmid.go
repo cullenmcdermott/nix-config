@@ -50,6 +50,22 @@ func ForCwd() (ID, error) {
 	return ForPath(resolved), nil
 }
 
+// ProjectPath returns the absolute project root used for mounts: git toplevel
+// if available, else cwd. Symlinks resolved.
+func ProjectPath() (string, error) {
+	if root, ok := gitToplevel(); ok {
+		return root, nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	if r, err := filepath.EvalSymlinks(cwd); err == nil {
+		return r, nil
+	}
+	return cwd, nil
+}
+
 func gitToplevel() (string, bool) {
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
 	out, err := cmd.Output()

@@ -55,7 +55,7 @@ in
         fi
         local now mtime age reply
         now=$(date +%s)
-        mtime=$(stat -f %m config 2>/dev/null || echo 0)
+        mtime=$(date -r config +%s 2>/dev/null || echo 0)
         age=$(( now - mtime ))
         if (( age > 3600 )); then
           printf "ha-claude: config is %dm stale — make pull? [Y/n] " $(( age / 60 ))

@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/user"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
+	"github.com/cullenmcdermott/system-config/sandbox/internal/lima"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/state"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
@@ -113,12 +115,28 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 	if err != nil {
 		return err
 	}
+	projectPath, err := vmid.ProjectPath()
+	if err != nil {
+		return err
+	}
+	mounts := BuildMounts(projectPath, app.Paths.Home, r.Mounts)
+
+	provision, err := lima.RenderProvision(lima.ProvisionConfig{
+		User:                currentUsername(),
+		HostClaudeMountRoot: HostClaudeMountRoot,
+	})
+	if err != nil {
+		return err
+	}
+
 	spec := backend.VMSpec{
 		ID:        backend.VMID(id),
 		CPUs:      r.CPUs,
 		MemoryMiB: r.MemoryGiB * 1024,
 		DiskGiB:   r.DiskGiB,
 		Arch:      defaultArch(r.Arch),
+		Mounts:    mounts,
+		Provision: backend.ProvisionScript{Script: provision},
 	}
 	if err := state.Write(statePath, state.StateProvisioning); err != nil {
 		return err
@@ -155,4 +173,14 @@ func defaultArch(s string) string {
 		return "aarch64"
 	}
 	return s
+}
+
+func currentUsername() string {
+	if u := os.Getenv("USER"); u != "" {
+		return u
+	}
+	if u, err := user.Current(); err == nil {
+		return u.Username
+	}
+	return "user"
 }

@@ -2,6 +2,7 @@
 package lima
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -42,7 +43,7 @@ func RenderTemplate(s backend.VMSpec) (string, error) {
 		memGiB++
 	}
 
-	var b strings.Builder
+	var b bytes.Buffer
 	fmt.Fprintln(&b, "vmType: vz")
 	fmt.Fprintf(&b, "cpus: %d\n", s.CPUs)
 	fmt.Fprintf(&b, "memory: %dGiB\n", memGiB)
@@ -53,6 +54,35 @@ func RenderTemplate(s backend.VMSpec) (string, error) {
 	fmt.Fprintf(&b, "    arch: %s\n", img.Arch)
 	fmt.Fprintf(&b, "    digest: %q\n", img.Digest)
 	fmt.Fprintln(&b)
+
+	// Mounts — all use virtiofs in Phase 5.
+	if len(s.Mounts) > 0 {
+		fmt.Fprintln(&b, "mounts:")
+		for _, m := range s.Mounts {
+			writable := false
+			if m.Writable {
+				writable = true
+			}
+			fmt.Fprintf(&b, "  - location: %q\n", m.HostPath)
+			fmt.Fprintf(&b, "    mountPoint: %q\n", m.VMPath)
+			fmt.Fprintf(&b, "    writable: %t\n", writable)
+		}
+		fmt.Fprintln(&b)
+		fmt.Fprintln(&b, "mountType: virtiofs")
+		fmt.Fprintln(&b)
+	}
+
+	// Provision script — run on first boot.
+	if s.Provision.Script != "" {
+		lines := strings.Split(s.Provision.Script, "\n")
+		fmt.Fprintln(&b, "provision:")
+		for _, line := range lines {
+			fmt.Fprintf(&b, "  - mode: system\n")
+			fmt.Fprintf(&b, "    script: |\n")
+			fmt.Fprintf(&b, "      %s\n", line)
+		}
+	}
+
 	fmt.Fprintln(&b, "ssh: {}")
 	return b.String(), nil
 }
