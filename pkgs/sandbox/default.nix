@@ -7,7 +7,7 @@ in buildGoModule {
 
   src = lib.cleanSource ./.;
 
-  vendorHash = "sha256-18WMBXrf57u/nU/mfFzZusfEgOYaxnx8/9vBzdnrVKU=";
+  vendorHash = "sha256-nIZQlMdypWyI3v+AGwpCrW2aUmCTynQCqtfU5nqzSd8=";
 
   subPackages = [ "cmd/sandbox" ];
 
