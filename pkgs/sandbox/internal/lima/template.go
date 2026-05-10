@@ -80,13 +80,13 @@ func RenderTemplate(s backend.VMSpec) (string, error) {
 		fmt.Fprintln(&b)
 	}
 
-	// Provision script — run on first boot.
+	// Provision script — run on first boot as one entry so multi-line scripts
+	// (heredocs, if/fi, set -euo pipefail, etc.) execute in a single shell.
 	if s.Provision.Script != "" {
-		lines := strings.Split(s.Provision.Script, "\n")
 		fmt.Fprintln(&b, "provision:")
-		for _, line := range lines {
-			fmt.Fprintf(&b, "  - mode: system\n")
-			fmt.Fprintf(&b, "    script: |\n")
+		fmt.Fprintln(&b, "  - mode: system")
+		fmt.Fprintln(&b, "    script: |")
+		for _, line := range strings.Split(s.Provision.Script, "\n") {
 			fmt.Fprintf(&b, "      %s\n", line)
 		}
 	}

@@ -102,6 +102,28 @@ func TestRenderTemplate_WithProvision(t *testing.T) {
 	}
 }
 
+func TestRenderTemplate_MultiLineProvision_EmitsOneEntry(t *testing.T) {
+	script := "#!/bin/bash\nset -euo pipefail\nmkdir -p /tmp/foo\necho done"
+	spec := backend.VMSpec{
+		ID:   "ml-test-abc123",
+		CPUs: 2, MemoryMiB: 4096, DiskGiB: 20, Arch: "aarch64",
+		Provision: backend.ProvisionScript{Script: script},
+	}
+	got, err := RenderTemplate(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count := strings.Count(got, "- mode: system"); count != 1 {
+		t.Errorf("expected exactly 1 provision entry, got %d:\n%s", count, got)
+	}
+	if !strings.Contains(got, "\n") {
+		t.Error("provision script body should contain newlines")
+	}
+	if !strings.Contains(got, "set -euo pipefail") {
+		t.Errorf("provision script body missing expected content:\n%s", got)
+	}
+}
+
 func TestRenderTemplate_AMD64Image(t *testing.T) {
 	got, err := RenderTemplate(backend.VMSpec{ID: "x", CPUs: 1, MemoryMiB: 1024, DiskGiB: 10, Arch: "x86_64"})
 	if err != nil {
