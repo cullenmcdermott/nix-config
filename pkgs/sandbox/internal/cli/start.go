@@ -2,9 +2,14 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/user"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -180,7 +185,10 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 		return err
 	}
 	fmt.Fprintln(c.OutOrStdout(), "VM running.")
-	return manageMutagenSessions(ctx, c, app, id, projectPath)
+	if err := manageMutagenSessions(ctx, c, app, id, projectPath); err != nil {
+		return err
+	}
+	return startBridgeIfNeeded(ctx, c, app, id)
 }
 
 func doStart(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, statePath string) error {
@@ -193,7 +201,10 @@ func doStart(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, stateP
 	}
 	fmt.Fprintln(c.OutOrStdout(), "VM running.")
 	projectPath, _ := vmid.ProjectPath()
-	return manageMutagenSessions(ctx, c, app, id, projectPath)
+	if err := manageMutagenSessions(ctx, c, app, id, projectPath); err != nil {
+		return err
+	}
+	return startBridgeIfNeeded(ctx, c, app, id)
 }
 
 // manageMutagenSessions creates Mutagen sync sessions on first boot, or resumes
@@ -264,4 +275,47 @@ func archToPlatform(arch string) string {
 	default:
 		return "linux-arm64"
 	}
+}
+
+// startBridgeIfNeeded spawns the host bridge daemon, writes the PID file, and
+// pushes the session token into the VM. It is a no-op when app.Bridge is nil.
+func startBridgeIfNeeded(ctx context.Context, c *cobra.Command, app *App, id vmid.ID) error {
+	if app.Bridge == nil {
+		return nil
+	}
+	vp := app.Paths.VM(string(id))
+	token := newRandomToken()
+	proc, err := app.Bridge.Start(vp.BridgeSocket, vp.BridgeToken, token)
+	if err != nil {
+		return fmt.Errorf("start bridge: %w", err)
+	}
+	pidPath := filepath.Join(vp.DataDir, "bridge.pid")
+	_ = os.WriteFile(pidPath, []byte(fmt.Sprintf("%d\n", proc.Pid)), 0o644)
+
+	ssh, err := app.Backend.SSHConfig(ctx, backend.VMID(id))
+	if err != nil {
+		// Non-fatal: bridge is running; token push can fail if VM not yet reachable.
+		fmt.Fprintf(c.ErrOrStderr(), "warning: could not get SSH config to push bridge token: %v\n", err)
+		return nil
+	}
+	if err := writeTokenIntoVM(ctx, ssh, token); err != nil {
+		fmt.Fprintf(c.ErrOrStderr(), "warning: could not push bridge token into VM: %v\n", err)
+	}
+	return nil
+}
+
+// writeTokenIntoVM writes the bridge session token to /etc/sandbox/bridge-token
+// inside the VM via SSH + sudo tee.
+func writeTokenIntoVM(ctx context.Context, ssh backend.SSHConfig, token string) error {
+	cmd := exec.CommandContext(ctx, "ssh", "-F", ssh.ConfigFile, ssh.Host,
+		"sudo", "tee", "/etc/sandbox/bridge-token")
+	cmd.Stdin = strings.NewReader(token + "\n")
+	return cmd.Run()
+}
+
+// newRandomToken returns a cryptographically random 32-byte hex string.
+func newRandomToken() string {
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }

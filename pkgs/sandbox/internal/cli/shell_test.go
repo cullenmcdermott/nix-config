@@ -20,7 +20,7 @@ func TestShell_InvokesSSHWhenRunning(t *testing.T) {
 
 	var calledConfig, calledHost string
 	var calledArgs []string
-	app.sshExec = func(cfg, host string, args []string) error {
+	app.sshExec = func(cfg, host string, forwards, args []string) error {
 		calledConfig = cfg
 		calledHost = host
 		calledArgs = args

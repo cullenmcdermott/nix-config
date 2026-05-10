@@ -32,7 +32,8 @@ func newShellCmd(app *App) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return app.ExecSSH(ssh.ConfigFile, ssh.Host, args)
+			forwards := []string{"/run/sandbox-bridge.sock:" + vp.BridgeSocket}
+			return app.ExecSSH(ssh.ConfigFile, ssh.Host, forwards, args)
 		},
 	}
 }

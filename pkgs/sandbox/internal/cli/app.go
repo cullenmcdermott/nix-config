@@ -1,6 +1,12 @@
 package cli
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"syscall"
+
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/lima"
@@ -10,7 +16,7 @@ import (
 )
 
 // SSHExecer is the function signature for executing ssh into a VM.
-type SSHExecer func(configFile, host string, args []string) error
+type SSHExecer func(configFile, host string, forwards, args []string) error
 
 // WizardFunc lets tests stub out the interactive form.
 type WizardFunc func(global config.Global) (config.PerVM, error)
@@ -22,18 +28,61 @@ type App struct {
 	Backend backend.Backend
 	Mutagen *mutagen.Manager
 	Wizard  WizardFunc
+	Bridge  *BridgeSupervisor
 	sshExec SSHExecer
 }
 
 // ExecSSH runs ssh into the VM, using the injectable sshExec if set.
-func (a *App) ExecSSH(configFile, host string, args []string) error {
+// forwards is a list of remote-forward specs passed as -R flags (before the host).
+func (a *App) ExecSSH(configFile, host string, forwards []string, args []string) error {
 	if a.sshExec != nil {
-		return a.sshExec(configFile, host, args)
+		return a.sshExec(configFile, host, forwards, args)
 	}
-	// Real ssh exec — uses syscall.Exec on Unix so the user inherits the tty
-	// without an intermediate Go process.
-	allArgs := append([]string{"-F", configFile, "-t", host}, args...)
-	return syscallExec("ssh", allArgs)
+	base := []string{"-F", configFile, "-t"}
+	for _, f := range forwards {
+		base = append(base, "-R", f)
+	}
+	base = append(base, host)
+	base = append(base, args...)
+	return syscallExec("ssh", base)
+}
+
+// BridgeSupervisor manages the per-VM sandbox-bridged subprocess.
+type BridgeSupervisor struct {
+	Self string // absolute path to the sandbox binary
+}
+
+// Start spawns sandbox bridged as a detached daemon, writes the token to
+// tokenPath, and returns the new process handle. The process outlives the
+// calling sandbox start command.
+func (b *BridgeSupervisor) Start(socketPath, tokenPath, token string) (*os.Process, error) {
+	if err := os.WriteFile(tokenPath, []byte(token+"\n"), 0o600); err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(b.Self, "bridged", "--socket="+socketPath, "--token="+token)
+	// Detach from the parent's process group so the daemon keeps running after
+	// sandbox start exits.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return cmd.Process, nil
+}
+
+// Stop sends SIGTERM to the bridge daemon and removes socket/token/pid files.
+func (b *BridgeSupervisor) Stop(socketPath, tokenPath string) error {
+	pidPath := filepath.Join(filepath.Dir(socketPath), "bridge.pid")
+	if data, err := os.ReadFile(pidPath); err == nil {
+		var pid int
+		fmt.Sscanf(string(data), "%d", &pid)
+		if pid > 0 {
+			_ = syscall.Kill(pid, syscall.SIGTERM)
+		}
+	}
+	_ = os.Remove(socketPath)
+	_ = os.Remove(tokenPath)
+	_ = os.Remove(pidPath)
+	return nil
 }
 
 func productionWizard(g config.Global) (config.PerVM, error) {
@@ -53,10 +102,15 @@ func NewProductionApp() (*App, error) {
 	if err := p.EnsureDirs(); err != nil {
 		return nil, err
 	}
+	self, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
 	return &App{
 		Paths:   p,
 		Backend: lima.New(lima.NewRunner(""), p.VMsConfigDir),
 		Mutagen: mutagen.New(mutagen.NewRunner("")),
 		Wizard:  productionWizard,
+		Bridge:  &BridgeSupervisor{Self: self},
 	}, nil
 }

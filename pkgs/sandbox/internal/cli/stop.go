@@ -31,6 +31,9 @@ func newStopCmd(app *App) *cobra.Command {
 						fmt.Fprintf(c.ErrOrStderr(), "warning: mutagen pause failed (continuing stop): %v\n", err)
 					}
 				}
+				if app.Bridge != nil {
+					app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken)
+				}
 				if err := app.Backend.Stop(c.Context(), backend.VMID(id)); err != nil {
 					return err
 				}

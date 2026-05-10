@@ -66,6 +66,9 @@ func newDestroyCmd(app *App) *cobra.Command {
 				_ = state.Write(vp.StateFile, state.StateDestroyFailed)
 				return fmt.Errorf("destroy: %w", err)
 			}
+			if app.Bridge != nil {
+				app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken)
+			}
 			if err := os.RemoveAll(vp.DataDir); err != nil {
 				return err
 			}
