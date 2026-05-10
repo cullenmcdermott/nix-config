@@ -28,7 +28,7 @@ func newStopCmd(app *App) *cobra.Command {
 			case state.StateRunning:
 				if app.Mutagen != nil {
 					if err := app.Mutagen.PauseAll(c.Context(), string(id)); err != nil {
-						return fmt.Errorf("mutagen pause: %w", err)
+						fmt.Fprintf(c.ErrOrStderr(), "warning: mutagen pause failed (continuing stop): %v\n", err)
 					}
 				}
 				if err := app.Backend.Stop(c.Context(), backend.VMID(id)); err != nil {
