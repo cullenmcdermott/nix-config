@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/user"
-	"runtime"
 
 	"github.com/spf13/cobra"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/lima"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/mutagen"
+	"github.com/cullenmcdermott/system-config/sandbox/internal/nixwarm"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/state"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
@@ -122,7 +122,27 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 	if err != nil {
 		return err
 	}
-	mounts := BuildMounts(projectPath, app.Paths.Home, r.Mounts)
+
+	// Determine whether to include a warm /nix mount. We seed the warm template
+	// into each new VM during provisioning, so we RO-mount the warm template
+	// into the VM and rsync from it. Only include the mount if the warm template
+	// already has content.
+	warm, err := nixwarm.Open(app.Paths.WarmNixDir)
+	if err != nil {
+		return err
+	}
+	if err := warm.Ensure(); err != nil {
+		return err
+	}
+	hasWarm, err := warm.HasContent()
+	if err != nil {
+		return err
+	}
+	warmDir := ""
+	if hasWarm {
+		warmDir = warm.Dir
+	}
+	mounts := BuildMountsWithWarm(projectPath, app.Paths.Home, r.Mounts, warmDir)
 
 	provision, err := lima.RenderProvision(lima.ProvisionConfig{
 		User:                currentUsername(),
@@ -131,7 +151,7 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 		FloxURL:            FloxURL,
 		FloxSHA256:         FloxSHA256,
 		ClaudeVersion:      ClaudeVersion,
-		ClaudeURL:          BuildClaudeURL(ClaudeVersion, "linux-"+archToPlatform(defaultArch(r.Arch))),
+		ClaudeURL:          BuildClaudeURL(ClaudeVersion, archToPlatform(defaultArch(r.Arch))),
 		ClaudeSHA256:       ClaudeSHA256,
 		AgentsMarkdown:     agents.MarkdownContent(),
 	})
@@ -234,19 +254,12 @@ func currentUsername() string {
 	return "user"
 }
 
-// archToPlatform maps our "aarch64"/"x86_64" arch string to the
-// platform key used in the GCS URL (e.g. "linux-arm64").
+// archToPlatform maps our "aarch64"/"x86_64" arch string to the linux
+// platform key used in the GCS URL. The VM is always Linux regardless of
+// the host OS, so we never return a darwin-* key here.
 func archToPlatform(arch string) string {
 	switch arch {
-	case "aarch64":
-		if runtime.GOOS == "darwin" {
-			return "darwin-arm64"
-		}
-		return "linux-arm64"
 	case "x86_64":
-		if runtime.GOOS == "darwin" {
-			return "darwin-x64"
-		}
 		return "linux-x64"
 	default:
 		return "linux-arm64"
