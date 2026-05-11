@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
+	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/cobra"
 
@@ -159,6 +161,7 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 
 	provision, err := lima.RenderProvision(lima.ProvisionConfig{
 		User:                currentUsername(),
+		ProjectPath:         projectPath,
 		HostClaudeMountRoot: HostClaudeMountRoot,
 		FloxVersion:         FloxVersion,
 		FloxURL:             FloxURL,
@@ -168,6 +171,7 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 		ClaudeSHA256:        ClaudeSHA256,
 		AgentsMarkdown:      agents.MarkdownContent(),
 		ClaudeSubpaths:      ClaudeSubpaths,
+		SettingsJSON:        buildVMSettings(p.Home),
 	})
 	if err != nil {
 		return err
@@ -241,6 +245,11 @@ func manageMutagenSessions(ctx context.Context, c *cobra.Command, app *App, id v
 	if app.Mutagen == nil {
 		return nil
 	}
+	// Ensure the system SSH can resolve Lima's per-VM host aliases so that
+	// mutagen (which calls ssh directly) can connect to the VM.
+	if err := ensureSSHConfigInclude(app.Paths.Home); err != nil {
+		return fmt.Errorf("ssh config include: %w", err)
+	}
 	// Ensure the Mutagen daemon is running before any sync operation. This is
 	// idempotent and gives first-time users a clear error path (E-I-4).
 	if err := app.Mutagen.EnsureDaemon(ctx); err != nil {
@@ -250,14 +259,20 @@ func manageMutagenSessions(ctx context.Context, c *cobra.Command, app *App, id v
 	if err != nil {
 		return err
 	}
+	// Resolve the VM user's actual home directory — Lima may create it as
+	// /home/<user>.linux rather than /home/<user>.
+	vmHome, err := resolveVMHome(ctx, ssh)
+	if err != nil {
+		// Fall back to /home/<user> if we can't resolve it.
+		vmHome = "/home/" + os.Getenv("USER")
+	}
 	spec := mutagen.Spec{
-		VMID:          string(id),
-		HostPath:      projectPath,
-		VMPath:        projectPath,
-		HomeDir:       app.Paths.Home,
-		LimaSSHHost:   ssh.Host,
-		LimaSSHConfig: ssh.ConfigFile,
-		VMUser:        os.Getenv("USER"),
+		VMID:        string(id),
+		HostPath:    projectPath,
+		VMPath:      projectPath,
+		HomeDir:     app.Paths.Home,
+		LimaSSHHost: ssh.Host,
+		VMHome:      vmHome,
 	}
 	sessions, err := app.Mutagen.SessionsFor(ctx, string(id))
 	if err != nil {
@@ -393,4 +408,87 @@ func newRandomToken() string {
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// resolveVMHome queries the VM for the current user's home directory via SSH.
+// Lima may create the home at /home/<user>.linux rather than /home/<user>.
+func resolveVMHome(ctx context.Context, ssh backend.SSHConfig) (string, error) {
+	cmd := exec.CommandContext(ctx, "ssh", "-F", ssh.ConfigFile, ssh.Host,
+		"echo", "$HOME")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	home := strings.TrimSpace(string(out))
+	if home == "" {
+		return "", fmt.Errorf("empty $HOME from VM")
+	}
+	return home, nil
+}
+
+// buildVMSettings reads the host's ~/.claude/settings.json, strips fields that
+// don't apply in the VM (permissions, sandbox), and rewrites the statusLine
+// command to reference the VM-installed binary.  Returns the JSON string to
+// embed in the provision template, or "" if the host file can't be read.
+func buildVMSettings(homeDir string) string {
+	hostPath := filepath.Join(homeDir, ".claude", "settings.json")
+	data, err := os.ReadFile(hostPath)
+	if err != nil {
+		// No host settings — return minimal statusline-only config.
+		b, _ := json.MarshalIndent(map[string]any{
+			"statusLine": map[string]string{
+				"type":    "command",
+				"command": "/usr/local/bin/claude-statusline",
+			},
+		}, "", "  ")
+		return string(b)
+	}
+
+	var settings map[string]any
+	if json.Unmarshal(data, &settings) != nil {
+		return ""
+	}
+
+	// Drop host-specific keys that don't apply in the VM.
+	delete(settings, "permissions") // --dangerously-skip-permissions handles this
+	delete(settings, "sandbox")     // already inside the sandbox
+
+	// Point the statusline at the VM-installed binary.
+	settings["statusLine"] = map[string]string{
+		"type":    "command",
+		"command": "/usr/local/bin/claude-statusline",
+	}
+
+	b, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+// buildOmpVMConfig reads the host's ~/.config/omp/agent/config.yml, rewrites
+// sessionDir to a VM-local path, and returns the YAML string to embed in the
+// provision template. Returns "" if the host file can't be read.
+func buildOmpVMConfig(homeDir string) string {
+	hostPath := filepath.Join(homeDir, ".config", "omp", "agent", "config.yml")
+	data, err := os.ReadFile(hostPath)
+	if err != nil {
+		return ""
+	}
+
+	var config map[string]any
+	if yaml.Unmarshal(data, &config) != nil {
+		return ""
+	}
+
+	// Rewrite sessionDir to VM-local path. The exact home directory is
+	// resolved at shell time via $HOME, but config.yml needs a concrete
+	// path. Use a standard Linux home path — the provision script will
+	// create it.
+	config["sessionDir"] = "~/.local/state/omp/sessions"
+
+	b, err := yaml.Marshal(config)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
