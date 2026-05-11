@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,5 +29,48 @@ func TestDoCreate_PassesClaudeSubpathsToProvision(t *testing.T) {
 		if !strings.Contains(script, needle) {
 			t.Errorf("provision script missing bind-mount for %q\nfull script:\n%s", sub, script)
 		}
+	}
+}
+
+func TestDoCreate_PassesOmpSubpathsToProvision(t *testing.T) {
+	app := newTestApp(t)
+
+	// Create omp host directories so BuildMounts includes them.
+	for _, sub := range OmpSubpaths {
+		dir := filepath.Join(app.Paths.Home, ".config", "omp", "agent", sub)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	_ = runSubcommand(t, app, "start")
+
+	fake, ok := app.Backend.(*backend.Fake)
+	if !ok {
+		t.Fatalf("expected *backend.Fake, got %T", app.Backend)
+	}
+	script := fake.LastSpec.Provision.Script
+	if script == "" {
+		t.Fatal("provision script is empty")
+	}
+	for _, sub := range OmpSubpaths {
+		needle := `mount --bind -o ro "$HOST_OMP/` + sub + `"`
+		if !strings.Contains(script, needle) {
+			t.Errorf("provision script missing omp bind-mount for %q", sub)
+		}
+	}
+}
+
+func TestDoCreate_PassesOmpVersionToProvision(t *testing.T) {
+	app := newTestApp(t)
+	_ = runSubcommand(t, app, "start")
+
+	fake, ok := app.Backend.(*backend.Fake)
+	if !ok {
+		t.Fatalf("expected *backend.Fake, got %T", app.Backend)
+	}
+	script := fake.LastSpec.Provision.Script
+	if !strings.Contains(script, "omp-linux-arm64") {
+		t.Errorf("provision script missing omp download URL")
 	}
 }

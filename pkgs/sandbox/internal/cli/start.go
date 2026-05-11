@@ -172,6 +172,13 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 		AgentsMarkdown:      agents.MarkdownContent(),
 		ClaudeSubpaths:      ClaudeSubpaths,
 		SettingsJSON:        buildVMSettings(p.Home),
+		OmpVersion:          OmpVersion,
+		OmpURL:              BuildOmpURL(OmpVersion, defaultArch(r.Arch)),
+		OmpSHA256:           OmpSHA256,
+		HostOmpMountRoot:    HostOmpMountRoot,
+		OmpSubpaths:         OmpSubpaths,
+		OmpConfigYAML:       buildOmpVMConfig(p.Home),
+		OmpAgentsMarkdown:   agents.OmpMarkdownContent(),
 	})
 	if err != nil {
 		return err
