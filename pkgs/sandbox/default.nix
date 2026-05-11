@@ -1,4 +1,4 @@
-{ lib, buildGoModule, pkgsCross, ... }:
+{ lib, buildGoModule, installShellFiles, pkgsCross, ... }:
 
 let
   version = "0.0.1-dev";
@@ -12,11 +12,20 @@ in
 
     subPackages = [ "cmd/sandbox" ];
 
+    nativeBuildInputs = [ installShellFiles ];
+
     ldflags = [
       "-s"
       "-w"
       "-X github.com/cullenmcdermott/system-config/sandbox/internal/buildinfo.version=${version}"
     ];
+
+    postInstall = ''
+      installShellCompletion --cmd sandbox \
+        --bash <($out/bin/sandbox completion bash) \
+        --zsh <($out/bin/sandbox completion zsh) \
+        --fish <($out/bin/sandbox completion fish)
+    '';
 
     doCheck = true;
 

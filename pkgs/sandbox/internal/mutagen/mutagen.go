@@ -5,7 +5,6 @@ package mutagen
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"path"
@@ -97,25 +96,37 @@ func (m *Manager) CreateTranscripts(ctx context.Context, s Spec, subs []string) 
 }
 
 type Session struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
+	Name   string
+	Status string
 }
+
+// sessionListTemplate emits "name|status" per session. Mutagen has no `--json`
+// flag (removed pre-0.18); `--template` is the supported way to get
+// machine-parseable output. We use a pipe delimiter because session names
+// don't contain pipes.
+const sessionListTemplate = `{{range .}}{{.Name}}|{{.Status}}` + "\n" + `{{end}}`
 
 func (m *Manager) SessionsFor(ctx context.Context, vmID string) ([]Session, error) {
 	out, err := m.r.Output(ctx, nil,
 		"sync", "list",
 		"--label-selector="+sessionLabel(vmID),
-		"--json",
+		"--template", sessionListTemplate,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("mutagen sync list: %w", err)
 	}
-	if len(strings.TrimSpace(string(out))) == 0 {
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
 		return nil, nil
 	}
 	var sessions []Session
-	if err := json.Unmarshal(out, &sessions); err != nil {
-		return nil, fmt.Errorf("parse mutagen json: %w", err)
+	for _, line := range strings.Split(trimmed, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		name, status, _ := strings.Cut(line, "|")
+		sessions = append(sessions, Session{Name: name, Status: status})
 	}
 	return sessions, nil
 }

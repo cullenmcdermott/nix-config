@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -100,12 +101,32 @@ func (b *BridgeSupervisor) Stop(socketPath, tokenPath string) error {
 	return nil
 }
 
-func productionWizard(g config.Global) (config.PerVM, error) {
-	f, err := wizard.Run(wizard.NewForm(g))
-	if err != nil {
-		return config.PerVM{}, err
+// makeProductionWizard returns a WizardFunc that loads/saves mount history
+// from p.MountHistoryFile and passes it to the TUI for quick re-selection.
+func makeProductionWizard(p *paths.Paths) WizardFunc {
+	return func(g config.Global) (config.PerVM, error) {
+		history, _ := wizard.LoadHistory(p.MountHistoryFile) // best-effort
+
+		currentPath, _ := vmid.ProjectPath() // best-effort; empty string is safe
+
+		f, err := wizard.Run(wizard.NewForm(g), wizard.RunOptions{
+			History:     history,
+			CurrentPath: currentPath,
+		})
+		if err != nil {
+			return config.PerVM{}, err
+		}
+
+		// Record selected mounts in history, ranked by recency.
+		now := time.Now()
+		updated := make([]wizard.HistoryEntry, 0, len(f.ExtraMounts))
+		for _, mp := range f.ExtraMounts {
+			updated = append(updated, wizard.HistoryEntry{Path: mp, LastUsed: now})
+		}
+		_ = wizard.SaveHistory(p.MountHistoryFile, updated) // best-effort
+
+		return f.Apply(), nil
 	}
-	return f.Apply(), nil
 }
 
 // NewProductionApp wires the real Lima backend.
@@ -125,7 +146,7 @@ func NewProductionApp() (*App, error) {
 		Paths:             p,
 		Backend:           lima.New(lima.NewRunner(""), p.VMsConfigDir),
 		Mutagen:           mutagen.New(mutagen.NewRunner("")),
-		Wizard:            productionWizard,
+		Wizard:            makeProductionWizard(p),
 		Bridge:            &BridgeSupervisor{Self: self},
 		WrapperBinaryPath: os.Getenv("SANDBOX_CLAUDE_WRAPPER"),
 	}, nil

@@ -8,15 +8,16 @@ import (
 )
 
 type Paths struct {
-	Home           string
-	ConfigDir      string // ~/.config/sandbox
-	GlobalConfig   string // ~/.config/sandbox/config.toml
-	VMsConfigDir   string // ~/.config/sandbox/vms
-	DataDir        string // ~/.local/share/sandbox
-	VMsDataDir     string // ~/.local/share/sandbox/vms
-	WarmNixDir     string // ~/.local/share/sandbox/nix-warm
-	WarmNixLock    string // ~/.local/share/sandbox/nix-warm/.nix-warm.lock
-	ImagesCacheDir string // ~/.cache/sandbox/images
+	Home             string
+	ConfigDir        string // ~/.config/sandbox
+	GlobalConfig     string // ~/.config/sandbox/config.toml
+	VMsConfigDir     string // ~/.config/sandbox/vms
+	DataDir          string // ~/.local/share/sandbox
+	VMsDataDir       string // ~/.local/share/sandbox/vms
+	WarmNixDir       string // ~/.local/share/sandbox/nix-warm
+	WarmNixLock      string // ~/.local/share/sandbox/nix-warm/.nix-warm.lock
+	ImagesCacheDir   string // ~/.cache/sandbox/images
+	MountHistoryFile string // ~/.local/share/sandbox/mount-history.json
 }
 
 func Resolve() (*Paths, error) {
@@ -34,15 +35,16 @@ func Resolve() (*Paths, error) {
 	warm := filepath.Join(dataDir, "nix-warm")
 
 	return &Paths{
-		Home:           home,
-		ConfigDir:      configDir,
-		GlobalConfig:   filepath.Join(configDir, "config.toml"),
-		VMsConfigDir:   filepath.Join(configDir, "vms"),
-		DataDir:        dataDir,
-		VMsDataDir:     filepath.Join(dataDir, "vms"),
-		WarmNixDir:     warm,
-		WarmNixLock:    filepath.Join(warm, ".nix-warm.lock"),
-		ImagesCacheDir: imagesDir,
+		Home:             home,
+		ConfigDir:        configDir,
+		GlobalConfig:     filepath.Join(configDir, "config.toml"),
+		VMsConfigDir:     filepath.Join(configDir, "vms"),
+		DataDir:          dataDir,
+		VMsDataDir:       filepath.Join(dataDir, "vms"),
+		WarmNixDir:       warm,
+		WarmNixLock:      filepath.Join(warm, ".nix-warm.lock"),
+		ImagesCacheDir:   imagesDir,
+		MountHistoryFile: filepath.Join(dataDir, "mount-history.json"),
 	}, nil
 }
 

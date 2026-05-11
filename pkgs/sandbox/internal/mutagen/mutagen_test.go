@@ -126,17 +126,24 @@ func TestCreateTranscripts_EmptySubsIsNoop(t *testing.T) {
 	}
 }
 
-func TestStatus_ParsesJSON(t *testing.T) {
+func TestSessionsFor_ParsesTemplateLines(t *testing.T) {
+	listKey := "sync list --label-selector=sandbox-vm-id=demo-abcdef --template " + sessionListTemplate
 	r := &stubRunner{outputs: map[string]string{
-		"sync list --label-selector=sandbox-vm-id=demo-abcdef --json": `[{"name":"sandbox-demo-abcdef-project","status":"watching"}]`,
+		listKey: "sandbox-demo-abcdef-project|Watching\nsandbox-demo-abcdef-transcripts-projects|WaitingForRescan\n",
 	}}
 	m := New(r)
 	got, err := m.SessionsFor(context.Background(), "demo-abcdef")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].Name != "sandbox-demo-abcdef-project" || got[0].Status != "watching" {
-		t.Errorf("got %+v", got)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 sessions, got %d: %+v", len(got), got)
+	}
+	if got[0].Name != "sandbox-demo-abcdef-project" || got[0].Status != "Watching" {
+		t.Errorf("unexpected first session: %+v", got[0])
+	}
+	if got[1].Name != "sandbox-demo-abcdef-transcripts-projects" || got[1].Status != "WaitingForRescan" {
+		t.Errorf("unexpected second session: %+v", got[1])
 	}
 }
 
@@ -149,8 +156,9 @@ func TestTerminate_Idempotent(t *testing.T) {
 }
 
 func TestSessionsFor_EmptyResponse(t *testing.T) {
+	listKey := "sync list --label-selector=sandbox-vm-id=demo-abcdef --template " + sessionListTemplate
 	r := &stubRunner{outputs: map[string]string{
-		"sync list --label-selector=sandbox-vm-id=demo-abcdef --json": "",
+		listKey: "",
 	}}
 	m := New(r)
 	got, err := m.SessionsFor(context.Background(), "demo-abcdef")
