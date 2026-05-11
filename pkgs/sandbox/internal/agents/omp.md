@@ -44,8 +44,14 @@ A bridge daemon connects this VM to the host machine via a Unix socket at
 ### Key Paths
 
 - **Project directory**: mounted at the same absolute path as on the host (Mutagen sync, writable)
-- **~/.claude/**: partially overlaid from the host (skills, commands, agents, hooks are read-only mounts from host); other files (credentials, config) are local to the VM
-- **/etc/sandbox/AGENTS.md**: this file
+- **~/.config/omp/agent/**: config root; skills, prompts, extensions, and themes are read-only mounts from host; other files (agent.db, sessions) are local to the VM
+- **PI_CODING_AGENT_DIR**: env var pointing to `~/.config/omp/agent/` — set in `/etc/profile.d/omp-env.sh`
+- **PI_CONFIG_DIR**: env var set to `.config/omp` — omp appends this to `$HOME` internally
+
+### Known Gaps
+
+- **GitHub Copilot auth**: VM-local; you must re-authenticate in each new VM. Token is stored in `agent.db` (VM-local state).
+- **Session history**: stored in VM-local `~/.config/omp/agent/agent.db`; ephemeral per VM.
 
 ### What to Expect
 
