@@ -47,6 +47,7 @@ func NewRootForApp(app *App) *cobra.Command {
 	cmd.AddCommand(newMountCmd(app))
 	cmd.AddCommand(newVMCmd(app))
 	cmd.AddCommand(newBridgedCmd())
+	cmd.AddCommand(newOmpCmd(app))
 	return cmd
 }
 
