@@ -52,6 +52,12 @@ func runVMList(c *cobra.Command, app *App) error {
 	var known []os.DirEntry
 	for _, e := range entries {
 		if e.IsDir() {
+			stateFile := filepath.Join(app.Paths.VMsDataDir, e.Name(), "state.json")
+			// Skip phantom entries without a state file. A stray directory
+			// (warm-nix placeholder, temp dir) would have no state.json.
+			if _, err := os.Stat(stateFile); err != nil {
+				continue
+			}
 			known = append(known, e)
 		}
 	}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
@@ -15,17 +16,19 @@ const HostClaudeMountRoot = "/var/sandbox/host-claude"
 // the VM during provisioning. The provision script rsyncs its store into /nix/store.
 const WarmNixVMPath = "/var/sandbox/warm-nix"
 
-// claudeSubpaths are the read-only paths from ~/.claude that Claude Code reads.
-// Anything not in this list is writable and lives on persistent VM state.
-var claudeSubpaths = []struct {
-	rel string
-}{
-	{"skills"},
-	{"commands"},
-	{"agents"},
-	{"hooks"},
-	{"CLAUDE.md"},
-	{"settings.json"},
+// claudeSubpaths are the read-only paths from ~/.claude that are overlaid
+// read-only into the VM. These must be directories (not files). Anything not
+// in this list is writable and lives on persistent VM state.
+//
+// Exported so lima/provision.go can use the same list without duplication.
+var ClaudeSubpaths = []string{
+	"skills",
+	"commands",
+	"agents",
+	"hooks",
+	// "CLAUDE.md" and "settings.json" are omitted: Lima's virtiofs expects
+	// directories; regular-file mounts are undefined behavior. Files are
+	// copied into the VM by the provision script instead.
 }
 
 // BuildMounts returns the deterministic mount list for a VM given:
@@ -43,10 +46,16 @@ func BuildMounts(projectPath, homeDir string, extra []config.Mount) []backend.Mo
 			SyncMode: backend.SyncMutagen,
 		},
 	}
-	for _, sub := range claudeSubpaths {
+	for _, sub := range ClaudeSubpaths {
+		hostPath := filepath.Join(homeDir, ".claude", sub)
+		if _, err := os.Stat(hostPath); err != nil {
+			// Skip subpaths that don't exist on the host. Lima rejects mounts
+			// with non-existent source paths.
+			continue
+		}
 		out = append(out, backend.Mount{
-			HostPath: filepath.Join(homeDir, ".claude", sub.rel),
-			VMPath:   filepath.Join(HostClaudeMountRoot, sub.rel),
+			HostPath: hostPath,
+			VMPath:   filepath.Join(HostClaudeMountRoot, sub),
 			Writable: false,
 			SyncMode: backend.SyncVirtiofs,
 		})

@@ -15,7 +15,8 @@ func TestRoot_VMFlagOverridesCwd(t *testing.T) {
 }
 
 func TestRoot_VersionFlag_PrintsBuildVersion(t *testing.T) {
-	cmd := NewRoot()
+	app := newTestApp(t)
+	cmd := NewRootForApp(app)
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
@@ -30,7 +31,8 @@ func TestRoot_VersionFlag_PrintsBuildVersion(t *testing.T) {
 }
 
 func TestRoot_NoArgs_ShowsHelpAndExitsCleanly(t *testing.T) {
-	cmd := NewRoot()
+	app := newTestApp(t)
+	cmd := NewRootForApp(app)
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)

@@ -3,7 +3,7 @@
 let
   version = "0.0.1-dev";
   src = lib.cleanSource ./.;
-  vendorHash = "sha256-0vISaf3QmapQEet/2BAOqGP0/xW+FlhllrdMEDJU8VY=";
+  vendorHash = null;
 in
 {
   sandbox = buildGoModule {
@@ -33,7 +33,7 @@ in
     inherit version src vendorHash;
 
     subPackages = [ "cmd/sandbox-claude" ];
-    CGO_ENABLED = "0";
+    env.CGO_ENABLED = "0";
     ldflags = [ "-s" "-w" ];
     doCheck = false;
   };

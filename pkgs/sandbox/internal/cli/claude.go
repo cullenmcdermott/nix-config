@@ -24,7 +24,7 @@ func newClaudeCmd(app *App) *cobra.Command {
 			}
 			if persisted == state.StateNew || persisted == state.StateStopped {
 				start := newStartCmd(app)
-				start.SetContext(c.Context())
+				start.SetContext(withNoWizard(c.Context(), true))
 				start.SetOut(c.OutOrStdout())
 				start.SetErr(c.ErrOrStderr())
 				if err := start.RunE(start, nil); err != nil {

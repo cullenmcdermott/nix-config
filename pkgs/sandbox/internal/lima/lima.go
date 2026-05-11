@@ -49,15 +49,27 @@ func (b *Backend) Create(ctx context.Context, s backend.VMSpec) error {
 }
 
 func (b *Backend) Start(ctx context.Context, id backend.VMID) error {
-	return b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "start", instanceName(id))
+	name := instanceName(id)
+	if err := b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "start", "--tty=false", name); err != nil {
+		return fmt.Errorf("lima start %s: %w", name, err)
+	}
+	return nil
 }
 
 func (b *Backend) Stop(ctx context.Context, id backend.VMID) error {
-	return b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "stop", instanceName(id))
+	name := instanceName(id)
+	if err := b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "stop", name); err != nil {
+		return fmt.Errorf("lima stop %s: %w", name, err)
+	}
+	return nil
 }
 
 func (b *Backend) Destroy(ctx context.Context, id backend.VMID) error {
-	return b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "delete", "--force", instanceName(id))
+	name := instanceName(id)
+	if err := b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "delete", "--force", name); err != nil {
+		return fmt.Errorf("lima delete %s: %w", name, err)
+	}
+	return nil
 }
 
 type limaListEntry struct {
@@ -130,12 +142,22 @@ func (b *Backend) List(ctx context.Context) ([]backend.VMInfo, error) {
 	return out, nil
 }
 
+// mapLimaStatus maps Lima's textual status strings to backend.Status values.
+// Note: StatusGone is returned for two distinct cases — the VM is not in
+// limactl's list output (never existed or already destroyed), and Lima
+// reports an empty status string. Callers treat these identically, which
+// is correct for current use. If the distinction matters later, introduce
+// a separate StatusUnknown variant.
 func mapLimaStatus(s string) backend.Status {
 	switch strings.ToLower(s) {
 	case "running":
 		return backend.StatusRunning
 	case "stopped":
 		return backend.StatusStopped
+	case "broken":
+		return backend.StatusFailed // recoverable via destroy/recreate
+	case "uninitialized":
+		return backend.StatusStopped // Lima hasn't started it yet
 	case "":
 		return backend.StatusGone
 	default:

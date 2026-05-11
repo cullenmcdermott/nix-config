@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -16,20 +18,23 @@ func TestBuildMounts_IncludesProjectAtSamePath(t *testing.T) {
 }
 
 func TestBuildMounts_ROBindsAllClaudeSubpaths(t *testing.T) {
-	mounts := BuildMounts("/Users/alice/proj", "/Users/alice", nil)
+	home := t.TempDir()
+	for _, sub := range ClaudeSubpaths {
+		if err := os.MkdirAll(filepath.Join(home, ".claude", sub), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mounts := BuildMounts("/Users/alice/proj", home, nil)
 	for _, sub := range []string{"skills", "commands", "agents", "hooks"} {
-		host := "/Users/alice/.claude/" + sub
-		vm := "/var/sandbox/host-claude/" + sub
+		host := filepath.Join(home, ".claude", sub)
+		vm := filepath.Join(HostClaudeMountRoot, sub)
 		if !containsMount(mounts, host, vm, false) {
 			t.Errorf("missing RO mount for %s", sub)
 		}
 	}
-	if !containsMount(mounts, "/Users/alice/.claude/CLAUDE.md", "/var/sandbox/host-claude/CLAUDE.md", false) {
-		t.Errorf("missing CLAUDE.md mount")
-	}
-	if !containsMount(mounts, "/Users/alice/.claude/settings.json", "/var/sandbox/host-claude/settings.json", false) {
-		t.Errorf("missing settings.json mount")
-	}
+	// CLAUDE.md and settings.json are no longer virtiofs-mounted (Lima
+	// expects directories; files are undefined). They may be copied by the
+	// provision script if needed. No mount expected here.
 }
 
 func TestBuildMounts_AddsExtraMountsWritable(t *testing.T) {

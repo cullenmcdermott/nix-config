@@ -38,7 +38,7 @@ func (h *testHandlers) Auth(ctx context.Context) (string, time.Time, error) {
 // roundTripRequest calls handleRequest on a server and returns the reply bytes.
 func roundTripRequest(srv *Server, req Request) string {
 	var buf bytes.Buffer
-	srv.handleRequest(&buf, req)
+	srv.handleRequest(context.Background(), &buf, req)
 	return buf.String()
 }
 
@@ -70,7 +70,7 @@ func parseAuthReply(t *testing.T, body string) (ok bool, token string, exp time.
 }
 
 func TestHandleRequest_RejectsBadToken(t *testing.T) {
-	srv := NewServer("/unused", "right-token", &testHandlers{})
+	srv := NewServer("/unused", "right-token", &testHandlers{}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "secret.read", Token: "wrong", Ref: "op://X"})
 	ok, errMsg := parseReply(t, out)
 	if ok || !strings.Contains(errMsg, "invalid token") {
@@ -85,7 +85,7 @@ func TestHandleRequest_SecretRead_CallsHandler(t *testing.T) {
 			called = ref
 			return "s3cret", nil
 		},
-	})
+	}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "secret.read", Token: "tok", Ref: "op://Vault/Item/password"})
 	if called != "op://Vault/Item/password" {
 		t.Errorf("handler called with %q, want %q", called, "op://Vault/Item/password")
@@ -100,7 +100,7 @@ func TestHandleRequest_SecretRead_CallsHandler(t *testing.T) {
 }
 
 func TestHandleRequest_SecretRead_RejectsNonOpRef(t *testing.T) {
-	srv := NewServer("/unused", "tok", &testHandlers{})
+	srv := NewServer("/unused", "tok", &testHandlers{}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "secret.read", Token: "tok", Ref: "https://evil.com"})
 	ok, errMsg := parseReply(t, out)
 	if ok {
@@ -116,7 +116,7 @@ func TestHandleRequest_SecretRead_HandlerError(t *testing.T) {
 		secret: func(_ context.Context, ref string) (string, error) {
 			return "", context.DeadlineExceeded
 		},
-	})
+	}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "secret.read", Token: "tok", Ref: "op://X"})
 	ok, errMsg := parseReply(t, out)
 	if ok {
@@ -134,7 +134,7 @@ func TestHandleRequest_URLOpen_CallsHandler(t *testing.T) {
 			called = url
 			return nil
 		},
-	})
+	}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "url.open", Token: "tok", URL: "https://example.com"})
 	if called != "https://example.com" {
 		t.Errorf("open called with %q", called)
@@ -146,7 +146,7 @@ func TestHandleRequest_URLOpen_CallsHandler(t *testing.T) {
 }
 
 func TestHandleRequest_URLOpen_RejectsFileScheme(t *testing.T) {
-	srv := NewServer("/unused", "tok", &testHandlers{})
+	srv := NewServer("/unused", "tok", &testHandlers{}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "url.open", Token: "tok", URL: "file:///etc/passwd"})
 	ok, errMsg := parseReply(t, out)
 	if ok {
@@ -158,7 +158,7 @@ func TestHandleRequest_URLOpen_RejectsFileScheme(t *testing.T) {
 }
 
 func TestHandleRequest_URLOpen_RejectsSSHScheme(t *testing.T) {
-	srv := NewServer("/unused", "tok", &testHandlers{})
+	srv := NewServer("/unused", "tok", &testHandlers{}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "url.open", Token: "tok", URL: "ssh://host"})
 	ok, errMsg := parseReply(t, out)
 	if ok {
@@ -175,7 +175,7 @@ func TestHandleRequest_Auth_ReturnsTokenAndExpiry(t *testing.T) {
 		auth: func(_ context.Context) (string, time.Time, error) {
 			return "jwt-token", exp, nil
 		},
-	})
+	}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "claude.auth", Token: "tok"})
 	ok, tok, gotExp := parseAuthReply(t, out)
 	if !ok {
@@ -194,7 +194,7 @@ func TestHandleRequest_Auth_HandlerError(t *testing.T) {
 		auth: func(_ context.Context) (string, time.Time, error) {
 			return "", time.Time{}, context.DeadlineExceeded
 		},
-	})
+	}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "claude.auth", Token: "tok"})
 	ok, errMsg := parseReply(t, out)
 	if ok {
@@ -206,7 +206,7 @@ func TestHandleRequest_Auth_HandlerError(t *testing.T) {
 }
 
 func TestHandleRequest_UnknownType(t *testing.T) {
-	srv := NewServer("/unused", "tok", &testHandlers{})
+	srv := NewServer("/unused", "tok", &testHandlers{}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "bad.type", Token: "tok"})
 	ok, errMsg := parseReply(t, out)
 	if ok {
@@ -219,7 +219,7 @@ func TestHandleRequest_UnknownType(t *testing.T) {
 
 func TestHandleRequest_SecretRead_RefWithHTTPsPrefix(t *testing.T) {
 	// https:// is NOT an op:// prefix.
-	srv := NewServer("/unused", "tok", &testHandlers{})
+	srv := NewServer("/unused", "tok", &testHandlers{}, 15*time.Second)
 	out := roundTripRequest(srv, Request{Type: "secret.read", Token: "tok", Ref: "https://example.com/secret"})
 	ok, errMsg := parseReply(t, out)
 	if ok {

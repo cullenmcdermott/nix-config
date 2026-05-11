@@ -17,6 +17,11 @@ type ProdHandlers struct {
 	CredentialsPath string
 }
 
+// Secret reads a reference from 1Password. The ref is validated to start with
+// "op://" before being passed to "op read". exec.Command passes each argument
+// as a separate argv entry (not shell-expanded), so there is no shell injection
+// risk. The op:// prefix also prevents flag injection since refs never start
+// with "-".
 func (p *ProdHandlers) Secret(ctx context.Context, ref string) (string, error) {
 	if !strings.HasPrefix(ref, "op://") {
 		return "", fmt.Errorf("ref must start with op://")

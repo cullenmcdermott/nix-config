@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -21,7 +22,7 @@ func newBridgedCmd() *cobra.Command {
 			ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 			defer cancel()
 			h := &bridge.ProdHandlers{CredentialsPath: credentials}
-			s := bridge.NewServer(socket, token, h)
+			s := bridge.NewServer(socket, token, h, 30*time.Second)
 			return s.Serve(ctx)
 		},
 	}

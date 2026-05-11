@@ -20,7 +20,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ cfg.package ];
+    home.packages = [
+      cfg.package
+      pkgs.lima
+      pkgs.mutagen
+    ];
     home.sessionVariables.SANDBOX_CLAUDE_WRAPPER =
       "${cfg.wrapperPackage}/bin/sandbox-claude";
   };

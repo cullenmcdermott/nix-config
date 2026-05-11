@@ -112,7 +112,7 @@ func TestBackend_Start_Stop_Destroy(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := [][]string{
-		{"start", "sandbox-demo-abcdef"},
+		{"start", "--tty=false", "sandbox-demo-abcdef"},
 		{"stop", "sandbox-demo-abcdef"},
 		{"delete", "--force", "sandbox-demo-abcdef"},
 	}
@@ -123,6 +123,7 @@ func TestBackend_Start_Stop_Destroy(t *testing.T) {
 		}
 	}
 }
+
 
 func TestBackend_SSHConfig_PointsAtLimaDir(t *testing.T) {
 	t.Setenv("HOME", "/Users/alice")

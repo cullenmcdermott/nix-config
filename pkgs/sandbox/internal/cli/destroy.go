@@ -55,16 +55,21 @@ func newDestroyCmd(app *App) *cobra.Command {
 				{
 					"vm-stop", "stop VM",
 					func(ctx context.Context) error {
-						if rec.State != state.StateRunning {
-							return nil
-						}
+						// Always attempt Stop. Lima's limactl stop is idempotent —
+						// it succeeds even if the VM is already stopped. We used to
+						// guard on rec.State != RUNNING, but that skipped the stop
+						// on DESTROY_FAILED recovery (C-I-2). The VM might still be
+						// running in that case; attempt Stop regardless.
 						if app.Mutagen != nil {
 							if err := app.Mutagen.PauseAll(ctx, string(id)); err != nil {
 								fmt.Fprintf(c.ErrOrStderr(), "warning: mutagen pause failed (continuing): %v\n", err)
 							}
 						}
 						if err := mergeNixIntoWarm(ctx, app, id); err != nil {
-							return fmt.Errorf("merge /nix into warm template: %w", err)
+							// Best-effort. The warm cache is an optimization, not a
+							// correctness requirement. If the VM is unreachable or the
+							// rsync fails, we still want to destroy it (C-I-3).
+							fmt.Fprintf(c.ErrOrStderr(), "warning: merging /nix into warm template failed (continuing): %v\n", err)
 						}
 						return app.Backend.Stop(ctx, backend.VMID(id))
 					},
@@ -175,7 +180,7 @@ func mergeNixIntoWarm(ctx context.Context, app *App, id vmid.ID) error {
 	}
 
 	cmd := exec.CommandContext(ctx, "rsync",
-		"-aH", "--delete-after",
+		"-aH",
 		"-e", fmt.Sprintf("ssh -F %s", ssh.ConfigFile),
 		ssh.Host+":/nix/store/",
 		filepath.Join(warm.Dir, "store")+"/",

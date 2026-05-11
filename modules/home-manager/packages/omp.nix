@@ -11,10 +11,10 @@
 #
 # Then update the hash for your platform in the hashes attrset.
 let
-  version = "14.5.14";
+  version = "14.9.2";
   hashes = {
     # aarch64-darwin — update with: nix hash convert --hash-algo sha256 --to sri $(nix-prefetch-url https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-arm64 | tail -1)
-    "aarch64-darwin" = "sha256-qEhhJ8Vn1B5GU4DhHp344P3ShJTB9hhH0Ooa0i0x4e4=";
+    "aarch64-darwin" = "sha256-kxrs9AVCyvCf61lwr7RN2J3vtQR0cb/DKA+XYJJguV4=";
     # x86_64-darwin — not yet fetched
     "x86_64-darwin" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
     # x86_64-linux — not yet fetched

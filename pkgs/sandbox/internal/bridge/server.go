@@ -23,18 +23,20 @@ type Handlers interface {
 // Server is a per-VM bridge daemon. It listens on a unix socket and dispatches
 // validated requests to the provided Handlers.
 type Server struct {
-	socketPath string
-	token      string
-	handlers   Handlers
+	socketPath     string
+	token          string
+	handlers       Handlers
+	handlerTimeout time.Duration // bounds per-request handler duration; zero means no limit
 
 	mu  sync.Mutex
 	lis net.Listener
 }
 
 // NewServer creates a bridge server that will listen on socketPath. The token
-// must match the one passed in each request.
-func NewServer(socketPath, token string, h Handlers) *Server {
-	return &Server{socketPath: socketPath, token: token, handlers: h}
+// must match the one passed in each request. handlerTimeout bounds how long
+// each handler call runs; zero means no per-request timeout.
+func NewServer(socketPath, token string, h Handlers, handlerTimeout time.Duration) *Server {
+	return &Server{socketPath: socketPath, token: token, handlers: h, handlerTimeout: handlerTimeout}
 }
 
 // Serve starts listening and handling requests until the passed context is
@@ -61,8 +63,6 @@ func (s *Server) Serve(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		<-ctx.Done()
-		// Close the listener to unblock the accept goroutine if the loop is
-		// still running; cancel the context to signal the select loop to exit.
 		s.mu.Lock()
 		if s.lis != nil {
 			_ = s.lis.Close()
@@ -115,6 +115,14 @@ func (s *Server) Close() error {
 // handle reads one JSON request from the connection and dispatches it.
 func (s *Server) handle(c net.Conn) {
 	defer c.Close()
+
+	// Set a connection-level deadline: if the client doesn't send a complete
+	// request within the timeout, the connection is closed. This prevents a
+	// slow-reader or malicious client from holding the goroutine indefinitely.
+	if s.handlerTimeout > 0 {
+		_ = c.SetReadDeadline(time.Now().Add(s.handlerTimeout))
+	}
+
 	br := bufio.NewReader(c)
 
 	// Read exactly one JSON request per connection.
@@ -128,12 +136,25 @@ func (s *Server) handle(c net.Conn) {
 		writeErr(c, "bad json: "+err.Error())
 		return
 	}
-	s.handleRequest(c, req)
+
+	// Derive a per-request context with timeout. If handlerTimeout is zero,
+	// pass context.Background() (no timeout). If set, each handler call gets
+	// at most handlerTimeout to complete.
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if s.handlerTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), s.handlerTimeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
+
+	s.handleRequest(ctx, c, req)
 }
 
 // handleRequest dispatches a parsed request to the appropriate handler method.
 // Exported for testing without socket I/O.
-func (s *Server) handleRequest(c io.Writer, req Request) {
+func (s *Server) handleRequest(ctx context.Context, c io.Writer, req Request) {
 	if req.Token != s.token {
 		writeErr(c, "invalid token")
 		return
@@ -144,7 +165,7 @@ func (s *Server) handleRequest(c io.Writer, req Request) {
 			writeErr(c, "ref must start with op://")
 			return
 		}
-		v, err := s.handlers.Secret(context.Background(), req.Ref)
+		v, err := s.handlers.Secret(ctx, req.Ref)
 		if err != nil {
 			writeErr(c, err.Error())
 			return
@@ -156,14 +177,14 @@ func (s *Server) handleRequest(c io.Writer, req Request) {
 			writeErr(c, "only http(s) URLs allowed")
 			return
 		}
-		if err := s.handlers.Open(context.Background(), req.URL); err != nil {
+		if err := s.handlers.Open(ctx, req.URL); err != nil {
 			writeErr(c, err.Error())
 			return
 		}
 		_ = json.NewEncoder(c).Encode(Reply{OK: true})
 
 	case "claude.auth":
-		tok, exp, err := s.handlers.Auth(context.Background())
+		tok, exp, err := s.handlers.Auth(ctx)
 		if err != nil {
 			writeErr(c, err.Error())
 			return

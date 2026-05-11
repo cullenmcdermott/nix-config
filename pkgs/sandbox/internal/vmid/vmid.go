@@ -70,6 +70,16 @@ func gitToplevel() (string, bool) {
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
 	out, err := cmd.Output()
 	if err != nil {
+		// Distinguish "not a git repo" (exit 128, stderr contains "not a git repo")
+		// from other failures (corrupt .git, broken hooks, missing git binary, etc.)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr.ExitCode() == 128 && strings.Contains(string(exitErr.Stderr), "not a git repository") {
+				return "", false
+			}
+		}
+		// Other git errors: surface them rather than silently falling back.
+		// Log to stderr so the user knows the VM ID may differ from yesterday.
+		fmt.Fprintf(os.Stderr, "git rev-parse --show-toplevel: %v\n", err)
 		return "", false
 	}
 	root := strings.TrimSpace(string(out))
