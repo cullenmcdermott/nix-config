@@ -67,7 +67,8 @@ func TestCreateTranscriptsSession_Args(t *testing.T) {
 		VMID:        "demo-abcdef",
 		HomeDir:     "/Users/alice",
 		LimaSSHHost: "lima-sandbox-demo-abcdef",
-	})
+		VMUser:      "alice",
+	}, TranscriptSubs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,6 +80,49 @@ func TestCreateTranscriptsSession_Args(t *testing.T) {
 		if !strings.Contains(j, "--mode=one-way-safe") {
 			t.Errorf("transcripts must be one-way: %s", j)
 		}
+	}
+}
+
+// NEW-I-2: when only one transcript sub is missing, only that one is created.
+func TestCreateTranscripts_OnlyCreatesNamedSubs(t *testing.T) {
+	r := &stubRunner{}
+	m := New(r)
+	err := m.CreateTranscripts(context.Background(), Spec{
+		VMID:        "demo-abcdef",
+		HomeDir:     "/Users/alice",
+		LimaSSHHost: "lima-sandbox-demo-abcdef",
+		VMUser:      "alice",
+	}, []string{"projects"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.calls) != 1 {
+		t.Fatalf("expected 1 call, got %v", r.calls)
+	}
+	joined := strings.Join(r.calls[0], " ")
+	if !strings.Contains(joined, "transcripts-projects") {
+		t.Errorf("expected projects session, got: %s", joined)
+	}
+	if strings.Contains(joined, "transcripts-todos") {
+		t.Errorf("must not create todos when only projects requested: %s", joined)
+	}
+}
+
+// Empty subs list is a no-op (nothing to reconcile).
+func TestCreateTranscripts_EmptySubsIsNoop(t *testing.T) {
+	r := &stubRunner{}
+	m := New(r)
+	err := m.CreateTranscripts(context.Background(), Spec{
+		VMID:        "demo-abcdef",
+		HomeDir:     "/Users/alice",
+		LimaSSHHost: "lima-sandbox-demo-abcdef",
+		VMUser:      "alice",
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.calls) != 0 {
+		t.Fatalf("expected no calls for empty subs, got %v", r.calls)
 	}
 }
 
@@ -115,6 +159,22 @@ func TestSessionsFor_EmptyResponse(t *testing.T) {
 	}
 	if got != nil {
 		t.Errorf("expected nil for empty response, got %+v", got)
+	}
+}
+
+// E-I-4: EnsureDaemon issues `mutagen daemon start`.
+func TestEnsureDaemon_RunsDaemonStart(t *testing.T) {
+	r := &stubRunner{}
+	m := New(r)
+	if err := m.EnsureDaemon(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.calls) != 1 {
+		t.Fatalf("expected 1 call, got %v", r.calls)
+	}
+	joined := strings.Join(r.calls[0], " ")
+	if joined != "daemon start" {
+		t.Errorf("expected `daemon start`, got %q", joined)
 	}
 }
 

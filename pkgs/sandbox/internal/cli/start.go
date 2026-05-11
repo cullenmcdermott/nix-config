@@ -160,13 +160,14 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 	provision, err := lima.RenderProvision(lima.ProvisionConfig{
 		User:                currentUsername(),
 		HostClaudeMountRoot: HostClaudeMountRoot,
-		FloxVersion:        FloxVersion,
-		FloxURL:            FloxURL,
-		FloxSHA256:         FloxSHA256,
-		ClaudeVersion:      ClaudeVersion,
-		ClaudeURL:          BuildClaudeURL(ClaudeVersion, archToPlatform(defaultArch(r.Arch))),
-		ClaudeSHA256:       ClaudeSHA256,
-		AgentsMarkdown:     agents.MarkdownContent(),
+		FloxVersion:         FloxVersion,
+		FloxURL:             FloxURL,
+		FloxSHA256:          FloxSHA256,
+		ClaudeVersion:       ClaudeVersion,
+		ClaudeURL:           BuildClaudeURL(ClaudeVersion, archToPlatform(defaultArch(r.Arch))),
+		ClaudeSHA256:        ClaudeSHA256,
+		AgentsMarkdown:      agents.MarkdownContent(),
+		ClaudeSubpaths:      ClaudeSubpaths,
 	})
 	if err != nil {
 		return err
@@ -189,14 +190,23 @@ func doCreate(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, state
 		_ = state.Write(statePath, state.StateFailed)
 		return fmt.Errorf("create: %w", err)
 	}
+	// State stays PROVISIONING until Mutagen and the bridge are wired up.
+	// If we wrote RUNNING here and Mutagen/bridge then failed, the next
+	// `sandbox start` would short-circuit on "already running" and never retry
+	// the failed setup (NEW-I-3 / C-I-4). Mark FAILED on any post-create error.
+	if err := manageMutagenSessions(ctx, c, app, id, projectPath); err != nil {
+		_ = state.Write(statePath, state.StateFailed)
+		return err
+	}
+	if err := startBridgeIfNeeded(ctx, c, app, id); err != nil {
+		_ = state.Write(statePath, state.StateFailed)
+		return err
+	}
 	if err := state.Write(statePath, state.StateRunning); err != nil {
 		return err
 	}
 	fmt.Fprintln(c.OutOrStdout(), "VM running.")
-	if err := manageMutagenSessions(ctx, c, app, id, projectPath); err != nil {
-		return err
-	}
-	return startBridgeIfNeeded(ctx, c, app, id)
+	return nil
 }
 
 func doStart(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, statePath string) error {
@@ -204,15 +214,25 @@ func doStart(ctx context.Context, c *cobra.Command, app *App, id vmid.ID, stateP
 	if err := app.Backend.Start(ctx, backend.VMID(id)); err != nil {
 		return fmt.Errorf("start: %w", err)
 	}
+	projectPath, err := vmid.ProjectPath()
+	if err != nil {
+		return fmt.Errorf("project path: %w", err)
+	}
+	// State stays STOPPED until Mutagen and the bridge are wired up. See the
+	// matching comment in doCreate (NEW-I-3 / C-I-4).
+	if err := manageMutagenSessions(ctx, c, app, id, projectPath); err != nil {
+		_ = state.Write(statePath, state.StateFailed)
+		return err
+	}
+	if err := startBridgeIfNeeded(ctx, c, app, id); err != nil {
+		_ = state.Write(statePath, state.StateFailed)
+		return err
+	}
 	if err := state.Write(statePath, state.StateRunning); err != nil {
 		return err
 	}
 	fmt.Fprintln(c.OutOrStdout(), "VM running.")
-	projectPath, _ := vmid.ProjectPath()
-	if err := manageMutagenSessions(ctx, c, app, id, projectPath); err != nil {
-		return err
-	}
-	return startBridgeIfNeeded(ctx, c, app, id)
+	return nil
 }
 
 // manageMutagenSessions creates Mutagen sync sessions on first boot, or resumes
@@ -221,31 +241,79 @@ func manageMutagenSessions(ctx context.Context, c *cobra.Command, app *App, id v
 	if app.Mutagen == nil {
 		return nil
 	}
+	// Ensure the Mutagen daemon is running before any sync operation. This is
+	// idempotent and gives first-time users a clear error path (E-I-4).
+	if err := app.Mutagen.EnsureDaemon(ctx); err != nil {
+		return err
+	}
 	ssh, err := app.Backend.SSHConfig(ctx, backend.VMID(id))
 	if err != nil {
 		return err
 	}
 	spec := mutagen.Spec{
-		VMID:        string(id),
-		HostPath:    projectPath,
-		VMPath:      projectPath,
-		HomeDir:     app.Paths.Home,
-		LimaSSHHost: ssh.Host,
+		VMID:          string(id),
+		HostPath:      projectPath,
+		VMPath:        projectPath,
+		HomeDir:       app.Paths.Home,
+		LimaSSHHost:   ssh.Host,
+		LimaSSHConfig: ssh.ConfigFile,
+		VMUser:        os.Getenv("USER"),
 	}
 	sessions, err := app.Mutagen.SessionsFor(ctx, string(id))
 	if err != nil {
 		return fmt.Errorf("mutagen session list: %w", err)
 	}
-	if len(sessions) == 0 {
+
+
+	// Check which sessions exist and create only the missing ones (E-I-3).
+	// This recovers from partial session creation (e.g. project succeeds but
+	// one of the transcript subs fails). Mutagen errors on duplicate session
+	// names, so we must not recreate sessions that already exist (NEW-I-2).
+	projectName := "sandbox-" + string(id) + "-project"
+	hasProject := false
+	existingTranscripts := map[string]bool{}
+	for _, s := range sessions {
+		if strings.Contains(s.Name, projectName) {
+			hasProject = true
+		}
+		for _, sub := range mutagen.TranscriptSubs {
+			if strings.Contains(s.Name, "sandbox-"+string(id)+"-transcripts-"+sub) {
+				existingTranscripts[sub] = true
+			}
+		}
+	}
+	missingTranscripts := []string{}
+	for _, sub := range mutagen.TranscriptSubs {
+		if !existingTranscripts[sub] {
+			missingTranscripts = append(missingTranscripts, sub)
+		}
+	}
+
+	created := false
+	if !hasProject {
 		fmt.Fprintln(c.OutOrStdout(), "creating Mutagen sync sessions…")
 		if err := app.Mutagen.CreateProject(ctx, spec); err != nil {
 			return fmt.Errorf("mutagen project session: %w", err)
 		}
-		if err := app.Mutagen.CreateTranscripts(ctx, spec); err != nil {
+		created = true
+	}
+	if len(missingTranscripts) > 0 {
+		if !created {
+			fmt.Fprintln(c.OutOrStdout(), "creating Mutagen sync sessions…")
+		}
+		if err := app.Mutagen.CreateTranscripts(ctx, spec, missingTranscripts); err != nil {
 			return fmt.Errorf("mutagen transcripts session: %w", err)
 		}
+		created = true
+	}
+
+	if created {
 		fmt.Fprintln(c.OutOrStdout(), "sync sessions created.")
-	} else {
+	}
+
+	// Resume any paused sessions. ResumeAll is safe to call even if sessions
+	// are already running (mutagen exits 0 for already-running sessions).
+	if len(sessions) > 0 {
 		fmt.Fprintln(c.OutOrStdout(), "resuming sync sessions…")
 		if err := app.Mutagen.ResumeAll(ctx, string(id)); err != nil {
 			return fmt.Errorf("mutagen resume: %w", err)

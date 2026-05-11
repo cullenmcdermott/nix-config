@@ -8,8 +8,9 @@ import (
 
 // Fake is an in-memory backend used by tests of higher layers.
 type Fake struct {
-	mu  sync.Mutex
-	vms map[VMID]Status
+	mu       sync.Mutex
+	vms      map[VMID]Status
+	LastSpec VMSpec
 }
 
 func NewFake() *Fake {
@@ -23,6 +24,7 @@ func (f *Fake) Create(_ context.Context, s VMSpec) error {
 		return fmt.Errorf("vm %s already exists", s.ID)
 	}
 	f.vms[s.ID] = StatusStopped
+	f.LastSpec = s
 	return nil
 }
 

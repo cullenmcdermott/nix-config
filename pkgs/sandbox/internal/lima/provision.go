@@ -21,9 +21,11 @@ type ProvisionConfig struct {
 
 	// Seeded AGENTS.md content
 	AgentsMarkdown string
-}
 
-var subPathsForUnit = []string{"skills", "commands", "agents", "hooks", "CLAUDE.md", "settings.json"}
+	// ClaudeSubpaths are the ~/.claude subdirectories to bind-mount into the VM.
+	// Must be directories. Populated from mounts.ClaudeSubpaths by the caller.
+	ClaudeSubpaths []string
+}
 
 const provisionTmpl = `#!/usr/bin/env bash
 set -euo pipefail
@@ -99,14 +101,17 @@ fi
 
 # ── AGENTS.md ─────────────────────────────────────────────────────────────────
 mkdir -p /etc/sandbox
-cat <<'AGENTS_MD_EOF'
+cat > /etc/sandbox/AGENTS.md <<'AGENTS_MD_EOF'
 {{.AgentsMarkdown}}
 AGENTS_MD_EOF
 
 # Seed the global agents path that Claude Code discovers.
 mkdir -p "$USER_HOME/.claude"
 ln -sfn /etc/sandbox/AGENTS.md "$USER_HOME/.claude/AGENTS.md" 2>/dev/null || true
-chown -R {{.User}}:{{.User}} "$USER_HOME/.claude"
+# No chown here: the chown above (before bind mounts) covers ~/.claude. A
+# second chown after the RO overlays would traverse the read-only mountpoints
+# and fail with "Operation not permitted" (D-I-1).
+
 
 # ── Claude wrapper ───────────────────────────────────────────────────────────
 if [ -x /var/sandbox/bin/sandbox-claude ]; then
@@ -159,7 +164,7 @@ func RenderProvision(cfg ProvisionConfig) (string, error) {
 	if err := t.Execute(&b, struct {
 		ProvisionConfig
 		Subs []string
-	}{cfg, subPathsForUnit}); err != nil {
+	}{cfg, cfg.ClaudeSubpaths}); err != nil {
 		return "", err
 	}
 	return b.String(), nil

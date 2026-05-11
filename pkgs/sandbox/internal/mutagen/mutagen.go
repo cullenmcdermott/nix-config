@@ -22,9 +22,31 @@ type Spec struct {
 	VMPath      string // VM-side absolute path (project sync only)
 	HomeDir     string // host home, used for transcripts (e.g. "/Users/alice")
 	LimaSSHHost string // ssh alias from lima.SSHConfig.Host
+	LimaSSHConfig string // path to Lima's ssh.config (for hostname resolution)
+	VMUser      string // VM username (e.g. from $USER), used for transcript paths
 }
 
 func sessionLabel(vmID string) string { return "sandbox-vm-id=" + vmID }
+
+// sshCommandFor returns the ssh command with Lima's config file prepended.
+// This ensures the Lima SSH alias (e.g. lima-sandbox-<id>) resolves correctly.
+func sshCommandFor(configFile string) string {
+	if configFile == "" {
+		return ""
+	}
+	return fmt.Sprintf("ssh -F %s", configFile)
+}
+
+// EnsureDaemon runs `mutagen daemon start`. The daemon is required for any
+// `sync` subcommand to work. This is idempotent: Mutagen's daemon start exits
+// 0 (with a "daemon is already running" message) when the daemon is already up.
+// First-time users frequently hit a confusing "no daemon" error otherwise (E-I-4).
+func (m *Manager) EnsureDaemon(ctx context.Context) error {
+	if err := m.r.Run(ctx, nil, io.Discard, io.Discard, "daemon", "start"); err != nil {
+		return fmt.Errorf("mutagen daemon start: %w", err)
+	}
+	return nil
+}
 
 func (m *Manager) CreateProject(ctx context.Context, s Spec) error {
 	args := []string{
@@ -33,36 +55,45 @@ func (m *Manager) CreateProject(ctx context.Context, s Spec) error {
 		"--label", sessionLabel(s.VMID),
 		"--mode=two-way-resolved",
 		"--ignore-vcs",
-		s.HostPath,
-		s.LimaSSHHost + ":" + s.VMPath,
 	}
+	if ssh := sshCommandFor(s.LimaSSHConfig); ssh != "" {
+		args = append(args, "--ssh-command", ssh)
+	}
+	args = append(args, s.HostPath, s.LimaSSHHost+":"+s.VMPath)
 	return m.r.Run(ctx, nil, io.Discard, io.Discard, args...)
 }
 
-func (m *Manager) CreateTranscripts(ctx context.Context, s Spec) error {
-	vmUser := currentUserGuess(s.HomeDir)
-	for _, sub := range []string{"projects", "todos"} {
+// TranscriptSubs is the canonical set of ~/.claude subdirectories synced one-way
+// from the VM back to the host (transcripts of agent activity).
+var TranscriptSubs = []string{"projects", "todos"}
+
+// CreateTranscripts creates one-way-safe sync sessions for the named subs.
+// Pass the full TranscriptSubs list on first boot, or only the missing names
+// when reconciling a partially-created set (NEW-I-2). Mutagen errors on
+// duplicate session names, so the caller must not include subs that already
+// exist.
+func (m *Manager) CreateTranscripts(ctx context.Context, s Spec, subs []string) error {
+	if s.VMUser == "" {
+		return fmt.Errorf("VMUser is required for transcript path construction")
+	}
+	for _, sub := range subs {
 		hostPath := path.Join(s.HomeDir, ".claude", sub)
-		vmPath := path.Join("/home", vmUser, ".claude", sub)
+		vmPath := path.Join("/home", s.VMUser, ".claude", sub)
 		args := []string{
 			"sync", "create",
 			"--name=sandbox-" + s.VMID + "-transcripts-" + sub,
 			"--label", sessionLabel(s.VMID),
 			"--mode=one-way-safe",
-			s.LimaSSHHost + ":" + vmPath,
-			hostPath,
 		}
+		if ssh := sshCommandFor(s.LimaSSHConfig); ssh != "" {
+			args = append(args, "--ssh-command", ssh)
+		}
+		args = append(args, s.LimaSSHHost+":"+vmPath, hostPath)
 		if err := m.r.Run(ctx, nil, io.Discard, io.Discard, args...); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func currentUserGuess(homeDir string) string {
-	// "/Users/alice" -> "alice"
-	parts := strings.Split(strings.Trim(homeDir, "/"), "/")
-	return parts[len(parts)-1]
 }
 
 type Session struct {

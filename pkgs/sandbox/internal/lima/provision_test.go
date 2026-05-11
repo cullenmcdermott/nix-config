@@ -47,16 +47,18 @@ func TestRenderProvision_OverlayMountsAllSubpaths(t *testing.T) {
 	got, err := RenderProvision(ProvisionConfig{
 		User:                "alice",
 		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		ClaudeSubpaths:      []string{"skills", "commands", "agents", "hooks"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Each subpath should appear as an if-block with mount --bind.
-	for _, sub := range []string{"skills", "commands", "agents", "hooks", "CLAUDE.md", "settings.json"} {
+	for _, sub := range []string{"skills", "commands", "agents", "hooks"} {
 		if !strings.Contains(got, "mount --bind -o ro \"$HOST_CLAUDE/"+sub+"\"") {
 			t.Errorf("missing mount for %s", sub)
 		}
 	}
+	// CLAUDE.md and settings.json are no longer mounted (Lima expects directories).
 }
 
 func TestRenderProvision_SystemdUnitInstalled(t *testing.T) {
@@ -112,6 +114,7 @@ func TestRenderProvision_IdempotentViaMountpointCheck(t *testing.T) {
 	got, err := RenderProvision(ProvisionConfig{
 		User:                "bob",
 		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		ClaudeSubpaths:      []string{"skills", "commands", "agents", "hooks"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -120,8 +123,9 @@ func TestRenderProvision_IdempotentViaMountpointCheck(t *testing.T) {
 	if count == 0 {
 		t.Errorf("no mountpoint guards found in script:\n%s", got)
 	}
-	if count < len(subPathsForUnit) {
-		t.Errorf("expected at least %d mountpoint guards, got %d", len(subPathsForUnit), count)
+	if count < 4 {
+		// At least one guard per ClaudeSubpath entry × 2 (inline + overlay script).
+		t.Errorf("expected at least 4 mountpoint guards, got %d", count)
 	}
 }
 
@@ -139,6 +143,12 @@ func TestRenderProvision_AgentsMarkdownSeeded(t *testing.T) {
 	}
 	if !strings.Contains(got, "ln -sfn /etc/sandbox/AGENTS.md") {
 		t.Errorf("AGENTS.md symlink not created:\n%s", got)
+	}
+	// The heredoc must redirect to /etc/sandbox/AGENTS.md so the symlink
+	// target exists. Prior bug: heredoc dumped to stdout, leaving a dangling
+	// symlink (NEW-I-1).
+	if !strings.Contains(got, "cat > /etc/sandbox/AGENTS.md <<'AGENTS_MD_EOF'") {
+		t.Errorf("AGENTS.md heredoc must redirect to file, not stdout:\n%s", got)
 	}
 }
 
