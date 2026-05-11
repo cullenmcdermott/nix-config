@@ -38,7 +38,7 @@ func TestProdAuth_FallsBackToTokenField(t *testing.T) {
 	dir := t.TempDir()
 	credPath := filepath.Join(dir, "creds.json")
 	body := map[string]any{
-		"token": "fallback-jwt",
+		"token":      "fallback-jwt",
 		"expires_at": time.Now().Add(time.Hour).Format(time.RFC3339),
 	}
 	b, _ := json.Marshal(body)

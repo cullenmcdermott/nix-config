@@ -1,0 +1,38 @@
+## Justfile for the sandbox Go module.
+## Run inside `flox activate` so Go 1.26 + golangci-lint resolve correctly.
+
+default:
+    @just --list
+
+# Run all checks: fmt, vet, lint, test.
+check: fmt vet lint test
+
+# Format Go source (gofmt + goimports). Scoped to source dirs to avoid
+# touching the read-only GOMODCACHE under .flox/cache.
+fmt:
+    gofmt -w cmd internal
+    goimports -w cmd internal
+
+# `go vet` across the whole module.
+vet:
+    go vet ./...
+
+# `golangci-lint` using .golangci.yml.
+lint:
+    golangci-lint run ./...
+
+# Run the test suite. Use `just test pkg/path` to scope to one package.
+test +ARGS='./...':
+    go test {{ARGS}}
+
+# Race-detector run; slower but catches concurrency bugs.
+test-race:
+    go test -race -count=1 ./...
+
+# Build the host binary into ./sandbox.
+build:
+    go build -o sandbox ./cmd/sandbox
+
+# Tidy go.mod / go.sum.
+tidy:
+    go mod tidy

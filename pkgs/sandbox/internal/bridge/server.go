@@ -114,7 +114,7 @@ func (s *Server) Close() error {
 
 // handle reads one JSON request from the connection and dispatches it.
 func (s *Server) handle(c net.Conn) {
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	// Set a connection-level deadline: if the client doesn't send a complete
 	// request within the timeout, the connection is closed. This prevents a
@@ -198,17 +198,4 @@ func (s *Server) handleRequest(ctx context.Context, c io.Writer, req Request) {
 
 func writeErr(w io.Writer, msg string) {
 	_ = json.NewEncoder(w).Encode(Reply{OK: false, Error: msg})
-}
-
-// waitForSocketReady uses net.Dial to confirm the server is listening.
-func waitForSocketReady(sockPath string, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if c, err := net.Dial("unix", sockPath); err == nil {
-			c.Close()
-			return nil
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	return fmt.Errorf("socket %s not reachable within %v", sockPath, timeout)
 }

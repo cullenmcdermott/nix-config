@@ -11,8 +11,8 @@ import (
 
 func newShellCmd(app *App) *cobra.Command {
 	return &cobra.Command{
-		Use:               "shell",
-		Short:             "Open an interactive bash inside this project's VM",
+		Use:                "shell",
+		Short:              "Open an interactive bash inside this project's VM",
 		DisableFlagParsing: true,
 		RunE: func(c *cobra.Command, args []string) error {
 			id, err := app.SelectedVMID(c)

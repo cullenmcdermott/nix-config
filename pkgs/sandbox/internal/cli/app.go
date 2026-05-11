@@ -87,7 +87,9 @@ func (b *BridgeSupervisor) Stop(socketPath, tokenPath string) error {
 	pidPath := filepath.Join(filepath.Dir(socketPath), "bridge.pid")
 	if data, err := os.ReadFile(pidPath); err == nil {
 		var pid int
-		fmt.Sscanf(string(data), "%d", &pid)
+		// PID file may be empty/garbage from a crash; pid stays 0 and the
+		// guard below skips the kill.
+		_, _ = fmt.Sscanf(string(data), "%d", &pid)
 		if pid > 0 {
 			_ = syscall.Kill(pid, syscall.SIGTERM)
 		}

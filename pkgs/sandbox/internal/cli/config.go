@@ -55,15 +55,7 @@ func runConfigEdit(c *cobra.Command, app *App) error {
 		return err
 	}
 	if _, err := os.Stat(vp.ConfigFile); os.IsNotExist(err) {
-		v := config.PerVM{
-			CPUs:      r.CPUs,
-			MemoryGiB: r.MemoryGiB,
-			DiskGiB:   r.DiskGiB,
-			Arch:      r.Arch,
-			Agent:     r.Agent,
-			Mounts:    r.Mounts,
-		}
-		if err := config.SavePerVM(vp.ConfigFile, v); err != nil {
+		if err := config.SavePerVM(vp.ConfigFile, config.PerVM(r)); err != nil {
 			return err
 		}
 	}

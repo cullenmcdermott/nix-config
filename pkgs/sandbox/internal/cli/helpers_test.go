@@ -42,7 +42,7 @@ func newTestApp(t *testing.T) *App {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	_ = f.Close()
 	return &App{Paths: p, Backend: backend.NewFake()}
 }
 

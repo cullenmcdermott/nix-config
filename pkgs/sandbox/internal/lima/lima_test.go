@@ -36,16 +36,15 @@ func (s *stubRunner) Run(_ context.Context, _ io.Reader, _, _ io.Writer, args ..
 	return s.err
 }
 
-func newTestBackend(t *testing.T, sr *stubRunner) (*Backend, string) {
+func newTestBackend(t *testing.T, sr *stubRunner) *Backend {
 	t.Helper()
 	dir := t.TempDir()
-	b := New(sr, filepath.Join(dir, "vms-config"))
-	return b, dir
+	return New(sr, filepath.Join(dir, "vms-config"))
 }
 
 func TestBackend_Create_WritesYAMLAndCallsLimactlStart(t *testing.T) {
 	sr := &stubRunner{}
-	b, _ := newTestBackend(t, sr)
+	b := newTestBackend(t, sr)
 	spec := backend.VMSpec{
 		ID:        "demo-abcdef",
 		CPUs:      2,
@@ -74,7 +73,7 @@ func TestBackend_Status_ParsesJSON(t *testing.T) {
 		"list --json": `{"name":"sandbox-demo-abcdef","status":"Running"}` + "\n" +
 			`{"name":"sandbox-other-aaaaaa","status":"Stopped"}` + "\n",
 	}}
-	b, _ := newTestBackend(t, sr)
+	b := newTestBackend(t, sr)
 	st, err := b.Status(context.Background(), "demo-abcdef")
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +87,7 @@ func TestBackend_Status_GoneForUnknownVM(t *testing.T) {
 	sr := &stubRunner{outputs: map[string]string{
 		"list --json": ``,
 	}}
-	b, _ := newTestBackend(t, sr)
+	b := newTestBackend(t, sr)
 	st, err := b.Status(context.Background(), "missing-zzzzzz")
 	if err != nil {
 		t.Fatal(err)
@@ -100,7 +99,7 @@ func TestBackend_Status_GoneForUnknownVM(t *testing.T) {
 
 func TestBackend_Start_Stop_Destroy(t *testing.T) {
 	sr := &stubRunner{}
-	b, _ := newTestBackend(t, sr)
+	b := newTestBackend(t, sr)
 	ctx := context.Background()
 	if err := b.Start(ctx, "demo-abcdef"); err != nil {
 		t.Fatal(err)
@@ -124,11 +123,10 @@ func TestBackend_Start_Stop_Destroy(t *testing.T) {
 	}
 }
 
-
 func TestBackend_SSHConfig_PointsAtLimaDir(t *testing.T) {
 	t.Setenv("HOME", "/Users/alice")
 	sr := &stubRunner{}
-	b, _ := newTestBackend(t, sr)
+	b := newTestBackend(t, sr)
 	ssh, err := b.SSHConfig(context.Background(), "demo-abcdef")
 	if err != nil {
 		t.Fatal(err)
@@ -144,7 +142,7 @@ func TestBackend_SSHConfig_PointsAtLimaDir(t *testing.T) {
 
 func TestBackend_PropagatesRunnerErrors(t *testing.T) {
 	sr := &stubRunner{err: errors.New("boom")}
-	b, _ := newTestBackend(t, sr)
+	b := newTestBackend(t, sr)
 	err := b.Start(context.Background(), "demo-abcdef")
 	if err == nil || !strings.Contains(err.Error(), "boom") {
 		t.Fatalf("expected propagated error, got %v", err)

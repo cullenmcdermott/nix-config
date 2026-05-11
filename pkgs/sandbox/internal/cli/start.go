@@ -264,7 +264,6 @@ func manageMutagenSessions(ctx context.Context, c *cobra.Command, app *App, id v
 		return fmt.Errorf("mutagen session list: %w", err)
 	}
 
-
 	// Check which sessions exist and create only the missing ones (E-I-3).
 	// This recovers from partial session creation (e.g. project succeeds but
 	// one of the transcript subs fails). Mutagen errors on duplicate session

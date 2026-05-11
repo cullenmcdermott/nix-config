@@ -17,13 +17,13 @@ type Manager struct{ r Runner }
 func New(r Runner) *Manager { return &Manager{r: r} }
 
 type Spec struct {
-	VMID        string // e.g. "demo-abcdef"
-	HostPath    string // host-side absolute path (project sync only)
-	VMPath      string // VM-side absolute path (project sync only)
-	HomeDir     string // host home, used for transcripts (e.g. "/Users/alice")
-	LimaSSHHost string // ssh alias from lima.SSHConfig.Host
+	VMID          string // e.g. "demo-abcdef"
+	HostPath      string // host-side absolute path (project sync only)
+	VMPath        string // VM-side absolute path (project sync only)
+	HomeDir       string // host home, used for transcripts (e.g. "/Users/alice")
+	LimaSSHHost   string // ssh alias from lima.SSHConfig.Host
 	LimaSSHConfig string // path to Lima's ssh.config (for hostname resolution)
-	VMUser      string // VM username (e.g. from $USER), used for transcript paths
+	VMUser        string // VM username (e.g. from $USER), used for transcript paths
 }
 
 func sessionLabel(vmID string) string { return "sandbox-vm-id=" + vmID }

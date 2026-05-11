@@ -81,7 +81,7 @@ func (c *Client) do(ctx context.Context, body map[string]any, reply any) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(deadline)
 	if err := json.NewEncoder(conn).Encode(body); err != nil {
 		return err

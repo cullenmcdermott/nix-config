@@ -4,8 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 	"gopkg.in/yaml.v3"
+
+	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
 )
 
 // limaSchema mirrors the relevant fields of a Lima YAML file for round-trip

@@ -62,9 +62,6 @@ func WriteRecord(path string, r Record) error {
 	return os.Rename(tmp, path)
 }
 
-// onDisk exists for backwards-compat deserialization only; new code uses Record directly.
-type onDisk = Record
-
 func Read(path string) (State, error) {
 	r, err := ReadRecord(path)
 	return r.State, err

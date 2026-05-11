@@ -31,7 +31,7 @@ func startEchoServer(t *testing.T, reply string) string {
 				return
 			}
 			go func() {
-				defer c.Close()
+				defer func() { _ = c.Close() }()
 				_, _ = bufio.NewReader(c).ReadBytes('\n') // discard request
 				_, _ = c.Write([]byte(reply + "\n"))
 			}()

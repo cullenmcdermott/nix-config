@@ -31,7 +31,9 @@ func newStopCmd(app *App) *cobra.Command {
 					}
 				}
 				if app.Bridge != nil {
-					app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken)
+					if err := app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken); err != nil {
+						fmt.Fprintf(c.ErrOrStderr(), "warning: bridge stop failed (continuing stop): %v\n", err)
+					}
 				}
 				if err := app.Backend.Stop(c.Context(), backend.VMID(id)); err != nil {
 					return err

@@ -80,7 +80,6 @@ func (p *Paths) VM(id string) VMPaths {
 	}
 }
 
-
 // EnsureDirs creates the host-side directories the sandbox needs at startup.
 // Idempotent. Directories are created with 0o700 (owner-only) permissions since
 // they eventually hold bridge.token and bridge.sock — sensitive files.

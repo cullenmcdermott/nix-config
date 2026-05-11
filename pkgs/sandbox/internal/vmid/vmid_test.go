@@ -50,7 +50,7 @@ func TestForCwd_FallsBackToCwdOutsideGit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Chdir(cwd)
+	defer func() { _ = os.Chdir(cwd) }()
 	if err := os.Chdir(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestForCwd_UsesGitToplevel(t *testing.T) {
 		t.Fatal(err)
 	}
 	cwd, _ := os.Getwd()
-	defer os.Chdir(cwd)
+	defer func() { _ = os.Chdir(cwd) }()
 	if err := os.Chdir(sub); err != nil {
 		t.Fatal(err)
 	}

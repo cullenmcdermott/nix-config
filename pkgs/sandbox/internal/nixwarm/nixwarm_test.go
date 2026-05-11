@@ -112,7 +112,7 @@ func TestHasContent_WithEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	_ = f.Close()
 	has, err := w.HasContent()
 	if err != nil {
 		t.Fatal(err)

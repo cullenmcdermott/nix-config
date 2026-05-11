@@ -77,10 +77,10 @@ func newDestroyCmd(app *App) *cobra.Command {
 				{
 					"bridge-stop", "stop bridge daemon",
 					func(ctx context.Context) error {
-						if app.Bridge != nil {
-							app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken)
+						if app.Bridge == nil {
+							return nil
 						}
-						return nil
+						return app.Bridge.Stop(vp.BridgeSocket, vp.BridgeToken)
 					},
 				},
 				{
@@ -166,7 +166,11 @@ func mergeNixIntoWarm(ctx context.Context, app *App, id vmid.ID) error {
 	if err != nil {
 		return err
 	}
-	defer release()
+	defer func() {
+		if rerr := release(); rerr != nil {
+			fmt.Fprintf(os.Stderr, "warning: warm template lock release failed: %v\n", rerr)
+		}
+	}()
 
 	ssh, err := app.Backend.SSHConfig(ctx, backend.VMID(id))
 	if err != nil {

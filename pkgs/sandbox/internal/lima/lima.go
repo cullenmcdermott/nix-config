@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -59,6 +60,9 @@ func (b *Backend) Start(ctx context.Context, id backend.VMID) error {
 func (b *Backend) Stop(ctx context.Context, id backend.VMID) error {
 	name := instanceName(id)
 	if err := b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "stop", name); err != nil {
+		if isNotFound(err) {
+			return nil
+		}
 		return fmt.Errorf("lima stop %s: %w", name, err)
 	}
 	return nil
@@ -67,9 +71,24 @@ func (b *Backend) Stop(ctx context.Context, id backend.VMID) error {
 func (b *Backend) Destroy(ctx context.Context, id backend.VMID) error {
 	name := instanceName(id)
 	if err := b.runner.Run(ctx, nil, os.Stdout, os.Stderr, "delete", "--force", name); err != nil {
+		if isNotFound(err) {
+			return nil
+		}
 		return fmt.Errorf("lima delete %s: %w", name, err)
 	}
 	return nil
+}
+
+// isNotFound reports whether a limactl error means the instance simply doesn't
+// exist. Both Stop and Destroy are idempotent when the instance is already gone.
+func isNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "no such file or directory") ||
+		strings.Contains(msg, "not found") ||
+		errors.Is(err, os.ErrNotExist)
 }
 
 type limaListEntry struct {

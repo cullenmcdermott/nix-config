@@ -1,0 +1,30 @@
+## Flox Environment Manifest for the `sandbox` Go module.
+##
+## Provides the Go toolchain + lint/test/debug tools needed to develop
+## pkgs/sandbox/. Caches under .flox/cache so they survive `flox delete`.
+
+schema-version = "1.12.0"
+
+[install]
+go.pkg-path = "go_1_26"
+golangci-lint.pkg-path = "golangci-lint"
+delve.pkg-path = "delve"
+gotools.pkg-path = "gotools"
+just.pkg-path = "just"
+jq.pkg-path = "jq"
+git.pkg-path = "git"
+
+[vars]
+GO111MODULE = "on"
+CGO_ENABLED = "0"
+
+[hook]
+on-activate = '''
+export GOENV="${GOENV:-${FLOX_ENV_CACHE}/goenv}"
+export GOCACHE="${GOCACHE:-${FLOX_ENV_CACHE}/go-build}"
+export GOMODCACHE="${GOMODCACHE:-${FLOX_ENV_CACHE}/go/pkg/mod}"
+mkdir -p "$GOENV" "$GOCACHE" "$GOMODCACHE"
+'''
+
+[options]
+systems = ["aarch64-darwin", "x86_64-darwin", "aarch64-linux", "x86_64-linux"]

@@ -1,0 +1,42 @@
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - unconvert
+    - unparam
+
+  settings:
+    errcheck:
+      # Only exclude functions whose error is universally ignored: writes to
+      # stdout/stderr return errors only on broken pipe, which is not actionable
+      # in a CLI tool.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/cullenmcdermott/system-config/sandbox
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
