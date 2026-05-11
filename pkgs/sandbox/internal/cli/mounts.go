@@ -15,6 +15,9 @@ const HostClaudeMountRoot = "/var/sandbox/host-claude"
 // WarmNixVMPath is where the host-side warm /nix template is RO-mounted inside
 // the VM during provisioning. The provision script rsyncs its store into /nix/store.
 const WarmNixVMPath = "/var/sandbox/warm-nix"
+// HostOmpMountRoot is where host-side ~/.config/omp/agent subpaths land inside
+// the VM. The first-boot bind-mount unit rebinds them onto ~/.config/omp/agent/<sub>.
+const HostOmpMountRoot = "/var/sandbox/host-omp"
 
 // claudeSubpaths are the read-only paths from ~/.claude that are overlaid
 // read-only into the VM. These must be directories (not files). Anything not
@@ -29,6 +32,15 @@ var ClaudeSubpaths = []string{
 	// "CLAUDE.md" and "settings.json" are omitted: Lima's virtiofs expects
 	// directories; regular-file mounts are undefined behavior. Files are
 	// copied into the VM by the provision script instead.
+}
+// OmpSubpaths are the read-only paths from ~/.config/omp/agent/ that are
+// overlaid into the VM. These must be directories (not files). Config files
+// (config.yml, AGENTS.md) are copied by the provision script instead.
+var OmpSubpaths = []string{
+	"skills",
+	"prompts",
+	"extensions",
+	"themes",
 }
 
 // BuildMounts returns the deterministic mount list for a VM given:
@@ -56,6 +68,18 @@ func BuildMounts(projectPath, homeDir string, extra []config.Mount) []backend.Mo
 		out = append(out, backend.Mount{
 			HostPath: hostPath,
 			VMPath:   filepath.Join(HostClaudeMountRoot, sub),
+			Writable: false,
+			SyncMode: backend.SyncVirtiofs,
+		})
+	}
+	for _, sub := range OmpSubpaths {
+		hostPath := filepath.Join(homeDir, ".config", "omp", "agent", sub)
+		if _, err := os.Stat(hostPath); err != nil {
+			continue
+		}
+		out = append(out, backend.Mount{
+			HostPath: hostPath,
+			VMPath:   filepath.Join(HostOmpMountRoot, sub),
 			Writable: false,
 			SyncMode: backend.SyncVirtiofs,
 		})

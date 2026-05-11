@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
@@ -143,5 +144,32 @@ func TestBuildMountsWithWarm_DedupesWithExtras(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("warm mount missing entirely")
+	}
+}
+func TestBuildMounts_ROBindsAllOmpSubpaths(t *testing.T) {
+	home := t.TempDir()
+	for _, sub := range OmpSubpaths {
+		if err := os.MkdirAll(filepath.Join(home, ".config", "omp", "agent", sub), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mounts := BuildMounts("/Users/alice/proj", home, nil)
+	for _, sub := range OmpSubpaths {
+		host := filepath.Join(home, ".config", "omp", "agent", sub)
+		vm := filepath.Join(HostOmpMountRoot, sub)
+		if !containsMount(mounts, host, vm, false) {
+			t.Errorf("missing RO mount for omp subpath %s", sub)
+		}
+	}
+}
+
+func TestBuildMounts_SkipsOmpSubpathsWhenMissing(t *testing.T) {
+	home := t.TempDir()
+	// Don't create any omp directories
+	mounts := BuildMounts("/Users/alice/proj", home, nil)
+	for _, m := range mounts {
+		if strings.Contains(m.VMPath, "host-omp") {
+			t.Errorf("omp mount should not appear when host dirs missing: %+v", m)
+		}
 	}
 }
