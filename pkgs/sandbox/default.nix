@@ -3,7 +3,7 @@
 let
   version = "0.0.1-dev";
   src = lib.cleanSource ./.;
-  vendorHash = null;
+  vendorHash = "sha256-0vISaf3QmapQEet/2BAOqGP0/xW+FlhllrdMEDJU8VY=";
 in
 {
   sandbox = buildGoModule {
