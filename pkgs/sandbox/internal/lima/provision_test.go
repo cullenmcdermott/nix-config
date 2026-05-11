@@ -31,8 +31,8 @@ func TestRenderProvision_FullStack(t *testing.T) {
 		"# ── Claude Code ──",
 		"storage.googleapis.com/claude-code-dist",
 		"https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.138/linux-arm64/claude",
-		"# ── AGENTS.md ──",
-		"/etc/sandbox/AGENTS.md",
+		"# ── CLAUDE.md",
+		"/etc/sandbox/CLAUDE.md",
 		"## Environment",
 		"sandbox-helper.service",
 		"StreamLocalBindUnlink",
@@ -141,14 +141,14 @@ func TestRenderProvision_AgentsMarkdownSeeded(t *testing.T) {
 	if !strings.Contains(got, "## Verify Before Claiming") {
 		t.Errorf("AgentsMarkdown not embedded:\n%s", got)
 	}
-	if !strings.Contains(got, "ln -sfn /etc/sandbox/AGENTS.md") {
-		t.Errorf("AGENTS.md symlink not created:\n%s", got)
+	if !strings.Contains(got, "ln -sfn /etc/sandbox/CLAUDE.md") {
+		t.Errorf("CLAUDE.md symlink not created:\n%s", got)
 	}
-	// The heredoc must redirect to /etc/sandbox/AGENTS.md so the symlink
+	// The heredoc must redirect to /etc/sandbox/CLAUDE.md so the symlink
 	// target exists. Prior bug: heredoc dumped to stdout, leaving a dangling
 	// symlink (NEW-I-1).
-	if !strings.Contains(got, "cat > /etc/sandbox/AGENTS.md <<'AGENTS_MD_EOF'") {
-		t.Errorf("AGENTS.md heredoc must redirect to file, not stdout:\n%s", got)
+	if !strings.Contains(got, "cat > /etc/sandbox/CLAUDE.md <<'CLAUDE_MD_EOF'") {
+		t.Errorf("CLAUDE.md heredoc must redirect to file, not stdout:\n%s", got)
 	}
 }
 
@@ -193,5 +193,104 @@ func TestRenderProvision_RsyncSeedFromWarmTemplate(t *testing.T) {
 	}
 	if !strings.Contains(got, "# ── Seed /nix/store from warm template ─") {
 		t.Errorf("warm seed comment not in script:\n%s", got)
+	}
+}
+func TestRenderProvision_OmpBinaryInstall(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		OmpVersion:          "14.9.3",
+		OmpURL:              "https://github.com/can1357/oh-my-pi/releases/download/v14.9.3/omp-linux-arm64",
+		OmpSHA256:           "d8a0f46a3aa638ddaa681507e8b310f99791855413b48386244e850a6c001549",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{
+		"# ── omp",
+		"command -v omp",
+		"omp-linux-arm64",
+		"sha256sum -c",
+		"/usr/local/bin/omp",
+	} {
+		if !strings.Contains(got, needle) {
+			t.Errorf("missing %q in provision script", needle)
+		}
+	}
+}
+
+func TestRenderProvision_OmpConfigSetup(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		HostOmpMountRoot:    "/var/sandbox/host-omp",
+		OmpSubpaths:         []string{"skills", "prompts", "extensions", "themes"},
+		OmpConfigYAML:       "defaultModel: claude-sonnet-4-6\nsessionDir: /home/alice/.local/state/omp/sessions\n",
+		OmpAgentsMarkdown:   "## Sandbox Environment\ntest content\n",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{
+		"$USER_HOME/.config/omp/agent",
+		"config.yml",
+		"AGENTS.md",
+		"PI_CODING_AGENT_DIR",
+		"PI_CONFIG_DIR",
+		"omp-env.sh",
+	} {
+		if !strings.Contains(got, needle) {
+			t.Errorf("missing %q in provision script", needle)
+		}
+	}
+}
+
+func TestRenderProvision_OmpBindMounts(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:             "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		HostOmpMountRoot: "/var/sandbox/host-omp",
+		OmpSubpaths:      []string{"skills", "prompts", "extensions", "themes"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sub := range []string{"skills", "prompts", "extensions", "themes"} {
+		needle := `mount --bind -o ro "$HOST_OMP/` + sub + `"`
+		if !strings.Contains(got, needle) {
+			t.Errorf("missing omp bind mount for %s", sub)
+		}
+	}
+}
+
+func TestRenderProvision_OmpOverlayReapply(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:             "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		HostOmpMountRoot: "/var/sandbox/host-omp",
+		OmpSubpaths:      []string{"skills", "prompts"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The overlay re-apply script must include omp mount re-application.
+	if !strings.Contains(got, `HOST_OMP="`) {
+		t.Errorf("overlay script missing HOST_OMP variable")
+	}
+}
+
+func TestRenderProvision_OmpEnvVars(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, `PI_CODING_AGENT_DIR`) {
+		t.Errorf("missing PI_CODING_AGENT_DIR in provision script")
+	}
+	if !strings.Contains(got, `PI_CONFIG_DIR`) {
+		t.Errorf("missing PI_CONFIG_DIR in provision script")
 	}
 }
