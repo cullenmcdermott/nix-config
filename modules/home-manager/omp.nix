@@ -209,8 +209,6 @@ in
       PI_TELEMETRY = lib.mkDefault "0";
     };
 
-    programs.pomp.enable = true;
-
     home.activation.ompConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       # omp writes runtime YAML caches from our nix-managed JSON files.
       # Delete them on every switch so the JSON files remain authoritative.
@@ -227,14 +225,6 @@ in
       "omp/agent/presets.json".text = builtins.toJSON ompPresets;
       "omp/agent/AGENTS.md".text = ompAgentsMd;
 
-      # VM sandboxing handled by pomp wrapper (programs.pomp)
-      "omp/agent/extensions/footer.ts".source = ./omp/extensions/footer.ts;
-      "omp/agent/extensions/model-memory.ts".source = ./omp/extensions/model-memory.ts;
-      "omp/agent/extensions/presets.ts".source = ./omp/extensions/presets.ts;
-      "omp/agent/extensions/host-bridge" = {
-        source = ./omp/extensions/host-bridge;
-        recursive = true;
-      };
 
 
       "omp/agent/themes" = {

@@ -291,6 +291,9 @@ except:
     then cfg.statusLine.scriptText
     else defaultStatusLineScript;
 
+
+  # When a statusline package is set, use the binary directly; skip the script.
+  useStatuslineBinary = cfg.statusLine.package != null;
 in
 {
   options.programs.claude-code-nix = {
@@ -324,10 +327,21 @@ in
         description = "Whether to enable the custom status line.";
       };
 
+      package = lib.mkOption {
+        type = lib.types.nullOr lib.types.package;
+        default = null;
+        description = ''
+          A static binary to use as the statusline command (e.g. claude-statusline).
+          When set, the binary is used directly instead of the bash script — no
+          runtime dependencies on jq, bc, python3, or coreutils.  This is the
+          recommended mode for sandbox VMs and portable installs.
+        '';
+      };
+
       scriptText = lib.mkOption {
         type = lib.types.nullOr lib.types.lines;
         default = null;
-        description = "Custom statusline script. null uses the built-in starship-style statusline.";
+        description = "Custom statusline script. null uses the built-in starship-style statusline. Ignored when package is set.";
       };
     };
 
@@ -384,13 +398,13 @@ in
     # takes precedence on PATH anyway. Only set a package if pinning a version.
     programs.claude-code.package = lib.mkDefault null;
 
-    home.packages = [
-      pkgs.bc # For arithmetic in statusline script
-    ] ++ cfg.extraPackages;
+    home.packages = (lib.optional (!useStatuslineBinary) pkgs.bc)
+      ++ (lib.optional useStatuslineBinary cfg.statusLine.package)
+      ++ cfg.extraPackages;
 
     home.file = {
-      # Statusline scripts
-      ".claude/statusline-command.sh" = lib.mkIf cfg.statusLine.enable {
+      # Statusline script (only when not using the Go binary)
+      ".claude/statusline-command.sh" = lib.mkIf (cfg.statusLine.enable && !useStatuslineBinary) {
         text = statusLineScriptText;
         executable = true;
       };
@@ -430,7 +444,10 @@ in
     programs.claude-code.settings = lib.mkIf cfg.statusLine.enable {
       statusLine = {
         type = "command";
-        command = "${config.home.homeDirectory}/.claude/statusline-command.sh";
+        command =
+          if useStatuslineBinary
+          then "${lib.getExe cfg.statusLine.package}"
+          else "${config.home.homeDirectory}/.claude/statusline-command.sh";
       };
     };
 

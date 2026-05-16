@@ -25,11 +25,6 @@ func (s *stubRunner) Output(_ context.Context, _ io.Reader, args ...string) ([]b
 	return nil, nil
 }
 
-func (s *stubRunner) Run(_ context.Context, _ io.Reader, _, _ io.Writer, args ...string) error {
-	s.calls = append(s.calls, args)
-	return s.err
-}
-
 func TestCreateProjectSession_Args(t *testing.T) {
 	r := &stubRunner{}
 	m := New(r)
@@ -67,7 +62,7 @@ func TestCreateTranscriptsSession_Args(t *testing.T) {
 		VMID:        "demo-abcdef",
 		HomeDir:     "/Users/alice",
 		LimaSSHHost: "lima-sandbox-demo-abcdef",
-		VMUser:      "alice",
+		VMHome:      "/home/alice.linux",
 	}, TranscriptSubs)
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +86,7 @@ func TestCreateTranscripts_OnlyCreatesNamedSubs(t *testing.T) {
 		VMID:        "demo-abcdef",
 		HomeDir:     "/Users/alice",
 		LimaSSHHost: "lima-sandbox-demo-abcdef",
-		VMUser:      "alice",
+		VMHome:      "/home/alice.linux",
 	}, []string{"projects"})
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +111,7 @@ func TestCreateTranscripts_EmptySubsIsNoop(t *testing.T) {
 		VMID:        "demo-abcdef",
 		HomeDir:     "/Users/alice",
 		LimaSSHHost: "lima-sandbox-demo-abcdef",
-		VMUser:      "alice",
+		VMHome:      "/home/alice.linux",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)

@@ -11,7 +11,6 @@ import (
 // Runner abstracts `mutagen` invocations so tests can stub it.
 type Runner interface {
 	Output(ctx context.Context, stdin io.Reader, args ...string) ([]byte, error)
-	Run(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args ...string) error
 }
 
 type realRunner struct {
@@ -37,12 +36,4 @@ func (r *realRunner) Output(ctx context.Context, stdin io.Reader, args ...string
 		return nil, fmt.Errorf("%s %v: %w (%s)", r.bin, args, err, stderr.String())
 	}
 	return stdout.Bytes(), nil
-}
-
-func (r *realRunner) Run(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
-	cmd := exec.CommandContext(ctx, r.bin, args...)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	return cmd.Run()
 }

@@ -5,8 +5,8 @@
 // runtime dependencies — the same build works on macOS hosts and Linux VMs.
 //
 // Line 1: model ─ branch ─ tokens/total  ctx-bar  · $cost
-// Line 2: 5h usage bar · weekly usage bar   (best-effort, macOS only)
-// Line 3: reset times                        (best-effort, macOS only)
+// Line 2: 5h usage bar · weekly usage bar
+// Line 3: reset times
 package main
 
 import (
@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -42,6 +43,7 @@ const (
 
 const (
 	iconModel    = ""
+	iconDir      = "\033[38;2;82;139;255m"
 	iconGit      = "\033[38;2;187;154;255m"
 	iconCost     = "\033[38;2;241;250;140m"
 	iconInterval = "\033[38;2;86;211;232m"
@@ -120,6 +122,13 @@ func main() {
 		cwd = "~"
 	}
 
+	// Directory basename for display.
+	dirName := filepath.Base(cwd)
+	if dirName == "." || dirName == "/" {
+		dirName = cwd
+	}
+	cwdSeg := segd + iconDir + cBlue + dirName + cReset
+
 	tokens := in.ContextWindow.Current.Input +
 		in.ContextWindow.Current.Output +
 		in.ContextWindow.Current.CacheCreation +
@@ -138,9 +147,10 @@ func main() {
 			seg, iconCost, cReset, cYellow, in.Cost.Total, cReset)
 	}
 
-	// ── Line 1 ───────────────────────────────────────────────────────────
-	fmt.Printf("%s%s%s%s%s%s%s%s/%s%s%s %s%s\n",
+	// ── Line 1: model ─  cwd ─  branch ─ tokens/total ctx-bar · $cost
+	fmt.Printf("%s%s%s%s%s%s%s%s%s/%s%s%s %s%s\n",
 		iconModel, cBlue, cBold, model, cReset,
+		cwdSeg,
 		gitSeg,
 		segd,
 		fmtTokens(tokens),
@@ -294,7 +304,7 @@ func getUsage() *usageData {
 	if err != nil {
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -316,27 +326,66 @@ func getUsage() *usageData {
 	return &u
 }
 
-// accessToken reads the Claude OAuth token from the macOS keychain.
-// Returns "" on non-macOS or if the keychain item doesn't exist.
+// accessToken returns a Claude OAuth access token for the usage API.
+// It tries, in order:
+//  1. ~/.claude/.credentials.json (works on all platforms, including VMs)
+//  2. macOS Keychain (host only)
 func accessToken() string {
-	if runtime.GOOS != "darwin" {
-		return ""
+	// 1. Credentials file — written by `claude login` / `claude setup-token`.
+	if home, err := os.UserHomeDir(); err == nil {
+		path := filepath.Join(home, ".claude", ".credentials.json")
+		if data, err := os.ReadFile(path); err == nil {
+			if tok := parseCredentialsJSON(data); tok != "" {
+				return tok
+			}
+		}
 	}
-	cmd := exec.Command("security", "find-generic-password",
-		"-s", "Claude Code-credentials", "-w")
-	out, err := cmd.Output()
-	if err != nil {
-		return ""
+
+	// 2. macOS Keychain — Claude Code stores OAuth tokens here on macOS.
+	if runtime.GOOS == "darwin" {
+		cmd := exec.Command("security", "find-generic-password",
+			"-s", "Claude Code-credentials", "-w")
+		if out, err := cmd.Output(); err == nil {
+			var wrapper struct {
+				ClaudeAiOauth struct {
+					AccessToken string `json:"accessToken"`
+				} `json:"claudeAiOauth"`
+			}
+			if json.Unmarshal(out, &wrapper) == nil && wrapper.ClaudeAiOauth.AccessToken != "" {
+				return wrapper.ClaudeAiOauth.AccessToken
+			}
+		}
 	}
-	var creds struct {
+
+	return ""
+}
+
+// parseCredentialsJSON extracts the access token from a credentials JSON blob.
+// Supports both {"access_token":"..."} and {"claudeAiOauth":{"accessToken":"..."}} shapes.
+func parseCredentialsJSON(data []byte) string {
+	// Shape 1: {"access_token":"..."}
+	var flat struct {
+		AccessToken string `json:"access_token"`
+		Token       string `json:"token"`
+	}
+	if json.Unmarshal(data, &flat) == nil {
+		if flat.AccessToken != "" {
+			return flat.AccessToken
+		}
+		if flat.Token != "" {
+			return flat.Token
+		}
+	}
+	// Shape 2: {"claudeAiOauth":{"accessToken":"..."}}
+	var nested struct {
 		ClaudeAiOauth struct {
 			AccessToken string `json:"accessToken"`
 		} `json:"claudeAiOauth"`
 	}
-	if json.Unmarshal(out, &creds) != nil {
-		return ""
+	if json.Unmarshal(data, &nested) == nil && nested.ClaudeAiOauth.AccessToken != "" {
+		return nested.ClaudeAiOauth.AccessToken
 	}
-	return creds.ClaudeAiOauth.AccessToken
+	return ""
 }
 
 // ── Time formatting ──────────────────────────────────────────────────────────

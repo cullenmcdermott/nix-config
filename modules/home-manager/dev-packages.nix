@@ -23,6 +23,7 @@ in
       google-chrome
       copilot-language-server
       curl
+      codex
       deadnix
       docker
       docker-compose

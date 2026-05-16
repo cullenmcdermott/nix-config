@@ -40,6 +40,12 @@ func (p *ProdHandlers) Open(ctx context.Context, url string) error {
 }
 
 func (p *ProdHandlers) Auth(ctx context.Context) (string, time.Time, error) {
+	// 1. Explicit environment variable — highest priority, no expiry.
+	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
+		return key, time.Time{}, nil
+	}
+
+	// 2. Credentials file written by `claude setup-token` or `claude login`.
 	path := p.CredentialsPath
 	if path == "" {
 		home := os.Getenv("HOME")
@@ -49,9 +55,25 @@ func (p *ProdHandlers) Auth(ctx context.Context) (string, time.Time, error) {
 		path = home + "/.claude/.credentials.json"
 	}
 	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", time.Time{}, fmt.Errorf("read credentials %s: %w", path, err)
+	if err == nil {
+		tok, exp, parseErr := parseCredentialsFile(b)
+		if parseErr == nil {
+			return tok, exp, nil
+		}
+		return "", time.Time{}, parseErr
 	}
+
+	// 3. macOS Keychain — Claude Code stores OAuth tokens under
+	//    service "Claude Code-credentials".
+	tok, exp, keychainErr := readKeychainCredentials(ctx)
+	if keychainErr == nil {
+		return tok, exp, nil
+	}
+
+	return "", time.Time{}, fmt.Errorf("no credentials found:\n  file: %w\n  keychain: %v\nhint: run `claude setup-token` or set ANTHROPIC_API_KEY", err, keychainErr)
+}
+
+func parseCredentialsFile(b []byte) (string, time.Time, error) {
 	var creds struct {
 		AccessToken string    `json:"access_token"`
 		Token       string    `json:"token"`
@@ -68,4 +90,38 @@ func (p *ProdHandlers) Auth(ctx context.Context) (string, time.Time, error) {
 		return "", time.Time{}, fmt.Errorf("no access_token in credentials file")
 	}
 	return tok, creds.ExpiresAt, nil
+}
+
+// readKeychainCredentials shells out to `security find-generic-password` to
+// read the OAuth token that Claude Code stores in the macOS login keychain.
+func readKeychainCredentials(ctx context.Context) (string, time.Time, error) {
+	user := os.Getenv("USER")
+	if user == "" {
+		return "", time.Time{}, fmt.Errorf("USER not set")
+	}
+	cmd := exec.CommandContext(ctx, "security", "find-generic-password",
+		"-s", "Claude Code-credentials", "-a", user, "-w")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("security find-generic-password: %w", err)
+	}
+
+	var wrapper struct {
+		ClaudeAiOauth struct {
+			AccessToken string `json:"accessToken"`
+			ExpiresAt   int64  `json:"expiresAt"` // epoch millis
+		} `json:"claudeAiOauth"`
+	}
+	if err := json.Unmarshal(out, &wrapper); err != nil {
+		return "", time.Time{}, fmt.Errorf("parse keychain credentials: %w", err)
+	}
+	tok := wrapper.ClaudeAiOauth.AccessToken
+	if tok == "" {
+		return "", time.Time{}, fmt.Errorf("no accessToken in keychain credentials")
+	}
+	var exp time.Time
+	if wrapper.ClaudeAiOauth.ExpiresAt > 0 {
+		exp = time.UnixMilli(wrapper.ClaudeAiOauth.ExpiresAt)
+	}
+	return tok, exp, nil
 }

@@ -6,7 +6,6 @@ package mutagen
 import (
 	"context"
 	"fmt"
-	"io"
 	"path"
 	"strings"
 )
@@ -16,32 +15,22 @@ type Manager struct{ r Runner }
 func New(r Runner) *Manager { return &Manager{r: r} }
 
 type Spec struct {
-	VMID          string // e.g. "demo-abcdef"
-	HostPath      string // host-side absolute path (project sync only)
-	VMPath        string // VM-side absolute path (project sync only)
-	HomeDir       string // host home, used for transcripts (e.g. "/Users/alice")
-	LimaSSHHost   string // ssh alias from lima.SSHConfig.Host
-	LimaSSHConfig string // path to Lima's ssh.config (for hostname resolution)
-	VMUser        string // VM username (e.g. from $USER), used for transcript paths
+	VMID        string // e.g. "demo-abcdef"
+	HostPath    string // host-side absolute path (project sync only)
+	VMPath      string // VM-side absolute path (project sync only)
+	HomeDir     string // host home, used for transcripts (e.g. "/Users/alice")
+	LimaSSHHost string // ssh alias from lima.SSHConfig.Host
+	VMHome      string // VM-side home dir (e.g. "/home/alice.linux"), used for transcript paths
 }
 
 func sessionLabel(vmID string) string { return "sandbox-vm-id=" + vmID }
-
-// sshCommandFor returns the ssh command with Lima's config file prepended.
-// This ensures the Lima SSH alias (e.g. lima-sandbox-<id>) resolves correctly.
-func sshCommandFor(configFile string) string {
-	if configFile == "" {
-		return ""
-	}
-	return fmt.Sprintf("ssh -F %s", configFile)
-}
 
 // EnsureDaemon runs `mutagen daemon start`. The daemon is required for any
 // `sync` subcommand to work. This is idempotent: Mutagen's daemon start exits
 // 0 (with a "daemon is already running" message) when the daemon is already up.
 // First-time users frequently hit a confusing "no daemon" error otherwise (E-I-4).
 func (m *Manager) EnsureDaemon(ctx context.Context) error {
-	if err := m.r.Run(ctx, nil, io.Discard, io.Discard, "daemon", "start"); err != nil {
+	if _, err := m.r.Output(ctx, nil, "daemon", "start"); err != nil {
 		return fmt.Errorf("mutagen daemon start: %w", err)
 	}
 	return nil
@@ -54,12 +43,10 @@ func (m *Manager) CreateProject(ctx context.Context, s Spec) error {
 		"--label", sessionLabel(s.VMID),
 		"--mode=two-way-resolved",
 		"--ignore-vcs",
+		s.HostPath, s.LimaSSHHost + ":" + s.VMPath,
 	}
-	if ssh := sshCommandFor(s.LimaSSHConfig); ssh != "" {
-		args = append(args, "--ssh-command", ssh)
-	}
-	args = append(args, s.HostPath, s.LimaSSHHost+":"+s.VMPath)
-	return m.r.Run(ctx, nil, io.Discard, io.Discard, args...)
+	_, err := m.r.Output(ctx, nil, args...)
+	return err
 }
 
 // TranscriptSubs is the canonical set of ~/.claude subdirectories synced one-way
@@ -72,23 +59,20 @@ var TranscriptSubs = []string{"projects", "todos"}
 // duplicate session names, so the caller must not include subs that already
 // exist.
 func (m *Manager) CreateTranscripts(ctx context.Context, s Spec, subs []string) error {
-	if s.VMUser == "" {
-		return fmt.Errorf("VMUser is required for transcript path construction")
+	if s.VMHome == "" {
+		return fmt.Errorf("VMHome is required for transcript path construction")
 	}
 	for _, sub := range subs {
 		hostPath := path.Join(s.HomeDir, ".claude", sub)
-		vmPath := path.Join("/home", s.VMUser, ".claude", sub)
+		vmPath := path.Join(s.VMHome, ".claude", sub)
 		args := []string{
 			"sync", "create",
 			"--name=sandbox-" + s.VMID + "-transcripts-" + sub,
 			"--label", sessionLabel(s.VMID),
 			"--mode=one-way-safe",
+			s.LimaSSHHost + ":" + vmPath, hostPath,
 		}
-		if ssh := sshCommandFor(s.LimaSSHConfig); ssh != "" {
-			args = append(args, "--ssh-command", ssh)
-		}
-		args = append(args, s.LimaSSHHost+":"+vmPath, hostPath)
-		if err := m.r.Run(ctx, nil, io.Discard, io.Discard, args...); err != nil {
+		if _, err := m.r.Output(ctx, nil, args...); err != nil {
 			return err
 		}
 	}
@@ -132,17 +116,19 @@ func (m *Manager) SessionsFor(ctx context.Context, vmID string) ([]Session, erro
 }
 
 func (m *Manager) PauseAll(ctx context.Context, vmID string) error {
-	return m.r.Run(ctx, nil, io.Discard, io.Discard,
+	_, err := m.r.Output(ctx, nil,
 		"sync", "pause", "--label-selector="+sessionLabel(vmID))
+	return err
 }
 
 func (m *Manager) ResumeAll(ctx context.Context, vmID string) error {
-	return m.r.Run(ctx, nil, io.Discard, io.Discard,
+	_, err := m.r.Output(ctx, nil,
 		"sync", "resume", "--label-selector="+sessionLabel(vmID))
+	return err
 }
 
 func (m *Manager) TerminateAll(ctx context.Context, vmID string) error {
-	err := m.r.Run(ctx, nil, io.Discard, io.Discard,
+	_, err := m.r.Output(ctx, nil,
 		"sync", "terminate", "--label-selector="+sessionLabel(vmID))
 	if err != nil && strings.Contains(err.Error(), "not found") {
 		return nil
