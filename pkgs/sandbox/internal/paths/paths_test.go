@@ -18,8 +18,8 @@ func TestResolve_DefaultHome(t *testing.T) {
 		"ConfigDir":      "/Users/alice/.config/sandbox",
 		"GlobalConfig":   "/Users/alice/.config/sandbox/config.toml",
 		"DataDir":        "/Users/alice/.local/share/sandbox",
-		"WarmNixDir":     "/Users/alice/.local/share/sandbox/nix-warm",
-		"WarmNixLock":    "/Users/alice/.local/share/sandbox/nix-warm/.nix-warm.lock",
+		"NixCacheDir":    "/Users/alice/.local/share/sandbox/nix-cache",
+		"NixCacheKey":    "/Users/alice/.local/share/sandbox/nix-cache-key.sec",
 		"VMsDataDir":     "/Users/alice/.local/share/sandbox/vms",
 		"VMsConfigDir":   "/Users/alice/.config/sandbox/vms",
 		"ImagesCacheDir": "/Users/alice/.cache/sandbox/images",
@@ -29,8 +29,8 @@ func TestResolve_DefaultHome(t *testing.T) {
 			"ConfigDir":      p.ConfigDir,
 			"GlobalConfig":   p.GlobalConfig,
 			"DataDir":        p.DataDir,
-			"WarmNixDir":     p.WarmNixDir,
-			"WarmNixLock":    p.WarmNixLock,
+			"NixCacheDir":    p.NixCacheDir,
+			"NixCacheKey":    p.NixCacheKey,
 			"VMsDataDir":     p.VMsDataDir,
 			"VMsConfigDir":   p.VMsConfigDir,
 			"ImagesCacheDir": p.ImagesCacheDir,
@@ -39,6 +39,33 @@ func TestResolve_DefaultHome(t *testing.T) {
 			t.Errorf("%s = %q, want %q", name, got, want)
 		}
 	}
+}
+
+func TestResolve_NixCacheKeyOutsideNixCacheDir(t *testing.T) {
+	// The signing key MUST NOT live inside NixCacheDir, because NixCacheDir is
+	// RO-mounted into every VM. If the key were inside, VM-side code would
+	// be able to read it and forge cache entries.
+	t.Setenv("HOME", "/Users/alice")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("XDG_DATA_HOME", "")
+	t.Setenv("XDG_CACHE_HOME", "")
+	p, err := Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel, err := filepath.Rel(p.NixCacheDir, p.NixCacheKey)
+	if err != nil {
+		t.Fatalf("filepath.Rel: %v", err)
+	}
+	// A path that starts with ".." escapes NixCacheDir (which is what we want).
+	if rel != ".." && !startsWith(rel, ".."+string(filepath.Separator)) {
+		t.Errorf("NixCacheKey (%q) appears to be inside NixCacheDir (%q); secret would be VM-visible (rel=%q)",
+			p.NixCacheKey, p.NixCacheDir, rel)
+	}
+}
+
+func startsWith(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }
 
 func TestResolve_RespectsXDG(t *testing.T) {

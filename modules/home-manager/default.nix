@@ -2,7 +2,6 @@
   config,
   pkgs,
   lib,
-  username,
   ...
 }:
 let
@@ -12,12 +11,21 @@ let
     rev = "f232228244495c018b3c1857436cf491ebb79bbb";
     hash = "sha256-/u7NC9opHNXh9kQMWYzeLyurdQPPHULiCTUbvTZsXeU=";
   };
-
-  homeDirectory =
-    if pkgs.stdenv.isDarwin then
-      "/Users/${username}"
+  # google-chrome isn't packaged for aarch64-linux, so fall back to chromium
+  # there (keeps the playwright-mcp wrapper working on the arm64 sandbox VM).
+  browser =
+    if pkgs.stdenv.hostPlatform.isLinux && pkgs.stdenv.hostPlatform.isAarch64 then
+      {
+        pkg = pkgs.chromium;
+        bin = "chromium";
+        channel = "chromium";
+      }
     else
-      "/home/${username}";
+      {
+        pkg = pkgs.google-chrome;
+        bin = "google-chrome-stable";
+        channel = "chrome";
+      };
 in
 {
   imports = [
@@ -29,9 +37,7 @@ in
     ./claude-code.nix
     ./zwift-media.nix
     ./omp.nix
-    ./open-design.nix
   ];
-  home.homeDirectory = lib.mkForce homeDirectory;
 
   # HA-specific zsh init — depends on programs.claude-code-nix.homeAssistant
   # (claude-code.nix is imported above, so config is available here)
@@ -77,31 +83,6 @@ in
     ''
   );
 
-  programs.zsh.shellAliases = {
-    brew = "op plugin run -- brew";
-    ls = "ls --color=auto -F";
-    vim = "nvim";
-    nixswitch = "sudo darwin-rebuild switch --flake ~/src/system-config/.#";
-    nixup = "pushd ~/src/system-config && nix flake update && sudo darwin-rebuild switch --flake ~/src/system-config/.#; popd";
-    k = "kubecolor";
-    ga = "git add";
-    gb = "git branch";
-    gbD = "git branch -D";
-    gc = "git commit -v";
-    gcma = "git checkout main";
-    gco = "git checkout";
-    gcb = "git checkout -b";
-    gd = "git diff";
-    gl = "git pull";
-    glola = "git log --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --all";
-    gm = "git merge";
-    gp = "git push";
-    grb = "git rebase";
-    gst = "git status";
-    gcl = "git clone";
-    grv = "git remote -v";
-  };
-
   # --- Claude Code Configuration (upstream home-manager module) ---
   programs.claude-code = {
     enable = true;
@@ -109,15 +90,39 @@ in
     settings = {
       permissions = {
         allow = [
-          "Read" "Glob" "Grep" "LS" "WebFetch" "WebSearch"
-          "Bash(ls:*)" "Bash(find:*)" "Bash(grep:*)" "Bash(rg:*)"
-          "Bash(cat:*)" "Bash(head:*)" "Bash(tail:*)"
-          "Bash(git status)" "Bash(git log:*)" "Bash(git diff:*)" "Bash(git show:*)"
-          "Bash(mkdir:*)" "Bash(chmod:*)"
-          "Bash(nix search:*)" "Bash(nix-env:*)" "Bash(time zsh:*)" "Bash(zsh:*)"
-          "Bash(sg:*)" "Bash(ast-grep:*)" "Bash(difft:*)" "Bash(shellcheck:*)"
-          "Bash(scc:*)" "Bash(yq:*)" "Bash(delta:*)" "Bash(hyperfine:*)"
-          "Bash(cursor-agent:*)" "Bash(uv run:*)"
+          "Read"
+          "Glob"
+          "Grep"
+          "LS"
+          "WebFetch"
+          "WebSearch"
+          "Bash(ls:*)"
+          "Bash(find:*)"
+          "Bash(grep:*)"
+          "Bash(rg:*)"
+          "Bash(cat:*)"
+          "Bash(head:*)"
+          "Bash(tail:*)"
+          "Bash(git status)"
+          "Bash(git log:*)"
+          "Bash(git diff:*)"
+          "Bash(git show:*)"
+          "Bash(mkdir:*)"
+          "Bash(chmod:*)"
+          "Bash(nix search:*)"
+          "Bash(nix-env:*)"
+          "Bash(time zsh:*)"
+          "Bash(zsh:*)"
+          "Bash(sg:*)"
+          "Bash(ast-grep:*)"
+          "Bash(difft:*)"
+          "Bash(shellcheck:*)"
+          "Bash(scc:*)"
+          "Bash(yq:*)"
+          "Bash(delta:*)"
+          "Bash(hyperfine:*)"
+          "Bash(cursor-agent:*)"
+          "Bash(uv run:*)"
         ];
       };
       env = {
@@ -178,7 +183,8 @@ in
       frontend-design = "${claudeSkills}/skills/frontend-design";
       llm-orchestrator = ./../../skills/llm-orchestrator;
       claude-code-config = ./../../skills/claude-code-config;
-    } // lib.optionalAttrs config.programs.claude-code-nix.homeAssistant.enable {
+    }
+    // lib.optionalAttrs config.programs.claude-code-nix.homeAssistant.enable {
       home-assistant = ./../../skills/home-assistant;
     };
 
@@ -197,7 +203,7 @@ in
 
   programs.claude-code-nix = {
     enable = true;
-    defaultModel = "claude-opus-4-7";
+    defaultModel = "claude-opus-4-8";
 
     mcpServers.playwright = {
       command = "mcp-server-playwright-wrapper";
@@ -209,12 +215,17 @@ in
       go = {
         command = "${pkgs.gopls}/bin/gopls";
         args = [ "serve" ];
-        extensionToLanguage = { ".go" = "go"; };
+        extensionToLanguage = {
+          ".go" = "go";
+        };
       };
       python = {
         command = "${pkgs.pyright}/bin/pyright-langserver";
         args = [ "--stdio" ];
-        extensionToLanguage = { ".py" = "python"; ".pyi" = "python"; };
+        extensionToLanguage = {
+          ".py" = "python";
+          ".pyi" = "python";
+        };
       };
       typescript = {
         command = "${pkgs.typescript-language-server}/bin/typescript-language-server";
@@ -229,35 +240,54 @@ in
       terraform = {
         command = "${pkgs.terraform-ls}/bin/terraform-ls";
         args = [ "serve" ];
-        extensionToLanguage = { ".tf" = "terraform"; ".tfvars" = "terraform"; };
+        extensionToLanguage = {
+          ".tf" = "terraform";
+          ".tfvars" = "terraform";
+        };
       };
       nix = {
         command = "${pkgs.nixd}/bin/nixd";
         args = [ ];
-        extensionToLanguage = { ".nix" = "nix"; };
+        extensionToLanguage = {
+          ".nix" = "nix";
+        };
         initializationOptions = {
-          nixpkgs = { expr = "import <nixpkgs> {}"; };
+          nixpkgs = {
+            expr = "import <nixpkgs> {}";
+          };
         };
       };
       yaml = {
         command = "${pkgs.yaml-language-server}/bin/yaml-language-server";
         args = [ "--stdio" ];
-        extensionToLanguage = { ".yml" = "yaml"; ".yaml" = "yaml"; };
+        extensionToLanguage = {
+          ".yml" = "yaml";
+          ".yaml" = "yaml";
+        };
       };
       bash = {
         command = "${pkgs.bash-language-server}/bin/bash-language-server";
         args = [ "start" ];
-        extensionToLanguage = { ".sh" = "shellscript"; ".bash" = "shellscript"; };
+        extensionToLanguage = {
+          ".sh" = "shellscript";
+          ".bash" = "shellscript";
+        };
       };
       dockerfile = {
         command = "${pkgs.dockerfile-language-server}/bin/docker-langserver";
         args = [ "--stdio" ];
-        extensionToLanguage = { "Dockerfile" = "dockerfile"; ".dockerfile" = "dockerfile"; };
+        extensionToLanguage = {
+          "Dockerfile" = "dockerfile";
+          ".dockerfile" = "dockerfile";
+        };
       };
       json = {
         command = "${pkgs.vscode-langservers-extracted}/bin/vscode-json-language-server";
         args = [ "--stdio" ];
-        extensionToLanguage = { ".json" = "json"; ".jsonc" = "jsonc"; };
+        extensionToLanguage = {
+          ".json" = "json";
+          ".jsonc" = "jsonc";
+        };
       };
     };
 
@@ -265,8 +295,8 @@ in
       (pkgs.writeShellScriptBin "mcp-server-playwright-wrapper" ''
         export PWMCP_PROFILES_DIR_FOR_TEST="$HOME/.pwmcp-profiles"
         exec ${pkgs.playwright-mcp}/bin/mcp-server-playwright \
-          --executable-path "${pkgs.google-chrome}/bin/google-chrome-stable" \
-          --browser chrome \
+          --executable-path "${browser.pkg}/bin/${browser.bin}" \
+          --browser ${browser.channel} \
           "$@"
       '')
     ];

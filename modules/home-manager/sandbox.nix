@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.programs.sandbox;
@@ -32,8 +37,7 @@ in
     # Point at sandbox-claude inside the combined VM binaries package.
     # The sandbox host binary mounts filepath.Dir(this) into /var/sandbox/bin/,
     # which exposes every binary in the package (sandbox-claude, claude-statusline).
-    home.sessionVariables.SANDBOX_CLAUDE_WRAPPER =
-      "${cfg.vmBinariesPackage}/bin/sandbox-claude";
+    home.sessionVariables.SANDBOX_CLAUDE_WRAPPER = "${cfg.vmBinariesPackage}/bin/sandbox-claude";
 
     # Use the Go statusline binary on the host too — same binary that runs
     # inside the VM, compiled natively for the host platform.

@@ -10,20 +10,24 @@ let
       gke-gcloud-auth-plugin
     ]
   );
+  # google-chrome has no aarch64-linux build; use chromium on that platform.
+  browser =
+    if pkgs.stdenv.hostPlatform.isLinux && pkgs.stdenv.hostPlatform.isAarch64 then
+      pkgs.chromium
+    else
+      pkgs.google-chrome;
 in
 {
   home.packages =
     with pkgs;
     [
-      alejandra
       argc
       argocd
       cargo
       chart-testing
-      google-chrome
+      browser
       copilot-language-server
       curl
-      codex
       deadnix
       docker
       docker-compose
@@ -51,7 +55,6 @@ in
       omnictl
       packer
       python3
-      pipx
       pyright
       qemu
       (renovate.overrideAttrs (oldAttrs: {
@@ -69,7 +72,6 @@ in
       sd
       scc
       shellcheck
-      silver-searcher
       skopeo
       watchexec
       yq-go

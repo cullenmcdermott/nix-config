@@ -11,10 +11,10 @@
 #
 # Then update the hash for your platform in the hashes attrset.
 let
-  version = "14.9.2";
+  version = "15.11.0";
   hashes = {
     # aarch64-darwin — update with: nix hash convert --hash-algo sha256 --to sri $(nix-prefetch-url https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-arm64 | tail -1)
-    "aarch64-darwin" = "sha256-kxrs9AVCyvCf61lwr7RN2J3vtQR0cb/DKA+XYJJguV4=";
+    "aarch64-darwin" = "sha256-MI9jvHJFljVnP+Dd4yMskNSEN1ilTeEhLXleUAuFvfg=";
     # x86_64-darwin — not yet fetched
     "x86_64-darwin" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
     # x86_64-linux — not yet fetched
@@ -26,12 +26,16 @@ let
   src = pkgs.fetchurl {
     url =
       {
-        "aarch64-darwin" = "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-arm64";
-        "x86_64-darwin" = "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-x64";
+        "aarch64-darwin" =
+          "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-arm64";
+        "x86_64-darwin" =
+          "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-x64";
         "x86_64-linux" = "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-linux-x64";
-        "aarch64-linux" = "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-linux-arm64";
+        "aarch64-linux" =
+          "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-linux-arm64";
       }
-      .${pkgs.stdenv.hostPlatform.system} or (throw "Unsupported platform: ${pkgs.stdenv.hostPlatform.system}");
+      .${pkgs.stdenv.hostPlatform.system}
+        or (throw "Unsupported platform: ${pkgs.stdenv.hostPlatform.system}");
     hash =
       hashes.${pkgs.stdenv.hostPlatform.system}
         or (throw "No hash for platform: ${pkgs.stdenv.hostPlatform.system}");

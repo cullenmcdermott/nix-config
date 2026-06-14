@@ -1,7 +1,7 @@
 { self, ... }:
 {
   perSystem =
-    { pkgs, system, ... }:
+    { pkgs, ... }:
     {
       formatter = pkgs.nixfmt-rfc-style;
 
@@ -16,8 +16,7 @@
     };
 
   # Build the macbook system as part of `nix flake check` on aarch64-darwin.
-  flake.checks.aarch64-darwin.macbook =
-    self.darwinConfigurations."cullens-MacBook-Pro".system;
+  flake.checks.aarch64-darwin.macbook = self.darwinConfigurations."cullens-MacBook-Pro".system;
 
   # Contract checks: verify base modules work without consumer-provided optional inputs.
   # These fail at build time if a base module accidentally requires an input that
@@ -25,9 +24,14 @@
   flake.checks.aarch64-darwin.darwinBase-contract =
     let
       inherit (self.inputs) nixpkgs darwin;
-      pkgs = import nixpkgs { system = "aarch64-darwin"; config.allowUnfree = true; };
+      pkgs = import nixpkgs {
+        system = "aarch64-darwin";
+        config.allowUnfree = true;
+      };
       test = darwin.lib.darwinSystem {
-        specialArgs = { username = "test"; };
+        specialArgs = {
+          username = "test";
+        };
         modules = [
           { nixpkgs.hostPlatform = "aarch64-darwin"; }
           self.darwinModules.base
@@ -39,16 +43,25 @@
       # by checking the nix.settings.experimental-features option.
       # If base required inputs.dagger/flox, this would eval error before here.
       echo "${
-        if test.config.nix.settings.experimental-features == [ "nix-command" "flakes" ]
-        then "PASS: darwinModules.base has nix-command flakes"
-        else "FAIL: darwinModules.base eval was not clean"
+        if
+          test.config.nix.settings.experimental-features == [
+            "nix-command"
+            "flakes"
+          ]
+        then
+          "PASS: darwinModules.base has nix-command flakes"
+        else
+          "FAIL: darwinModules.base eval was not clean"
       }" > $out
     '';
 
   flake.checks.aarch64-darwin.homeManagerBase-contract =
     let
       inherit (self.inputs) nixpkgs home-manager;
-      pkgs = import nixpkgs { system = "aarch64-darwin"; config.allowUnfree = true; };
+      pkgs = import nixpkgs {
+        system = "aarch64-darwin";
+        config.allowUnfree = true;
+      };
       hm = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
@@ -59,20 +72,26 @@
             programs.home-manager.enable = true;
           }
         ];
-        extraSpecialArgs = { username = "test"; };
+        extraSpecialArgs = {
+          username = "test";
+        };
       };
     in
-    pkgs.runCommand "homeManagerBase-contract-check" { } ''
-      # Force evaluation of the full config to catch any inputs.* references
-      # that would fail downstream (where consumer doesn't have those inputs).
-      # The built-in homeManagerModules.base requires no inputs in extraSpecialArgs.
-      echo "PASS: homeManagerModules.base evaluated without consumer inputs" > $out
-    '';
+    # forcedEval instantiates the full activation derivation at eval time —
+    # without it, `hm` is never demanded (laziness) and the check is vacuous.
+    pkgs.runCommand "homeManagerBase-contract-check"
+      { forcedEval = builtins.unsafeDiscardStringContext hm.activationPackage.drvPath; }
+      ''
+        echo "PASS: homeManagerModules.base evaluated without consumer inputs ($forcedEval)" > $out
+      '';
 
   flake.checks.aarch64-darwin.homeManagerAgenticSkills-contract =
     let
       inherit (self.inputs) nixpkgs home-manager;
-      pkgs = import nixpkgs { system = "aarch64-darwin"; config.allowUnfree = true; };
+      pkgs = import nixpkgs {
+        system = "aarch64-darwin";
+        config.allowUnfree = true;
+      };
       hm = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
@@ -80,16 +99,24 @@
           {
             home.username = "test";
             home.homeDirectory = "/Users/test";
+            # stateVersion is a consumer responsibility (normally via base);
+            # the stub provides it so the check exercises agenticSkills alone.
+            home.stateVersion = "24.05";
             programs.home-manager.enable = true;
             cullen.agenticSkills.enable = true;
           }
         ];
-        extraSpecialArgs = { username = "test"; };
+        extraSpecialArgs = {
+          username = "test";
+        };
       };
     in
-    pkgs.runCommand "homeManagerAgenticSkills-contract-check" { } ''
-      # Verify agenticSkills closes over its own remote inputs (flox-agentic, superpowers)
-      # and does not require them in consumer's extraSpecialArgs.inputs.
-      echo "PASS: homeManagerModules.agenticSkills closed over remote inputs" > $out
-    '';
+    # Verify agenticSkills closes over its own remote inputs (flox-agentic,
+    # superpowers) without requiring them in consumer extraSpecialArgs.inputs.
+    # forcedEval makes the check real — see homeManagerBase-contract above.
+    pkgs.runCommand "homeManagerAgenticSkills-contract-check"
+      { forcedEval = builtins.unsafeDiscardStringContext hm.activationPackage.drvPath; }
+      ''
+        echo "PASS: homeManagerModules.agenticSkills closed over remote inputs ($forcedEval)" > $out
+      '';
 }

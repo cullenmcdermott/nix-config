@@ -46,12 +46,36 @@ func TestCreateProjectSession_Args(t *testing.T) {
 		"sync", "create",
 		"--name=sandbox-demo-abcdef-project",
 		"--mode=two-way-resolved",
+		"--ignore-vcs",
+		"--label sandbox-vcs=false",
 		"/Users/alice/proj",
 		"lima-sandbox-demo-abcdef:/Users/alice/proj",
 	} {
 		if !strings.Contains(joined, must) {
 			t.Errorf("missing %q in: %s", must, joined)
 		}
+	}
+}
+
+func TestCreateProjectSession_SyncVCS(t *testing.T) {
+	r := &stubRunner{}
+	m := New(r)
+	err := m.CreateProject(context.Background(), Spec{
+		VMID:        "demo-abcdef",
+		HostPath:    "/Users/alice/proj",
+		VMPath:      "/Users/alice/proj",
+		LimaSSHHost: "lima-sandbox-demo-abcdef",
+		SyncVCS:     true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(r.calls[0], " ")
+	if strings.Contains(joined, "--ignore-vcs") {
+		t.Errorf("SyncVCS=true must not pass --ignore-vcs: %s", joined)
+	}
+	if !strings.Contains(joined, "--label sandbox-vcs=true") {
+		t.Errorf("missing sandbox-vcs=true label: %s", joined)
 	}
 }
 
@@ -67,8 +91,8 @@ func TestCreateTranscriptsSession_Args(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(r.calls) != 2 {
-		t.Fatalf("expected 2 calls (projects + todos), got %v", r.calls)
+	if len(r.calls) != len(TranscriptSubs) {
+		t.Fatalf("expected %d calls (one per transcript sub), got %v", len(TranscriptSubs), r.calls)
 	}
 	for _, c := range r.calls {
 		j := strings.Join(c, " ")
@@ -124,7 +148,7 @@ func TestCreateTranscripts_EmptySubsIsNoop(t *testing.T) {
 func TestSessionsFor_ParsesTemplateLines(t *testing.T) {
 	listKey := "sync list --label-selector=sandbox-vm-id=demo-abcdef --template " + sessionListTemplate
 	r := &stubRunner{outputs: map[string]string{
-		listKey: "sandbox-demo-abcdef-project|Watching\nsandbox-demo-abcdef-transcripts-projects|WaitingForRescan\n",
+		listKey: "sandbox-demo-abcdef-project|Watching|true\nsandbox-demo-abcdef-transcripts-projects|WaitingForRescan|\n",
 	}}
 	m := New(r)
 	got, err := m.SessionsFor(context.Background(), "demo-abcdef")
@@ -134,11 +158,36 @@ func TestSessionsFor_ParsesTemplateLines(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("expected 2 sessions, got %d: %+v", len(got), got)
 	}
-	if got[0].Name != "sandbox-demo-abcdef-project" || got[0].Status != "Watching" {
+	if got[0].Name != "sandbox-demo-abcdef-project" || got[0].Status != "Watching" || !got[0].SyncVCS {
 		t.Errorf("unexpected first session: %+v", got[0])
 	}
-	if got[1].Name != "sandbox-demo-abcdef-transcripts-projects" || got[1].Status != "WaitingForRescan" {
+	if got[1].Name != "sandbox-demo-abcdef-transcripts-projects" || got[1].Status != "WaitingForRescan" || got[1].SyncVCS {
 		t.Errorf("unexpected second session: %+v", got[1])
+	}
+}
+
+// Pre-label sessions (created before sandbox-vcs existed) emit "name|status"
+// with no third field; they must parse as SyncVCS=false.
+func TestSessionsFor_PreLabelSessions(t *testing.T) {
+	listKey := "sync list --label-selector=sandbox-vm-id=demo-abcdef --template " + sessionListTemplate
+	r := &stubRunner{outputs: map[string]string{
+		listKey: "sandbox-demo-abcdef-project|Watching\n",
+	}}
+	m := New(r)
+	got, err := m.SessionsFor(context.Background(), "demo-abcdef")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].SyncVCS {
+		t.Fatalf("expected one non-VCS session, got %+v", got)
+	}
+}
+
+func TestTerminateByName_Idempotent(t *testing.T) {
+	r := &stubRunner{err: errors.New(`session "x" not found`)}
+	m := New(r)
+	if err := m.Terminate(context.Background(), "sandbox-x-project"); err != nil {
+		t.Fatalf("terminate must swallow not-found errors, got %v", err)
 	}
 }
 

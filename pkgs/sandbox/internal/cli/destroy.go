@@ -4,15 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/backend"
-	"github.com/cullenmcdermott/system-config/sandbox/internal/nixwarm"
 	"github.com/cullenmcdermott/system-config/sandbox/internal/state"
-	"github.com/cullenmcdermott/system-config/sandbox/internal/vmid"
 )
 
 type destroyStep struct {
@@ -60,16 +56,16 @@ func newDestroyCmd(app *App) *cobra.Command {
 						// guard on rec.State != RUNNING, but that skipped the stop
 						// on DESTROY_FAILED recovery (C-I-2). The VM might still be
 						// running in that case; attempt Stop regardless.
+						//
+						// Before stopping, best-effort cache sync while the VM is
+						// still reachable. Failures must not block destroy — the
+						// cache is an optimization, not a correctness requirement
+						// (C-I-3).
+						syncCacheBestEffort(ctx, c, app, id)
 						if app.Mutagen != nil {
 							if err := app.Mutagen.PauseAll(ctx, string(id)); err != nil {
 								fmt.Fprintf(c.ErrOrStderr(), "warning: mutagen pause failed (continuing): %v\n", err)
 							}
-						}
-						if err := mergeNixIntoWarm(ctx, app, id); err != nil {
-							// Best-effort. The warm cache is an optimization, not a
-							// correctness requirement. If the VM is unreachable or the
-							// rsync fails, we still want to destroy it (C-I-3).
-							fmt.Fprintf(c.ErrOrStderr(), "warning: merging /nix into warm template failed (continuing): %v\n", err)
 						}
 						return app.Backend.Stop(ctx, backend.VMID(id))
 					},
@@ -144,52 +140,4 @@ func newDestroyCmd(app *App) *cobra.Command {
 	cmd.Flags().BoolVar(&force, "force", false, "destroy even if the VM is currently running")
 	cmd.Flags().BoolVar(&recover, "recover", false, "resume a DESTROY_FAILED sequence from where it left off")
 	return cmd
-}
-
-// mergeNixIntoWarm rsyncs the VM's /nix/store into the warm template via SSH,
-// serialized by the warm template's advisory lock. The VM must be reachable
-// (ideally still running) for this to work. If the warm template has no content
-// yet, or the VM is not reachable via SSH, this is a no-op.
-func mergeNixIntoWarm(ctx context.Context, app *App, id vmid.ID) error {
-	warm, err := nixwarm.Open(app.Paths.WarmNixDir)
-	if err != nil {
-		return err
-	}
-	hasWarm, err := warm.HasContent()
-	if err != nil {
-		return err
-	}
-	if !hasWarm {
-		return nil
-	}
-	release, err := warm.Lock(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if rerr := release(); rerr != nil {
-			fmt.Fprintf(os.Stderr, "warning: warm template lock release failed: %v\n", rerr)
-		}
-	}()
-
-	ssh, err := app.Backend.SSHConfig(ctx, backend.VMID(id))
-	if err != nil {
-		return err
-	}
-	if ssh.ConfigFile == "" || ssh.ConfigFile == "/dev/null" {
-		return nil
-	}
-	if _, err := os.Stat(ssh.ConfigFile); err != nil {
-		return nil
-	}
-
-	cmd := exec.CommandContext(ctx, "rsync",
-		"-aH",
-		"-e", fmt.Sprintf("ssh -F %s", ssh.ConfigFile),
-		ssh.Host+":/nix/store/",
-		filepath.Join(warm.Dir, "store")+"/",
-	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }

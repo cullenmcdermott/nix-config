@@ -1,8 +1,18 @@
-{ lib, buildGoModule, installShellFiles, ... }:
+{
+  lib,
+  buildGoModule,
+  installShellFiles,
+  ...
+}:
 
 let
   version = "0.0.1-dev";
-  src = lib.cleanSource ./.;
+  # Exclude .flox (holds a ~1GB Go module/build cache) so it doesn't bloat the
+  # build source or bust the derivation hash every time the local cache changes.
+  src = lib.fileset.toSource {
+    root = ./.;
+    fileset = lib.fileset.difference ./. (lib.fileset.maybeMissing ./.flox);
+  };
   vendorHash = "sha256-TRUwvIdxB0PF9KN5sIGpsyrk7s23jQxgIQz9wF/4o8Q=";
 in
 {
@@ -33,18 +43,27 @@ in
       description = "Per-project Lima VM wrapper for AI coding agents";
       license = licenses.mit;
       mainProgram = "sandbox";
-      platforms = [ "aarch64-darwin" "x86_64-darwin" ];
+      platforms = [
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
     };
   };
 
   # Cross-compiled static binaries for the Linux/arm64 sandbox VM.
-  # Both sandbox-claude (wrapper) and claude-statusline land in the same
-  # output directory so the single WrapperBinaryPath mount exposes both.
+  # All of these (sandbox-claude, claude-statusline, sandbox-op, sandbox-xdg-open)
+  # land in the same output directory so the single WrapperBinaryPath mount
+  # exposes every one of them.
   sandboxVmBinaries = buildGoModule {
     pname = "sandbox-vm-binaries-linux-arm64";
     inherit version src vendorHash;
 
-    subPackages = [ "cmd/sandbox-claude" "cmd/claude-statusline" ];
+    subPackages = [
+      "cmd/sandbox-claude"
+      "cmd/claude-statusline"
+      "cmd/sandbox-op"
+      "cmd/sandbox-xdg-open"
+    ];
     # Use Go's built-in cross-compilation (not pkgsCross) so we get a truly
     # static binary with no Nix-store ELF interpreter dependency.  The Nix Go
     # wrapper overrides env.GOOS/GOARCH, so we set them in preBuild instead.
@@ -57,7 +76,10 @@ in
       mv $out/bin/linux_arm64/* $out/bin/
       rmdir $out/bin/linux_arm64
     '';
-    ldflags = [ "-s" "-w" ];
+    ldflags = [
+      "-s"
+      "-w"
+    ];
     doCheck = false;
   };
 
@@ -67,7 +89,10 @@ in
     inherit version src vendorHash;
 
     subPackages = [ "cmd/claude-statusline" ];
-    ldflags = [ "-s" "-w" ];
+    ldflags = [
+      "-s"
+      "-w"
+    ];
     doCheck = false;
 
     meta = with lib; {

@@ -319,8 +319,9 @@ let
   };
 
   # Karabiner configuration JSON
-  # Xbox Controller Button Mapping:
-  #   A = button1, B = button2, X = button4, Y = button5
+  # Xbox Controller Button Mapping (as configured below):
+  #   A = button1 (Play/Pause), B = button2 (Toggle mode),
+  #   X = button7 (Skip Back),  Y = button8 (Skip Forward)
   # To customize for other controllers, use Karabiner-EventViewer to find button codes
   karabinerConfig = {
     title = "Game Controller Media Controls";
@@ -450,8 +451,8 @@ let
     The default configuration is set up for Xbox controllers:
     - A = button1 (Play/Pause)
     - B = button2 (Toggle Mode)
-    - X = button4 (Skip Back 10s)
-    - Y = button5 (Skip Forward 10s)
+    - X = button7 (Skip Back 10s)
+    - Y = button8 (Skip Forward 10s)
 
     For other controllers, use **Karabiner-EventViewer** to discover button codes:
     1. Open Karabiner-EventViewer
@@ -634,7 +635,7 @@ in
   config = lib.mkIf cfg.enable {
     # NOTE: Karabiner-Elements must be installed via Homebrew cask, not nixpkgs,
     # because it requires privileged system daemons that can't be sandboxed.
-    # The homebrew cask is added in modules/darwin/default.nix
+    # The homebrew cask is added in modules/darwin/homebrew-personal.nix
     home.packages = [
       sendToBrowserScript
       playPauseScript

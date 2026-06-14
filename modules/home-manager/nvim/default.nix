@@ -1,40 +1,22 @@
 {
-  config,
-  lib,
   pkgs,
   ...
 }:
-###############################################################################
-#
-#  AstroNvim's configuration and all its dependencies(lsp, formatter, etc.)
-#
-#e#############################################################################
 let
   shellAliases = {
     v = "nvim";
     vdiff = "nvim -d";
   };
-
-  # Recursively collect all files under a directory and produce
-  # xdg.configFile entries mapping them into nvim/.
-  nvimSource = ./nvim;
-  collectFiles = prefix: dirPath:
-    lib.concatMapAttrs (name: type:
-      let
-        relPath = "${prefix}${name}";
-        absPath = dirPath + "/${name}";
-      in
-      if type == "directory" then
-        collectFiles "${relPath}/" absPath
-      else
-        { "nvim/${relPath}" = { source = absPath; }; }
-    ) (builtins.readDir dirPath);
 in
 {
-  xdg.configFile = collectFiles "" nvimSource;
+  # recursive = true symlinks each file individually so nvim can still write
+  # into its own config tree at runtime.
+  xdg.configFile."nvim" = {
+    source = ./nvim;
+    recursive = true;
+  };
 
   home.shellAliases = shellAliases;
-  programs.nushell.shellAliases = shellAliases;
 
   programs.neovim = {
     enable = true;

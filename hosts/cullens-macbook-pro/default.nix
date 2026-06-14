@@ -2,9 +2,11 @@
   self,
   inputs,
   ...
-}: let
+}:
+let
   username = "cullen";
-in {
+in
+{
   flake.darwinConfigurations."cullens-MacBook-Pro" = inputs.darwin.lib.darwinSystem {
     specialArgs = {
       inherit username inputs;
@@ -21,7 +23,6 @@ in {
         cullen.flox.enable = true;
         cullen.dagger.enable = true;
       }
-      ./homebrew-personal.nix
       {
         home-manager = {
           useGlobalPkgs = true;
@@ -29,7 +30,7 @@ in {
           backupFileExtension = "back";
           extraSpecialArgs = {
             inherit inputs username;
-            claudeCodeOverrides = {};
+            claudeCodeOverrides = { };
           };
           users.${username}.imports = [
             self.homeManagerModules.full
@@ -37,15 +38,14 @@ in {
             self.homeManagerModules.omp
             self.homeManagerModules.sandbox
             inputs.mac-app-util.homeManagerModules.default
-            ({...}: {
+            (_: {
               home.homeDirectory = "/Users/${username}";
               cullen.agenticSkills.enable = true;
               cullen.omp.enable = true;
-              cullen.open-design.enable = true;
               programs.zwift-media.enable = true;
               programs.sandbox.enable = true;
             })
-            ({...}: {
+            (_: {
               # Personal-laptop-only: Home Assistant integrations
               # (registers home-assistant skill + ha-claude launcher + statusline badge)
               programs.claude-code-nix.homeAssistant.enable = true;

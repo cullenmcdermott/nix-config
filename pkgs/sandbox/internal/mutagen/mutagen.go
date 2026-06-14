@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -21,9 +22,15 @@ type Spec struct {
 	HomeDir     string // host home, used for transcripts (e.g. "/Users/alice")
 	LimaSSHHost string // ssh alias from lima.SSHConfig.Host
 	VMHome      string // VM-side home dir (e.g. "/home/alice.linux"), used for transcript paths
+	SyncVCS     bool   // sync .git into the VM (drops --ignore-vcs on the project session)
 }
 
 func sessionLabel(vmID string) string { return "sandbox-vm-id=" + vmID }
+
+// vcsLabelKey records whether a project session was created with VCS sync, so
+// callers can detect a config change and recreate the session. Mutagen has no
+// way to inspect (or change) --ignore-vcs on an existing session.
+const vcsLabelKey = "sandbox-vcs"
 
 // EnsureDaemon runs `mutagen daemon start`. The daemon is required for any
 // `sync` subcommand to work. This is idempotent: Mutagen's daemon start exits
@@ -41,17 +48,23 @@ func (m *Manager) CreateProject(ctx context.Context, s Spec) error {
 		"sync", "create",
 		"--name=sandbox-" + s.VMID + "-project",
 		"--label", sessionLabel(s.VMID),
+		"--label", fmt.Sprintf("%s=%t", vcsLabelKey, s.SyncVCS),
 		"--mode=two-way-resolved",
-		"--ignore-vcs",
-		s.HostPath, s.LimaSSHHost + ":" + s.VMPath,
 	}
+	if !s.SyncVCS {
+		args = append(args, "--ignore-vcs")
+	}
+	args = append(args, s.HostPath, s.LimaSSHHost+":"+s.VMPath)
 	_, err := m.r.Output(ctx, nil, args...)
 	return err
 }
 
 // TranscriptSubs is the canonical set of ~/.claude subdirectories synced one-way
-// from the VM back to the host (transcripts of agent activity).
-var TranscriptSubs = []string{"projects", "todos"}
+// from the VM back to the host (transcripts of agent activity). "tasks" is the
+// task-list store that newer Claude Code versions use alongside "todos".
+// Adding a sub here is retroactive: existing VMs gain the session on their
+// next `sandbox start` (missing-session reconciliation).
+var TranscriptSubs = []string{"projects", "todos", "tasks"}
 
 // CreateTranscripts creates one-way-safe sync sessions for the named subs.
 // Pass the full TranscriptSubs list on first boot, or only the missing names
@@ -80,15 +93,19 @@ func (m *Manager) CreateTranscripts(ctx context.Context, s Spec, subs []string) 
 }
 
 type Session struct {
-	Name   string
-	Status string
+	Name      string
+	Status    string
+	SyncVCS   bool
+	Conflicts int
 }
 
-// sessionListTemplate emits "name|status" per session. Mutagen has no `--json`
-// flag (removed pre-0.18); `--template` is the supported way to get
-// machine-parseable output. We use a pipe delimiter because session names
-// don't contain pipes.
-const sessionListTemplate = `{{range .}}{{.Name}}|{{.Status}}` + "\n" + `{{end}}`
+// sessionListTemplate emits "name|status|vcs|conflicts" per session. Mutagen
+// has no `--json` flag (removed pre-0.18); `--template` is the supported way
+// to get machine-parseable output. We use a pipe delimiter because session
+// names don't contain pipes. `index .Labels` yields "" for sessions without
+// the label (verified on mutagen 0.18.1), which parses as SyncVCS=false —
+// correct for pre-label sessions, which were always created with --ignore-vcs.
+const sessionListTemplate = `{{range .}}{{.Name}}|{{.Status}}|{{index .Labels "` + vcsLabelKey + `"}}|{{len .Conflicts}}` + "\n" + `{{end}}`
 
 func (m *Manager) SessionsFor(ctx context.Context, vmID string) ([]Session, error) {
 	out, err := m.r.Output(ctx, nil,
@@ -109,8 +126,20 @@ func (m *Manager) SessionsFor(ctx context.Context, vmID string) ([]Session, erro
 		if line == "" {
 			continue
 		}
-		name, status, _ := strings.Cut(line, "|")
-		sessions = append(sessions, Session{Name: name, Status: status})
+		fields := strings.Split(line, "|")
+		get := func(i int) string {
+			if i < len(fields) {
+				return fields[i]
+			}
+			return ""
+		}
+		conflicts, _ := strconv.Atoi(get(3))
+		sessions = append(sessions, Session{
+			Name:      get(0),
+			Status:    get(1),
+			SyncVCS:   get(2) == "true",
+			Conflicts: conflicts,
+		})
 	}
 	return sessions, nil
 }
@@ -124,6 +153,16 @@ func (m *Manager) PauseAll(ctx context.Context, vmID string) error {
 func (m *Manager) ResumeAll(ctx context.Context, vmID string) error {
 	_, err := m.r.Output(ctx, nil,
 		"sync", "resume", "--label-selector="+sessionLabel(vmID))
+	return err
+}
+
+// Terminate ends a single session by name. Not-found errors are swallowed so
+// callers can treat "already gone" as success.
+func (m *Manager) Terminate(ctx context.Context, name string) error {
+	_, err := m.r.Output(ctx, nil, "sync", "terminate", name)
+	if err != nil && strings.Contains(err.Error(), "not found") {
+		return nil
+	}
 	return err
 }
 

@@ -83,7 +83,7 @@ func Run(f Form, opts RunOptions) (Form, error) {
 
 	fields = append(fields,
 		huh.NewText().
-			Title("Additional extra mounts (one path per line; ~ is expanded)").
+			Title("Additional extra mounts, read-only (one per line; ~ expands; `sandbox mount add --rw` for writable)").
 			Value(&mountsText),
 	)
 

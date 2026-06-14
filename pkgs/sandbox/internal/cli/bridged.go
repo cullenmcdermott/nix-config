@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/cullenmcdermott/system-config/sandbox/internal/bridge"
+	"github.com/cullenmcdermott/system-config/sandbox/internal/config"
+	"github.com/cullenmcdermott/system-config/sandbox/internal/paths"
 )
 
 func newBridgedCmd() *cobra.Command {
@@ -21,7 +23,24 @@ func newBridgedCmd() *cobra.Command {
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 			defer cancel()
-			h := &bridge.ProdHandlers{CredentialsPath: credentials}
+
+			// Resolve the global config to pick up bridge.op_allow. A missing
+			// config file is fine (LoadGlobal returns defaults); any other
+			// error is fatal because silently running with an empty allowlist
+			// would mask a misconfigured/corrupt config from the user.
+			var opAllow []string
+			if p, err := paths.Resolve(); err == nil {
+				g, err := config.LoadGlobal(p.GlobalConfig)
+				if err != nil {
+					return err
+				}
+				opAllow = g.Bridge.OpAllow
+			}
+
+			h := &bridge.ProdHandlers{
+				CredentialsPath: credentials,
+				OpAllow:         opAllow,
+			}
 			s := bridge.NewServer(socket, token, h, 30*time.Second)
 			return s.Serve(ctx)
 		},

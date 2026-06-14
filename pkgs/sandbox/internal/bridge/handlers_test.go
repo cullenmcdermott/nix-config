@@ -163,3 +163,120 @@ func TestProdSecret_RefMustStartWithOp(t *testing.T) {
 		t.Errorf("expected op:// error, got %v", err)
 	}
 }
+
+func TestProdSecret_EmptyAllowlistDenies(t *testing.T) {
+	h := &ProdHandlers{}
+	_, err := h.Secret(context.Background(), "op://Private/GitHub/token")
+	if err == nil {
+		t.Fatal("expected denial with empty allowlist")
+	}
+	if !strings.Contains(err.Error(), "op_allow") {
+		t.Errorf("expected hint about op_allow, got: %v", err)
+	}
+}
+
+func TestProdSecret_NonMatchingRefDenied(t *testing.T) {
+	h := &ProdHandlers{OpAllow: []string{"op://Private/*"}}
+	_, err := h.Secret(context.Background(), "op://Shared/GitHub/token")
+	if err == nil {
+		t.Fatal("expected denial for non-matching ref")
+	}
+	if !strings.Contains(err.Error(), "does not match") {
+		t.Errorf("expected non-match error, got: %v", err)
+	}
+}
+
+func TestAllowRef_EmptyDeniesAll(t *testing.T) {
+	if allowRef("op://Private/X/y", nil) {
+		t.Error("nil allowlist must deny")
+	}
+	if allowRef("op://Private/X/y", []string{}) {
+		t.Error("empty allowlist must deny")
+	}
+}
+
+func TestAllowRef_ExactMatch(t *testing.T) {
+	pats := []string{"op://Private/GitHub/token"}
+	if !allowRef("op://Private/GitHub/token", pats) {
+		t.Error("exact match must allow")
+	}
+	if allowRef("op://Private/GitHub/tokenx", pats) {
+		t.Error("longer ref must NOT match an exact pattern")
+	}
+	if allowRef("op://Private/GitHub", pats) {
+		t.Error("prefix of ref must not match exact pattern")
+	}
+}
+
+func TestAllowRef_PrefixMatch(t *testing.T) {
+	pats := []string{"op://Private/*"}
+	if !allowRef("op://Private/GitHub/token", pats) {
+		t.Error("prefix should match")
+	}
+	if !allowRef("op://Private/", pats) {
+		t.Error("just-the-prefix should match")
+	}
+	if allowRef("op://Shared/X/y", pats) {
+		t.Error("different vault must not match")
+	}
+}
+
+func TestAllowRef_StarMatchesAll(t *testing.T) {
+	if !allowRef("op://anything/at/all", []string{"*"}) {
+		t.Error("'*' must allow everything")
+	}
+	if !allowRef("", []string{"*"}) {
+		t.Error("'*' must allow even empty")
+	}
+}
+
+func TestAllowRef_MultiplePatternsAnyMatchAllows(t *testing.T) {
+	pats := []string{"op://Private/GitHub/token", "op://Work/*"}
+	if !allowRef("op://Private/GitHub/token", pats) {
+		t.Error("first pattern should match")
+	}
+	if !allowRef("op://Work/AWS/key", pats) {
+		t.Error("second pattern should match")
+	}
+	if allowRef("op://Shared/X/y", pats) {
+		t.Error("no pattern should match")
+	}
+}
+
+func TestProdOpen_RejectsNonHTTPScheme(t *testing.T) {
+	h := &ProdHandlers{}
+	for _, bad := range []string{
+		"file:///etc/passwd",
+		"ssh://host/cmd",
+		"javascript:alert(1)",
+		"ftp://example.com",
+	} {
+		err := h.Open(context.Background(), bad)
+		if err == nil {
+			t.Errorf("expected rejection of %q", bad)
+			continue
+		}
+		if !strings.Contains(err.Error(), "http") {
+			t.Errorf("error for %q missing http hint: %v", bad, err)
+		}
+	}
+}
+
+func TestProdOpen_RejectsEmptyHost(t *testing.T) {
+	h := &ProdHandlers{}
+	err := h.Open(context.Background(), "https:///path")
+	if err == nil {
+		t.Fatal("expected rejection for empty host")
+	}
+	if !strings.Contains(err.Error(), "host") {
+		t.Errorf("expected empty-host error, got %v", err)
+	}
+}
+
+func TestProdOpen_RejectsMalformedURL(t *testing.T) {
+	h := &ProdHandlers{}
+	err := h.Open(context.Background(), "http://exa mple.com")
+	if err == nil {
+		t.Fatal("expected error on malformed URL")
+	}
+}

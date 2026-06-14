@@ -26,7 +26,6 @@ let
     "writing-skills"
   ];
 
-
   # Build a single directory containing all skills (local + superpowers + flox-agentic)
   # so that home-manager can symlink it cleanly without path collisions.
   allSkills = pkgs.runCommand "omp-all-skills" { } ''
@@ -81,9 +80,8 @@ let
     - `rg` (ripgrep), `fd`, `bat`, `jq`, `curl`, `gh` (GitHub CLI)
   '';
 
-
-  # Settings for omp — note: omp uses nested style (theme.dark, theme.light) instead of flat "theme"
-  # pi-web-access is NOT needed — omp has built-in web_search, fetch, and browser tools
+  # Settings for omp — note: omp uses nested style (theme.dark) instead of flat "theme".
+  # pi-web-access is NOT needed — omp has built-in web_search, fetch, and browser tools.
   ompSettings = {
     sessionDir = ompSessionDir;
     theme = {
@@ -96,39 +94,7 @@ let
     defaultModel = "claude-sonnet-4-6";
     enabledModels = [
       "github-copilot/*"
-      "minimax-code/*"
-      "opencode-go/*"
     ];
-    providers = {
-      minimax = {
-        name = "MiniMax";
-        baseUrl = "https://api.minimax.io/anthropic";
-        apiKey = "!op read op://Private/MiniMax/credential";
-        api = "anthropic-messages";
-        models = [
-          { id = "minimax-m2.7"; name = "MiniMax M2.7"; contextWindow = 100000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-        ];
-      };
-      opencode-go = {
-        name = "OpenCode Go";
-        baseUrl = "https://opencode.ai/zen/go/v1";
-        apiKey = "!op read op://Private/OpenCode/credential";
-        api = "openai-completions";
-        models = [
-          { id = "kimi-k2.6"; name = "Kimi K2.6"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "kimi-k2.5"; name = "Kimi K2.5"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "glm-5.1"; name = "GLM-5.1"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "glm-5"; name = "GLM-5"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "deepseek-v4-pro"; name = "DeepSeek V4 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "deepseek-v4-flash"; name = "DeepSeek V4 Flash"; contextWindow = 128000; maxTokens = 16384; reasoning = true; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "qwen3.6-plus"; name = "Qwen 3.6 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "qwen3.5-plus"; name = "Qwen 3.5 Plus"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "mimo-v2-pro"; name = "MiMo V2 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "mimo-v2-omni"; name = "MiMo V2 Omni"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-          { id = "mimo-v2.5-pro"; name = "MiMo V2.5 Pro"; contextWindow = 128000; maxTokens = 16384; reasoning = false; cost = { input = 0; output = 0; cacheRead = 0; cacheWrite = 0; }; }
-        ];
-      };
-    };
   };
 
   ompKeybindings = {
@@ -142,7 +108,12 @@ let
     plan = {
       description = "Read-only exploration and planning mode";
       thinkingLevel = "high";
-      tools = [ "read" "grep" "find" "ls" ];
+      tools = [
+        "read"
+        "grep"
+        "find"
+        "ls"
+      ];
       instructions = ''
         You are in PLANNING MODE.
 
@@ -163,7 +134,12 @@ let
     implement = {
       description = "Focused implementation mode with normal coding tools";
       thinkingLevel = "high";
-      tools = [ "read" "bash" "edit" "write" ];
+      tools = [
+        "read"
+        "bash"
+        "edit"
+        "write"
+      ];
       instructions = ''
         You are in IMPLEMENTATION MODE.
 
@@ -179,7 +155,13 @@ let
     review = {
       description = "Code review mode focused on correctness, safety, and maintainability";
       thinkingLevel = "high";
-      tools = [ "read" "bash" "grep" "find" "ls" ];
+      tools = [
+        "read"
+        "bash"
+        "grep"
+        "find"
+        "ls"
+      ];
       instructions = ''
         You are in REVIEW MODE.
 
@@ -219,13 +201,10 @@ in
     xdg.configFile = {
 
       # omp reads settings from $PI_CODING_AGENT_DIR/settings.json
-      # Providers go in models.json (same as pi)
-      "omp/agent/settings.json".text = builtins.toJSON (builtins.removeAttrs ompSettings [ "providers" ]);
+      "omp/agent/settings.json".text = builtins.toJSON ompSettings;
       "omp/agent/keybindings.json".text = builtins.toJSON ompKeybindings;
       "omp/agent/presets.json".text = builtins.toJSON ompPresets;
       "omp/agent/AGENTS.md".text = ompAgentsMd;
-
-
 
       "omp/agent/themes" = {
         source = ./omp/themes;

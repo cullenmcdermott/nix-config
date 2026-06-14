@@ -3,6 +3,7 @@ package bridge
 import (
 	"bufio"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,11 @@ import (
 	"sync"
 	"time"
 )
+
+// maxRequestBytes caps how much a single request line may consume. The VM is
+// untrusted; without a cap a client could withhold the newline and force the
+// host bridge to buffer unbounded memory (bounded only by the read deadline).
+const maxRequestBytes = 1 << 20 // 1 MiB
 
 // Handlers implements the three handler methods required by the bridge server.
 type Handlers interface {
@@ -123,9 +129,11 @@ func (s *Server) handle(c net.Conn) {
 		_ = c.SetReadDeadline(time.Now().Add(s.handlerTimeout))
 	}
 
-	br := bufio.NewReader(c)
+	br := bufio.NewReader(io.LimitReader(c, maxRequestBytes))
 
-	// Read exactly one JSON request per connection.
+	// Read exactly one JSON request per connection. The LimitReader bounds the
+	// total bytes; an oversized request hits EOF before the newline and is
+	// rejected as a read error below.
 	line, err := br.ReadBytes('\n')
 	if err != nil {
 		return
@@ -155,7 +163,9 @@ func (s *Server) handle(c net.Conn) {
 // handleRequest dispatches a parsed request to the appropriate handler method.
 // Exported for testing without socket I/O.
 func (s *Server) handleRequest(ctx context.Context, c io.Writer, req Request) {
-	if req.Token != s.token {
+	// Constant-time compare so a malicious VM client can't learn the token byte
+	// by byte from response timing.
+	if subtle.ConstantTimeCompare([]byte(req.Token), []byte(s.token)) != 1 {
 		writeErr(c, "invalid token")
 		return
 	}

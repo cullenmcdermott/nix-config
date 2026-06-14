@@ -70,7 +70,9 @@ func (f Form) Apply() config.PerVM {
 		if p == "" {
 			continue
 		}
-		mounts = append(mounts, config.Mount{HostPath: p, VMPath: p, Writable: true})
+		// Read-only by default: writable host mounts undercut the VM's
+		// isolation story. Opt in via `sandbox mount add --rw`.
+		mounts = append(mounts, config.Mount{HostPath: p, VMPath: p, Writable: false})
 	}
 	return config.PerVM{
 		CPUs:      f.CPUs,

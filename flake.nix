@@ -43,11 +43,13 @@
   outputs =
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [ "aarch64-darwin" "x86_64-linux" ];
+      systems = [
+        "aarch64-darwin"
+        "x86_64-linux"
+      ];
 
       imports = [
         ./flake-modules/modules.nix
-        ./flake-modules/compat.nix
         ./flake-modules/per-system.nix
         ./flake-modules/sandbox.nix
         ./hosts/cullens-macbook-pro

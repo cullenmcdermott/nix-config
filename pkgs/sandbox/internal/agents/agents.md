@@ -1,8 +1,17 @@
 ## Sandbox Environment
 
-You are running inside an isolated, disposable sandbox VM (Ubuntu 24.04 arm64).
-This VM exists solely for your use — you have full autonomy. There is no
-production data and nothing you do here can affect the host system.
+You are running inside a disposable sandbox VM (Ubuntu 24.04 arm64) that exists
+solely for your use — you have full autonomy here. The VM is isolated from the
+host, with three deliberate exceptions you must respect:
+
+- The **project directory** is a two-way sync: anything you write there lands on
+  the host's real working tree.
+- Your **credentials** (`~/.claude`, `~/.codex` auth) persist back to the host.
+- Any **writable host mounts** listed below affect the host directly.
+
+Outside those paths, nothing you do here touches the host. But treat writes to
+the project directory and destructive git/filesystem actions there with the same
+care you would on the host machine itself — confirm with the user first.
 
 ### Package Management
 
@@ -35,11 +44,31 @@ directories when changing into new project roots.
 ### Bridge to Host
 
 A bridge daemon connects this VM to the host machine via a Unix socket at
-`/run/sandbox/bridge.sock`. It provides:
+`/run/sandbox/bridge.sock`. Two host operations are exposed inside the VM as
+thin shims:
 
-- **1Password secrets**: accessible via the `op` CLI (reads are forwarded to the host)
-- **URL opening**: `xdg-open` or bridge-based URL opening routes to the host browser
-- **Git**: the project directory is synced from the host via Mutagen; `git` operations work normally
+- `op read op://<vault>/<item>/<field>` — forwarded to the host's 1Password
+  CLI. Only `op read` is supported; every other `op` subcommand exits non-zero.
+  The host enforces an allowlist (`bridge.op_allow` in
+  `~/.config/sandbox/config.toml`). A denied read returns an error that names
+  the missing pattern; do not retry — report it to the user so they can update
+  their allowlist.
+- `xdg-open <https-url>` — opens the URL in the host's default browser. Only
+  `http://` and `https://` URLs are accepted.
+
+### Git
+
+Whether `.git` syncs into the VM is a per-VM setting (`sync_git` in the host's
+per-VM config; off by default). Check the actual state before assuming: run
+`git rev-parse --git-dir` in the project directory.
+
+- **If it succeeds**: git works normally, and commits/branches sync back to
+  the host two-way. Avoid long-running rebases or other heavy ref/index
+  churn while the user might also be running git on the host — concurrent
+  git activity on both sides can cause Mutagen conflicts.
+- **If it fails**: `.git` is excluded from sync. Do not attempt git commits,
+  branches, or history inspection; they will fail. Describe the changes you
+  made so the user can commit on the host.
 
 ### Key Paths
 

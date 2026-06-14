@@ -24,6 +24,10 @@ linters:
         - fmt.Fprint
         - fmt.Fprintf
         - fmt.Fprintln
+    misspell:
+      # Nix-specific terms misspell wants to "correct".
+      ignore-rules:
+        - substituters
 
 formatters:
   enable:

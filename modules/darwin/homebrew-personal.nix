@@ -1,10 +1,11 @@
-{ ... }:
-{
+_: {
   homebrew.casks = [
     "1password"
     "arc"
     "caffeine"
+    "claude-code@latest"
     "cmux"
+    "codex"
     "discord"
     "firefox"
     "karabiner-elements"
@@ -12,5 +13,6 @@
     "hiddenbar"
     "istat-menus"
     "slack"
+    "telegram"
   ];
 }

@@ -67,8 +67,8 @@ func TestForm_Apply_ProducesPerVM(t *testing.T) {
 		if v.Mounts[i].VMPath != want {
 			t.Errorf("mount %d vm path defaults to host path; got %q", i, v.Mounts[i].VMPath)
 		}
-		if !v.Mounts[i].Writable {
-			t.Errorf("mount %d expected writable=true by default", i)
+		if v.Mounts[i].Writable {
+			t.Errorf("mount %d must default to read-only", i)
 		}
 	}
 }

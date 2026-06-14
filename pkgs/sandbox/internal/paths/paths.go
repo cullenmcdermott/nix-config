@@ -14,8 +14,9 @@ type Paths struct {
 	VMsConfigDir     string // ~/.config/sandbox/vms
 	DataDir          string // ~/.local/share/sandbox
 	VMsDataDir       string // ~/.local/share/sandbox/vms
-	WarmNixDir       string // ~/.local/share/sandbox/nix-warm
-	WarmNixLock      string // ~/.local/share/sandbox/nix-warm/.nix-warm.lock
+	CredentialsDir   string // ~/.local/share/sandbox/credentials (writable-mounted into VMs; persists LLM auth across rebuilds)
+	NixCacheDir      string // ~/.local/share/sandbox/nix-cache (RO-mounted into VMs)
+	NixCacheKey      string // ~/.local/share/sandbox/nix-cache-key.sec (signing key; NOT mounted into VMs)
 	ImagesCacheDir   string // ~/.cache/sandbox/images
 	MountHistoryFile string // ~/.local/share/sandbox/mount-history.json
 }
@@ -32,7 +33,10 @@ func Resolve() (*Paths, error) {
 	configDir := filepath.Join(cfg, "sandbox")
 	dataDir := filepath.Join(dat, "sandbox")
 	imagesDir := filepath.Join(cch, "sandbox", "images")
-	warm := filepath.Join(dataDir, "nix-warm")
+	// NixCacheKey lives in DataDir but OUTSIDE NixCacheDir, because
+	// NixCacheDir is mounted into every VM and the secret must never be
+	// VM-visible.
+	nixCacheDir := filepath.Join(dataDir, "nix-cache")
 
 	return &Paths{
 		Home:             home,
@@ -41,8 +45,9 @@ func Resolve() (*Paths, error) {
 		VMsConfigDir:     filepath.Join(configDir, "vms"),
 		DataDir:          dataDir,
 		VMsDataDir:       filepath.Join(dataDir, "vms"),
-		WarmNixDir:       warm,
-		WarmNixLock:      filepath.Join(warm, ".nix-warm.lock"),
+		CredentialsDir:   filepath.Join(dataDir, "credentials"),
+		NixCacheDir:      nixCacheDir,
+		NixCacheKey:      filepath.Join(dataDir, "nix-cache-key.sec"),
 		ImagesCacheDir:   imagesDir,
 		MountHistoryFile: filepath.Join(dataDir, "mount-history.json"),
 	}, nil
@@ -86,7 +91,7 @@ func (p *Paths) VM(id string) VMPaths {
 // Idempotent. Directories are created with 0o700 (owner-only) permissions since
 // they eventually hold bridge.token and bridge.sock — sensitive files.
 func (p *Paths) EnsureDirs() error {
-	for _, d := range []string{p.ConfigDir, p.VMsConfigDir, p.DataDir, p.VMsDataDir, p.WarmNixDir, p.ImagesCacheDir} {
+	for _, d := range []string{p.ConfigDir, p.VMsConfigDir, p.DataDir, p.VMsDataDir, p.CredentialsDir, p.NixCacheDir, p.ImagesCacheDir} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			return fmt.Errorf("mkdir %s: %w", d, err)
 		}

@@ -2,21 +2,13 @@
   config,
   pkgs,
   lib,
-  username,
   ...
 }:
-let
-  homeDirectory =
-    if pkgs.stdenv.isDarwin then
-      "/Users/${username}"
-    else
-      "/home/${username}";
-in
 {
   xdg = {
     enable = true;
-    cacheHome = "${homeDirectory}/.cache";
-    configHome = "${homeDirectory}/.config";
+    cacheHome = "${config.home.homeDirectory}/.cache";
+    configHome = "${config.home.homeDirectory}/.config";
     configFile."ghostty/config" = {
       text = ''
         theme = TokyoNight Storm
@@ -37,7 +29,8 @@ in
     };
     configFile."cmux/settings.json" = lib.mkIf pkgs.stdenv.isDarwin {
       text = builtins.toJSON {
-        "$schema" = "https://raw.githubusercontent.com/manaflow-ai/cmux/main/web/data/cmux-settings.schema.json";
+        "$schema" =
+          "https://raw.githubusercontent.com/manaflow-ai/cmux/main/web/data/cmux-settings.schema.json";
         app = {
           appearance = "dark";
           sendAnonymousTelemetry = false;
@@ -103,15 +96,15 @@ in
   programs.zsh.plugins = [ ];
   programs.zsh.oh-my-zsh.enable = false;
   programs.direnv.enable = true;
-  programs.direnv.package = pkgs.direnv.overrideAttrs (_: { doCheck = false; });
+  programs.direnv.package = pkgs.direnv.overrideAttrs (_: {
+    doCheck = false;
+  });
   programs.starship.enable = true;
   programs.starship.enableZshIntegration = true;
 
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
-    HOME = homeDirectory;
-    TERM = "xterm";
   };
   home.sessionPath = [
     "$HOME/.local/bin"

@@ -12,12 +12,20 @@ import (
 // VM. The first-boot bind-mount unit then rebinds them onto ~/.claude/<sub>.
 const HostClaudeMountRoot = "/var/sandbox/host-claude"
 
-// WarmNixVMPath is where the host-side warm /nix template is RO-mounted inside
-// the VM during provisioning. The provision script rsyncs its store into /nix/store.
-const WarmNixVMPath = "/var/sandbox/warm-nix"
+// NixCacheVMPath is where the host-side shared Nix binary cache is RO-mounted
+// inside the VM. The provision script configures nix-daemon to use it as a
+// substituter via file:// in /etc/nix/nix.conf.
+const NixCacheVMPath = "/var/sandbox/nix-cache"
+
 // HostOmpMountRoot is where host-side ~/.config/omp/agent subpaths land inside
 // the VM. The first-boot bind-mount unit rebinds them onto ~/.config/omp/agent/<sub>.
 const HostOmpMountRoot = "/var/sandbox/host-omp"
+
+// CredentialsVMPath is where the host-side persistent credential store is
+// mounted (writable) inside the VM. The provision script symlinks each tool's
+// auth file (~/.claude/.credentials.json, ~/.codex/auth.json) into it so logins
+// survive VM rebuilds. Shared across all VMs — auth is per-user, not per-project.
+const CredentialsVMPath = "/var/sandbox/credentials"
 
 // claudeSubpaths are the read-only paths from ~/.claude that are overlaid
 // read-only into the VM. These must be directories (not files). Anything not
@@ -33,6 +41,7 @@ var ClaudeSubpaths = []string{
 	// directories; regular-file mounts are undefined behavior. Files are
 	// copied into the VM by the provision script instead.
 }
+
 // OmpSubpaths are the read-only paths from ~/.config/omp/agent/ that are
 // overlaid into the VM. These must be directories (not files). Config files
 // (config.yml, AGENTS.md) are copied by the provision script instead.
@@ -106,15 +115,21 @@ func BuildMounts(projectPath, homeDir string, extra []config.Mount) []backend.Mo
 	return deduped
 }
 
-// BuildMountsWithWarm is like BuildMounts but also appends a read-only virtiofs
-// mount of the warm /nix template if warmHostDir is non-empty. The warm mount is
-// prepended to extra so BuildMounts' last-write-wins dedup lets user-specified
-// overrides at WarmNixVMPath take precedence.
-func BuildMountsWithWarm(projectPath, homeDir string, extra []config.Mount, warmHostDir string) []backend.Mount {
-	if warmHostDir == "" {
+// BuildMountsWithCache is like BuildMounts but also appends a read-only
+// virtiofs mount of the host-side Nix binary cache if cacheHostDir is
+// non-empty. The cache mount is prepended to extra so BuildMounts'
+// last-write-wins dedup lets user-specified overrides at NixCacheVMPath take
+// precedence.
+//
+// The mount is added UNCONDITIONALLY when cacheHostDir != "" — there is no
+// has-content gating. An empty cache is just a substituter miss, but gating
+// on emptiness would deadlock bootstrap (the cache cannot become non-empty
+// until at least one VM successfully populates it).
+func BuildMountsWithCache(projectPath, homeDir string, extra []config.Mount, cacheHostDir string) []backend.Mount {
+	if cacheHostDir == "" {
 		return BuildMounts(projectPath, homeDir, extra)
 	}
-	// Prepend the warm mount so user extras can override it via dedup.
-	autoExtra := append([]config.Mount{{HostPath: warmHostDir, VMPath: WarmNixVMPath, Writable: false}}, extra...)
+	// Prepend the cache mount so user extras can override it via dedup.
+	autoExtra := append([]config.Mount{{HostPath: cacheHostDir, VMPath: NixCacheVMPath, Writable: false}}, extra...)
 	return BuildMounts(projectPath, homeDir, autoExtra)
 }

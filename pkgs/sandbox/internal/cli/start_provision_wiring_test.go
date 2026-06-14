@@ -61,6 +61,43 @@ func TestDoCreate_PassesOmpSubpathsToProvision(t *testing.T) {
 	}
 }
 
+func TestDoCreate_PersistsCredentials(t *testing.T) {
+	app := newTestApp(t)
+	_ = runSubcommand(t, app, "start")
+
+	fake, ok := app.Backend.(*backend.Fake)
+	if !ok {
+		t.Fatalf("expected *backend.Fake, got %T", app.Backend)
+	}
+
+	// A writable credential store must be mounted at CredentialsVMPath, sourced
+	// from the persistent (per-user, survives-rebuild) host directory.
+	var found bool
+	for _, m := range fake.LastSpec.Mounts {
+		if m.VMPath != CredentialsVMPath {
+			continue
+		}
+		found = true
+		if !m.Writable {
+			t.Errorf("credentials mount must be writable")
+		}
+		if m.HostPath != app.Paths.CredentialsDir {
+			t.Errorf("credentials mount host path = %q, want %q", m.HostPath, app.Paths.CredentialsDir)
+		}
+	}
+	if !found {
+		t.Errorf("no credentials mount at %q in spec", CredentialsVMPath)
+	}
+
+	script := fake.LastSpec.Provision.Script
+	if !strings.Contains(script, `ln -sfn "$CRED_ROOT/claude/.credentials.json"`) {
+		t.Errorf("provision script missing claude credentials symlink:\n%s", script)
+	}
+	if !strings.Contains(script, `ln -sfn "$CRED_ROOT/codex/auth.json"`) {
+		t.Errorf("provision script missing codex credentials symlink")
+	}
+}
+
 func TestDoCreate_PassesOmpVersionToProvision(t *testing.T) {
 	app := newTestApp(t)
 	_ = runSubcommand(t, app, "start")

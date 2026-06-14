@@ -25,6 +25,9 @@ func newStopCmd(app *App) *cobra.Command {
 			}
 			switch persisted {
 			case state.StateRunning:
+				// Best-effort cache sync while the VM is still reachable.
+				// Failures must not block stop — the cache is an optimization.
+				syncCacheBestEffort(c.Context(), c, app, id)
 				if app.Mutagen != nil {
 					if err := app.Mutagen.PauseAll(c.Context(), string(id)); err != nil {
 						fmt.Fprintf(c.ErrOrStderr(), "warning: mutagen pause failed (continuing stop): %v\n", err)

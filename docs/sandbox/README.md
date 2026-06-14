@@ -34,13 +34,15 @@ Subsequent invocations attach in well under a second.
 - `~/.config/sandbox/config.toml` — global defaults
 - `~/.config/sandbox/vms/<id>/config.toml` — per-VM overrides
 - `~/.local/share/sandbox/vms/<id>/state.json` — persisted state
-- `~/.local/share/sandbox/nix-warm/` — shared warm `/nix` template
+- `~/.local/share/sandbox/nix-cache/` — shared signed Nix binary cache (RO-mounted into every VM as a substituter; populated by `sandbox cache sync` and best-effort on `sandbox stop` / `sandbox destroy`)
+- `~/.local/share/sandbox/nix-cache-key.sec` — ed25519 signing key for the cache; kept outside `nix-cache/` so VMs never see it
 
 ## Known limitations
 
 - **Hooks that depend on host-only tools.** `~/.claude/hooks/*` runs inside
-  the VM where `op`, `gh`, etc. may not exist. Specific cases can be absorbed
-  by the bridge over time.
+  the VM. `op read` and `xdg-open` are bridged through to the host, but other
+  host-only tools (`gh`, host-specific keychain CLIs, etc.) may still be
+  missing. Specific cases can be absorbed by the bridge over time.
 - **Concurrent host + VM Claude on the same project.** Mutagen surfaces
   transcript conflicts. Rare in practice.
 - **Network egress.** Default-open in v1; a future `network = "restricted"`

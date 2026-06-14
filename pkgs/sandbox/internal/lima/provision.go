@@ -2,8 +2,18 @@ package lima
 
 import (
 	"bytes"
+	"strings"
 	"text/template"
 )
+
+// shellQuote wraps s in single quotes so it is safe to interpolate into the
+// bash provision script. Without this, a project path containing $(...),
+// backticks, or other shell metacharacters would be evaluated when the script
+// runs as root inside the VM. Embedded single quotes are escaped using the
+// standard '\” idiom.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
 
 type ProvisionConfig struct {
 	User string
@@ -18,10 +28,12 @@ type ProvisionConfig struct {
 	FloxURL     string
 	FloxSHA256  string
 
-	// Claude Code: standalone binary from Anthropic GCS
-	ClaudeVersion string
-	ClaudeURL     string
-	ClaudeSHA256  string
+	// Claude Code: standalone binary from Anthropic GCS. The VM resolves the
+	// channel's current version on every boot and verifies the binary against
+	// the release manifest's sha256.
+	ClaudeGCSBase  string // e.g. https://storage.googleapis.com/claude-code-dist-<bucket>/claude-code-releases
+	ClaudeChannel  string // "stable" or "latest"
+	ClaudePlatform string // "linux-arm64" or "linux-x64"
 
 	// Seeded AGENTS.md content
 	AgentsMarkdown string
@@ -51,6 +63,21 @@ type ProvisionConfig struct {
 
 	// OmpAgentsMarkdown is the AGENTS.md content for omp in the VM.
 	OmpAgentsMarkdown string
+
+	// NixCachePublicKey is the public signing key of the host's shared Nix
+	// binary cache, in Nix's "<name>:<base64>" form. When set, the provision
+	// script configures nix-daemon to use the file:// cache as a substituter.
+	NixCachePublicKey string
+
+	// NixCacheVMPath is the VM-side mount path of the host's shared Nix binary
+	// cache (e.g. /var/sandbox/nix-cache). Used in the file:// substituter URL.
+	NixCacheVMPath string
+
+	// CredentialsVMPath is the VM-side mount path of the host's persistent
+	// credential store (e.g. /var/sandbox/credentials), mounted writable. When
+	// set, the provision script symlinks each tool's auth file into it so logins
+	// survive VM rebuilds. Empty disables credential persistence.
+	CredentialsVMPath string
 }
 
 const provisionTmpl = `#!/usr/bin/env bash
@@ -68,7 +95,7 @@ HOST_CLAUDE="{{.HostClaudeMountRoot}}"
 # Mutagen syncs the project to the same absolute path as on the host. The
 # parent directories must exist before Mutagen can create the sync root.
 {{- if .ProjectPath}}
-install -d -o {{.User}} -g {{.User}} "{{.ProjectPath}}"
+install -d -o {{.User}} -g {{.User}} {{shq .ProjectPath}}
 {{- end}}
 
 # ── ~/.claude RO overlay ──────────────────────────────────────────────────────
@@ -113,12 +140,6 @@ if [ ! -d /nix ]; then
 fi
 . /etc/profile.d/nix.sh
 
-# ── Seed /nix/store from warm template ──────────────────────────────────────
-if [ -d /var/sandbox/warm-nix/store ]; then
-  echo "seeding /nix/store from warm template…"
-  rsync -aH --ignore-existing /var/sandbox/warm-nix/store/ /nix/store/
-fi
-
 # ── Flox ──────────────────────────────────────────────────────────────────────
 if ! command -v flox >/dev/null 2>&1; then
   TMPF=$(mktemp -t flox.deb.XXXXXX)
@@ -131,20 +152,65 @@ if ! command -v flox >/dev/null 2>&1; then
   rm -f "$TMPF"
 fi
 
+# ── Shared Nix binary cache ──────────────────────────────────────────────────
+{{- if .NixCachePublicKey}}
+# Daemon-side substituter config: per-user --option substituters is rejected
+# for untrusted users, so this must live in /etc/nix/nix.conf.
+if ! grep -qs "file://{{.NixCacheVMPath}}" /etc/nix/nix.conf; then
+  mkdir -p /etc/nix
+  {
+    echo "extra-substituters = file://{{.NixCacheVMPath}}"
+    echo "extra-trusted-public-keys = {{.NixCachePublicKey}}"
+  } >> /etc/nix/nix.conf
+  systemctl restart nix-daemon 2>/dev/null || true
+fi
+{{- end}}
+
 # ── Claude Code ───────────────────────────────────────────────────────────────
-if ! command -v claude >/dev/null 2>&1; then
-  TMPC=$(mktemp -t claude.XXXXXX)
-  curl -fsSL "{{.ClaudeURL}}" -o "$TMPC"
-  echo "{{.ClaudeSHA256}}  $TMPC" | sha256sum -c -
-  install -m 0755 "$TMPC" /usr/local/bin/claude
-  rm -f "$TMPC"
+# Track the "{{.ClaudeChannel}}" release channel: resolve its current version
+# on every boot and reinstall when it changes (/etc/sandbox/claude-version
+# stamps what's installed). Downloads are verified against the sha256 in the
+# release manifest, same as the official installer. Every step uses an
+# explicit "|| return 1" because calling install_claude in an if-condition
+# suppresses set -e inside the function body.
+CLAUDE_BASE="{{.ClaudeGCSBase}}"
+install_claude() {
+  local ver="$1" sha tmp dest interp sys_ld
+  sha=$(curl -fsSL --max-time 30 "$CLAUDE_BASE/$ver/manifest.json" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["platforms"]["{{.ClaudePlatform}}"]["checksum"])') || return 1
+  [ -n "$sha" ] || return 1
+  tmp=$(mktemp -t claude.XXXXXX) || return 1
+  curl -fsSL "$CLAUDE_BASE/$ver/{{.ClaudePlatform}}/claude" -o "$tmp" || { rm -f "$tmp"; return 1; }
+  echo "$sha  $tmp" | sha256sum -c - || { rm -f "$tmp"; return 1; }
+  # On an already-wrapped VM the real binary lives at claude.real; install
+  # there to avoid clobbering the wrapper.
+  dest=/usr/local/bin/claude
+  [ -x /usr/local/bin/claude.real ] && dest=/usr/local/bin/claude.real
+  install -m 0755 "$tmp" "$dest" || { rm -f "$tmp"; return 1; }
+  rm -f "$tmp"
+  echo "$ver" > /etc/sandbox/claude-version
   # Some Claude builds use a Nix store ELF interpreter that doesn't exist in
   # the VM. If detected, symlink it to the system dynamic linker.
-  INTERP=$(dd if=/usr/local/bin/claude bs=4096 count=1 2>/dev/null | tr '\0' '\n' | grep '/nix/store.*ld-linux' | head -1 || true)
-  if [ -n "$INTERP" ] && [ ! -e "$INTERP" ]; then
-    mkdir -p "$(dirname "$INTERP")"
-    SYS_LD=$(ls /lib/ld-linux-* 2>/dev/null | head -1 || true)
-    [ -n "$SYS_LD" ] && ln -sf "$SYS_LD" "$INTERP"
+  interp=$(dd if="$dest" bs=4096 count=1 2>/dev/null | tr '\0' '\n' | grep '/nix/store.*ld-linux' | head -1 || true)
+  if [ -n "$interp" ] && [ ! -e "$interp" ]; then
+    mkdir -p "$(dirname "$interp")"
+    sys_ld=$(ls /lib/ld-linux-* 2>/dev/null | head -1 || true)
+    [ -n "$sys_ld" ] && ln -sf "$sys_ld" "$interp" || true
+  fi
+  return 0
+}
+WANT_CLAUDE=$(curl -fsSL --max-time 30 "$CLAUDE_BASE/{{.ClaudeChannel}}" || true)
+HAVE_CLAUDE=$(cat /etc/sandbox/claude-version 2>/dev/null || true)
+if [ -n "$WANT_CLAUDE" ] && { [ "$HAVE_CLAUDE" != "$WANT_CLAUDE" ] || ! command -v claude >/dev/null 2>&1; }; then
+  if install_claude "$WANT_CLAUDE"; then
+    echo "claude $WANT_CLAUDE installed"
+  elif command -v claude >/dev/null 2>&1; then
+    # Fail open on update: a transient download problem must not break boot
+    # when a working claude is already installed.
+    echo "warning: claude $WANT_CLAUDE install failed; keeping ${HAVE_CLAUDE:-existing}" >&2
+  else
+    echo "error: claude install failed and no existing install present" >&2
+    exit 1
   fi
 fi
 
@@ -190,6 +256,32 @@ if [ -x /var/sandbox/bin/claude-statusline ]; then
   fi
 fi
 
+# ── sandbox op shim (installed as /usr/local/bin/op) ─────────────────────────
+# In-VM op wrapper that forwards 'op read op://...' to the host's 1Password
+# CLI via the sandbox bridge. Other subcommands intentionally fail.
+if [ -x /var/sandbox/bin/sandbox-op ]; then
+  install -m 0755 /var/sandbox/bin/sandbox-op /usr/local/bin/op
+  OPINTERP=$(dd if=/usr/local/bin/op bs=4096 count=1 2>/dev/null | tr '\0' '\n' | grep '/nix/store.*ld-linux' | head -1 || true)
+  if [ -n "$OPINTERP" ] && [ ! -e "$OPINTERP" ]; then
+    mkdir -p "$(dirname "$OPINTERP")"
+    OP_SYS_LD=$(ls /lib/ld-linux-* 2>/dev/null | head -1 || true)
+    [ -n "$OP_SYS_LD" ] && ln -sf "$OP_SYS_LD" "$OPINTERP"
+  fi
+fi
+
+# ── sandbox xdg-open shim (installed as /usr/local/bin/xdg-open) ─────────────
+# In-VM xdg-open wrapper that forwards http(s) URLs to the host's 'open' via
+# the sandbox bridge.
+if [ -x /var/sandbox/bin/sandbox-xdg-open ]; then
+  install -m 0755 /var/sandbox/bin/sandbox-xdg-open /usr/local/bin/xdg-open
+  XDGINTERP=$(dd if=/usr/local/bin/xdg-open bs=4096 count=1 2>/dev/null | tr '\0' '\n' | grep '/nix/store.*ld-linux' | head -1 || true)
+  if [ -n "$XDGINTERP" ] && [ ! -e "$XDGINTERP" ]; then
+    mkdir -p "$(dirname "$XDGINTERP")"
+    XDG_SYS_LD=$(ls /lib/ld-linux-* 2>/dev/null | head -1 || true)
+    [ -n "$XDG_SYS_LD" ] && ln -sf "$XDG_SYS_LD" "$XDGINTERP"
+  fi
+fi
+
 # ── Claude settings.json (statusline + user preferences) ─────────────────────
 # Write the VM settings that reference the installed statusline binary.
 # The wrapper already handles --dangerously-skip-permissions, so we omit
@@ -201,6 +293,25 @@ cat > "$USER_HOME/.claude/settings.json" <<'SETTINGS_EOF'
 SETTINGS_EOF
 chown {{.User}}:{{.User}} "$USER_HOME/.claude/settings.json"
 {{- end}}
+
+# ── Persistent LLM credentials ───────────────────────────────────────────────
+# Symlink each tool's auth file onto the writable credential mount so in-VM
+# logins (Claude Code, codex) survive VM rebuilds. Guarded on the mount being
+# present so a drift re-apply on an older VM without the mount doesn't create a
+# stray local dir that silently fails to persist.
+{{- if .CredentialsVMPath}}
+CRED_ROOT="{{.CredentialsVMPath}}"
+if mountpoint -q "$CRED_ROOT"; then
+  mkdir -p "$CRED_ROOT/claude" "$CRED_ROOT/codex"
+  chown {{.User}}:{{.User}} "$CRED_ROOT/claude" "$CRED_ROOT/codex" 2>/dev/null || true
+  mkdir -p "$USER_HOME/.claude" "$USER_HOME/.codex"
+  ln -sfn "$CRED_ROOT/claude/.credentials.json" "$USER_HOME/.claude/.credentials.json"
+  ln -sfn "$CRED_ROOT/codex/auth.json" "$USER_HOME/.codex/auth.json"
+  chown -h {{.User}}:{{.User}} "$USER_HOME/.claude/.credentials.json" "$USER_HOME/.codex/auth.json" 2>/dev/null || true
+  chown {{.User}}:{{.User}} "$USER_HOME/.codex"
+fi
+{{- end}}
+
 # ── omp (Oh My Pi) ──────────────────────────────────────────────────────────
 {{- if .OmpURL}}
 if ! command -v omp >/dev/null 2>&1; then
@@ -301,14 +412,15 @@ TMPFILES
 // RenderProvision produces the first-boot provision script. It installs:
 //   - ~/.claude RO overlay (bind-mounts from /var/sandbox/host-claude/)
 //   - Nix multi-user daemon
-//   - Seed /nix/store from warm template (if /var/sandbox/warm-nix/store exists)
 //   - Flox from .deb package
+//   - Shared Nix binary cache substituter (file:///var/sandbox/nix-cache) when
+//     NixCachePublicKey is set
 //   - Claude Code standalone binary
 //   - /etc/sandbox/CLAUDE.md and ~/.claude/CLAUDE.md symlink
 //   - sandbox-helper.service placeholder
 //   - sshd StreamLocalBindUnlink for Phase 9 bridge forwarding
 func RenderProvision(cfg ProvisionConfig) (string, error) {
-	t, err := template.New("p").Parse(provisionTmpl)
+	t, err := template.New("p").Funcs(template.FuncMap{"shq": shellQuote}).Parse(provisionTmpl)
 	if err != nil {
 		return "", err
 	}
@@ -318,6 +430,7 @@ func RenderProvision(cfg ProvisionConfig) (string, error) {
 		Subs    []string
 		OmpSubs []string
 	}{cfg, cfg.ClaudeSubpaths, cfg.OmpSubpaths}); err != nil {
+		return "", err
 	}
 	return b.String(), nil
 }

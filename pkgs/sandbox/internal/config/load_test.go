@@ -81,6 +81,45 @@ func TestSavePerVM_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestLoadGlobal_BridgeOpAllow(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.toml")
+	mustWrite(t, p, "[bridge]\nop_allow = [\"op://Private/*\", \"op://Work/AWS/key\"]\n")
+
+	g, err := LoadGlobal(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"op://Private/*", "op://Work/AWS/key"}
+	if !reflect.DeepEqual(g.Bridge.OpAllow, want) {
+		t.Errorf("Bridge.OpAllow = %v, want %v", g.Bridge.OpAllow, want)
+	}
+}
+
+func TestLoadGlobal_BridgeOpAllow_DefaultEmpty(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.toml")
+	mustWrite(t, p, "cpus = 6\n")
+
+	g, err := LoadGlobal(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g.Bridge.OpAllow) != 0 {
+		t.Errorf("expected empty OpAllow, got %v", g.Bridge.OpAllow)
+	}
+}
+
+func TestLoadGlobal_MissingFile_EmptyOpAllow(t *testing.T) {
+	g, err := LoadGlobal(filepath.Join(t.TempDir(), "does-not-exist.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g.Bridge.OpAllow) != 0 {
+		t.Errorf("expected empty OpAllow when file missing, got %v", g.Bridge.OpAllow)
+	}
+}
+
 func mustWrite(t *testing.T, path, contents string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {

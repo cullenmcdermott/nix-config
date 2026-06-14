@@ -62,7 +62,8 @@ func LoadResolved(globalPath, perVMPath string) (Resolved, error) {
 		DiskGiB:   pick(v.DiskGiB, g.DiskGiB),
 		Arch:      pickStr(v.Arch, g.Arch),
 		Agent:     pickStr(v.Agent, g.Agent),
-		Mounts:    v.Mounts, // global has no mounts
+		Mounts:    v.Mounts,  // global has no mounts
+		SyncGit:   v.SyncGit, // global has no sync_git: a host-wide default would be a per-project trust decision made in the wrong place
 	}, nil
 }
 

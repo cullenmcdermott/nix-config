@@ -1,8 +1,17 @@
 ## Sandbox Environment
 
-You are running inside an isolated, disposable sandbox VM (Ubuntu 24.04 arm64).
-This VM exists solely for your use — you have full autonomy. There is no
-production data and nothing you do here can affect the host system.
+You are running inside a disposable sandbox VM (Ubuntu 24.04 arm64) that exists
+solely for your use — you have full autonomy here. The VM is isolated from the
+host, with three deliberate exceptions you must respect:
+
+- The **project directory** is a two-way sync: anything you write there lands on
+  the host's real working tree.
+- Your **credentials** (`~/.claude`, `~/.codex` auth) persist back to the host.
+- Any **writable host mounts** listed below affect the host directly.
+
+Outside those paths, nothing you do here touches the host. But treat writes to
+the project directory and destructive git/filesystem actions there with the same
+care you would on the host machine itself — confirm with the user first.
 
 ### Package Management
 
@@ -39,7 +48,7 @@ A bridge daemon connects this VM to the host machine via a Unix socket at
 
 - **1Password secrets**: accessible via the `op` CLI (reads are forwarded to the host)
 - **URL opening**: `xdg-open` or bridge-based URL opening routes to the host browser
-- **Git**: the project directory is synced from the host via Mutagen; `git` operations work normally
+- **Git**: the project directory is synced from the host via Mutagen. `.git` only syncs when the per-VM `sync_git` setting is on (off by default) — check with `git rev-parse --git-dir` before assuming git works
 
 ### Key Paths
 

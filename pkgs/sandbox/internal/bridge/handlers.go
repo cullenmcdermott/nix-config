@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -15,6 +16,32 @@ import (
 type ProdHandlers struct {
 	// CredentialsPath defaults to ~/.claude/.credentials.json.
 	CredentialsPath string
+
+	// OpAllow is the allowlist of op:// reference patterns the VM is permitted
+	// to read. A pattern ending in "*" is a prefix match; otherwise the match
+	// is exact. An empty slice denies every read — this is the safer default
+	// for a fresh install, where the user must opt in to specific refs.
+	OpAllow []string
+}
+
+// allowRef returns true when ref matches at least one pattern in patterns.
+// Pattern semantics:
+//   - trailing "*" → prefix match (everything before the "*" must be a prefix
+//     of ref); the pattern "*" alone therefore allows everything.
+//   - no trailing "*" → exact string match.
+//
+// An empty pattern list denies everything.
+func allowRef(ref string, patterns []string) bool {
+	for _, p := range patterns {
+		if strings.HasSuffix(p, "*") {
+			if strings.HasPrefix(ref, strings.TrimSuffix(p, "*")) {
+				return true
+			}
+		} else if ref == p {
+			return true
+		}
+	}
+	return false
 }
 
 // Secret reads a reference from 1Password. The ref is validated to start with
@@ -22,9 +49,18 @@ type ProdHandlers struct {
 // as a separate argv entry (not shell-expanded), so there is no shell injection
 // risk. The op:// prefix also prevents flag injection since refs never start
 // with "-".
+//
+// In addition, the ref must match the OpAllow allowlist. An empty allowlist
+// denies all reads with a hint to configure bridge.op_allow.
 func (p *ProdHandlers) Secret(ctx context.Context, ref string) (string, error) {
 	if !strings.HasPrefix(ref, "op://") {
 		return "", fmt.Errorf("ref must start with op://")
+	}
+	if len(p.OpAllow) == 0 {
+		return "", fmt.Errorf(`op read denied: no bridge.op_allow patterns configured in ~/.config/sandbox/config.toml (add e.g. op_allow = ["op://Private/*"] under [bridge])`)
+	}
+	if !allowRef(ref, p.OpAllow) {
+		return "", fmt.Errorf("op read denied: %s does not match any bridge.op_allow pattern", ref)
 	}
 	cmd := exec.CommandContext(ctx, "op", "read", ref)
 	out, err := cmd.Output()
@@ -34,11 +70,31 @@ func (p *ProdHandlers) Secret(ctx context.Context, ref string) (string, error) {
 	return strings.TrimRight(string(out), "\n"), nil
 }
 
-func (p *ProdHandlers) Open(ctx context.Context, url string) error {
-	cmd := exec.CommandContext(ctx, "open", url)
+// Open opens a URL on the host via macOS `open`. The VM is untrusted, so the
+// scheme is re-validated here even though the server layer also checks it —
+// defense in depth, and protects any non-server caller in the future.
+func (p *ProdHandlers) Open(ctx context.Context, raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("parse url: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("url.open: only http(s) URLs allowed, got scheme %q", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("url.open: empty host in %q", raw)
+	}
+	cmd := exec.CommandContext(ctx, "open", raw)
 	return cmd.Run()
 }
 
+// Auth returns the host's Claude credential to the VM. Unlike Secret, there is
+// NO allowlist here: any VM process holding the bridge token receives the
+// token. This is an intentional credential-egress surface (the in-VM agent must
+// authenticate to the Anthropic API on the user's behalf), but it means the
+// host's Claude credential is exposed to whatever runs in the sandbox. Prefer
+// the short-lived OAuth token (file/keychain) over a static ANTHROPIC_API_KEY:
+// the env var is returned with no expiry and, if exfiltrated, does not rotate.
 func (p *ProdHandlers) Auth(ctx context.Context) (string, time.Time, error) {
 	// 1. Explicit environment variable — highest priority, no expiry.
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {

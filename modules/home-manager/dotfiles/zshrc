@@ -1,6 +1,6 @@
 function squish {
   if [ -z "$1" ]; then
-    BRANCH=origin/master
+    BRANCH=origin/main
   else
     BRANCH=$1
   fi
@@ -8,12 +8,11 @@ function squish {
 }
 
 toggle-audio () {
-	if [[ "$(SwitchAudioSource -c)" == "Shure MV7" ]]
-	then
-		SwitchAudioSource -s 'CalDigit TS4 Audio - Rear'
-	else
-		SwitchAudioSource -s 'Shure MV7'
-	fi
+  if [[ "$(SwitchAudioSource -c)" == "Shure MV7" ]]; then
+    SwitchAudioSource -s 'CalDigit TS4 Audio - Rear'
+  else
+    SwitchAudioSource -s 'Shure MV7'
+  fi
 }
 
 # Cached kubectl completion (regenerate with: kubectl completion zsh > ~/.cache/kubectl-completion.zsh)

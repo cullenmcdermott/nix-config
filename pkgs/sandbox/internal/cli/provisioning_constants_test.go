@@ -22,20 +22,21 @@ func TestArchToPlatform(t *testing.T) {
 	}
 }
 
-func TestBuildClaudeURL(t *testing.T) {
-	platforms := []string{"linux-arm64", "linux-x64", "darwin-arm64", "darwin-x64"}
-	for _, platform := range platforms {
-		url := BuildClaudeURL("2.1.138", platform)
-		// Must contain the platform exactly once.
-		if count := strings.Count(url, platform); count != 1 {
-			t.Errorf("BuildClaudeURL(%q) contains platform %q %d times, want 1: %s", platform, platform, count, url)
-		}
-		// Must not double-prefix linux-.
-		if strings.Contains(url, "linux-linux-") {
-			t.Errorf("BuildClaudeURL(%q) has double linux- prefix: %s", platform, url)
-		}
-		if strings.Contains(url, "linux-darwin-") {
-			t.Errorf("BuildClaudeURL(%q) has linux-darwin- prefix: %s", platform, url)
-		}
+func TestClaudeGCSBase(t *testing.T) {
+	base := ClaudeGCSBase()
+	if !strings.HasPrefix(base, "https://storage.googleapis.com/claude-code-dist-") {
+		t.Errorf("unexpected base URL: %s", base)
+	}
+	if !strings.HasSuffix(base, "/claude-code-releases") {
+		t.Errorf("base must end in /claude-code-releases (no trailing slash): %s", base)
+	}
+	if !strings.Contains(base, ClaudeGCSBucket) {
+		t.Errorf("base missing bucket id: %s", base)
+	}
+}
+
+func TestClaudeChannelIsValid(t *testing.T) {
+	if ClaudeChannel != "stable" && ClaudeChannel != "latest" {
+		t.Errorf("ClaudeChannel must be stable or latest, got %q", ClaudeChannel)
 	}
 }

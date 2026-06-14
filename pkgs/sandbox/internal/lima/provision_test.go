@@ -12,9 +12,9 @@ func TestRenderProvision_FullStack(t *testing.T) {
 		FloxVersion:         "1.12.0",
 		FloxURL:             "https://downloads.flox.dev/by-env/stable/deb/flox-1.12.0.aarch64-linux.deb",
 		FloxSHA256:          "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-		ClaudeVersion:       "2.1.138",
-		ClaudeURL:           "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.138/linux-arm64/claude",
-		ClaudeSHA256:        "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe",
+		ClaudeGCSBase:       "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases",
+		ClaudeChannel:       "latest",
+		ClaudePlatform:      "linux-arm64",
 		AgentsMarkdown:      "## Environment\nhello\n",
 	})
 	if err != nil {
@@ -29,8 +29,10 @@ func TestRenderProvision_FullStack(t *testing.T) {
 		"https://downloads.flox.dev/by-env/stable/deb/flox-1.12.0.aarch64-linux.deb",
 		"sha256sum -c",
 		"# ── Claude Code ──",
-		"storage.googleapis.com/claude-code-dist",
-		"https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.138/linux-arm64/claude",
+		`CLAUDE_BASE="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"`,
+		"$CLAUDE_BASE/latest",
+		"manifest.json",
+		"linux-arm64/claude",
 		"# ── CLAUDE.md",
 		"/etc/sandbox/CLAUDE.md",
 		"## Environment",
@@ -100,13 +102,44 @@ func TestRenderProvision_FloxGuardedByCommandCheck(t *testing.T) {
 	}
 }
 
-func TestRenderProvision_ClaudeGuardedByCommandCheck(t *testing.T) {
-	got, err := RenderProvision(ProvisionConfig{User: "bob", HostClaudeMountRoot: "/var/sandbox/host-claude"})
+func TestRenderProvision_ClaudeTracksChannel(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "bob",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		ClaudeGCSBase:       "https://example.test/releases",
+		ClaudeChannel:       "latest",
+		ClaudePlatform:      "linux-arm64",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(got, "command -v claude") {
-		t.Errorf("claude install not guarded by command -v check:\n%s", got)
+	// Version is resolved from the channel at provision time (every boot) and
+	// tracked via a stamp file so unchanged versions skip the download.
+	if !strings.Contains(got, `WANT_CLAUDE=$(curl -fsSL --max-time 30 "$CLAUDE_BASE/latest"`) {
+		t.Errorf("channel version resolution not in script:\n%s", got)
+	}
+	if !strings.Contains(got, "/etc/sandbox/claude-version") {
+		t.Errorf("claude version stamp file not in script:\n%s", got)
+	}
+	// Downloads must be verified against the release manifest's checksum.
+	if !strings.Contains(got, "manifest.json") || !strings.Contains(got, "sha256sum -c") {
+		t.Errorf("manifest checksum verification not in script:\n%s", got)
+	}
+	if !strings.Contains(got, `["platforms"]["linux-arm64"]["checksum"]`) {
+		t.Errorf("platform checksum lookup not in script:\n%s", got)
+	}
+	// When the wrapper has already renamed the real binary, the new binary
+	// must land at claude.real, not clobber the wrapper at /usr/local/bin/claude.
+	if !strings.Contains(got, `[ -x /usr/local/bin/claude.real ] && dest=/usr/local/bin/claude.real`) {
+		t.Errorf("claude install does not target claude.real on wrapped VMs:\n%s", got)
+	}
+	// A failed update must not break boot when claude is already installed,
+	// but a failed first install must fail the provision.
+	if !strings.Contains(got, "warning: claude $WANT_CLAUDE install failed") {
+		t.Errorf("fail-open update path not in script:\n%s", got)
+	}
+	if !strings.Contains(got, "error: claude install failed and no existing install present") {
+		t.Errorf("fail-closed first-install path not in script:\n%s", got)
 	}
 }
 
@@ -177,22 +210,44 @@ func TestRenderProvision_ApplyScriptUsesPrintfNotHeredoc(t *testing.T) {
 	}
 }
 
-func TestRenderProvision_RsyncSeedFromWarmTemplate(t *testing.T) {
-	got, err := RenderProvision(ProvisionConfig{User: "alice", HostClaudeMountRoot: "/var/sandbox/host-claude"})
+func TestRenderProvision_NixCacheSubstituter(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		NixCachePublicKey:   "sandbox-cache-1:AbCdEf0123==",
+		NixCacheVMPath:      "/var/sandbox/nix-cache",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(got, "/var/sandbox/warm-nix/store") {
-		t.Errorf("warm template mount path not in script:\n%s", got)
+	for _, needle := range []string{
+		"# ── Shared Nix binary cache",
+		`grep -qs "file:///var/sandbox/nix-cache" /etc/nix/nix.conf`,
+		"extra-substituters = file:///var/sandbox/nix-cache",
+		"extra-trusted-public-keys = sandbox-cache-1:AbCdEf0123==",
+		"systemctl restart nix-daemon",
+	} {
+		if !strings.Contains(got, needle) {
+			t.Errorf("missing %q in:\n%s", needle, got)
+		}
 	}
-	if !strings.Contains(got, "rsync") {
-		t.Errorf("rsync not in script:\n%s", got)
+}
+
+func TestRenderProvision_NixCacheSubstituter_OmittedWhenKeyEmpty(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(got, "--ignore-existing") {
-		t.Errorf("rsync --ignore-existing not in script:\n%s", got)
+	// With no NixCachePublicKey, the whole block (including the comment) must
+	// not appear.
+	if strings.Contains(got, "extra-substituters = file://") {
+		t.Errorf("substituter line leaked into script with no public key:\n%s", got)
 	}
-	if !strings.Contains(got, "# ── Seed /nix/store from warm template ─") {
-		t.Errorf("warm seed comment not in script:\n%s", got)
+	if strings.Contains(got, "extra-trusted-public-keys") {
+		t.Errorf("trusted-public-keys line leaked into script with no public key:\n%s", got)
 	}
 }
 func TestRenderProvision_OmpBinaryInstall(t *testing.T) {
@@ -247,10 +302,10 @@ func TestRenderProvision_OmpConfigSetup(t *testing.T) {
 
 func TestRenderProvision_OmpBindMounts(t *testing.T) {
 	got, err := RenderProvision(ProvisionConfig{
-		User:             "alice",
+		User:                "alice",
 		HostClaudeMountRoot: "/var/sandbox/host-claude",
-		HostOmpMountRoot: "/var/sandbox/host-omp",
-		OmpSubpaths:      []string{"skills", "prompts", "extensions", "themes"},
+		HostOmpMountRoot:    "/var/sandbox/host-omp",
+		OmpSubpaths:         []string{"skills", "prompts", "extensions", "themes"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -265,10 +320,10 @@ func TestRenderProvision_OmpBindMounts(t *testing.T) {
 
 func TestRenderProvision_OmpOverlayReapply(t *testing.T) {
 	got, err := RenderProvision(ProvisionConfig{
-		User:             "alice",
+		User:                "alice",
 		HostClaudeMountRoot: "/var/sandbox/host-claude",
-		HostOmpMountRoot: "/var/sandbox/host-omp",
-		OmpSubpaths:      []string{"skills", "prompts"},
+		HostOmpMountRoot:    "/var/sandbox/host-omp",
+		OmpSubpaths:         []string{"skills", "prompts"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -276,6 +331,65 @@ func TestRenderProvision_OmpOverlayReapply(t *testing.T) {
 	// The overlay re-apply script must include omp mount re-application.
 	if !strings.Contains(got, `HOST_OMP="`) {
 		t.Errorf("overlay script missing HOST_OMP variable")
+	}
+}
+
+func TestRenderProvision_BridgeShimsInstalled(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Both shims must read from /var/sandbox/bin and install under
+	// /usr/local/bin with the destination names that other tools (op,
+	// xdg-open) expect to find on PATH.
+	for _, needle := range []string{
+		"/var/sandbox/bin/sandbox-op",
+		"install -m 0755 /var/sandbox/bin/sandbox-op /usr/local/bin/op",
+		"/var/sandbox/bin/sandbox-xdg-open",
+		"install -m 0755 /var/sandbox/bin/sandbox-xdg-open /usr/local/bin/xdg-open",
+	} {
+		if !strings.Contains(got, needle) {
+			t.Errorf("missing %q in provision script", needle)
+		}
+	}
+}
+
+func TestRenderProvision_PersistsCredentials(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+		CredentialsVMPath:   "/var/sandbox/credentials",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{
+		"# ── Persistent LLM credentials",
+		`CRED_ROOT="/var/sandbox/credentials"`,
+		`mountpoint -q "$CRED_ROOT"`,
+		`ln -sfn "$CRED_ROOT/claude/.credentials.json" "$USER_HOME/.claude/.credentials.json"`,
+		`ln -sfn "$CRED_ROOT/codex/auth.json" "$USER_HOME/.codex/auth.json"`,
+	} {
+		if !strings.Contains(got, needle) {
+			t.Errorf("missing %q in:\n%s", needle, got)
+		}
+	}
+}
+
+func TestRenderProvision_CredentialsOmittedWhenUnset(t *testing.T) {
+	got, err := RenderProvision(ProvisionConfig{
+		User:                "alice",
+		HostClaudeMountRoot: "/var/sandbox/host-claude",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The guarded body (not the section comment) must be absent without a path.
+	if strings.Contains(got, `CRED_ROOT=`) {
+		t.Errorf("credentials wiring leaked into script with no CredentialsVMPath:\n%s", got)
 	}
 }
 
@@ -292,5 +406,39 @@ func TestRenderProvision_OmpEnvVars(t *testing.T) {
 	}
 	if !strings.Contains(got, `PI_CONFIG_DIR`) {
 		t.Errorf("missing PI_CONFIG_DIR in provision script")
+	}
+}
+
+func TestRenderProvision_QuotesProjectPathAgainstShellInjection(t *testing.T) {
+	// A project directory whose name contains shell metacharacters must not be
+	// evaluated when the script runs as root in the VM.
+	got, err := RenderProvision(ProvisionConfig{
+		User:        "alice",
+		ProjectPath: `/Users/alice/repo$(touch /pwned)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The dangerous substring must appear only inside single quotes, never as a
+	// bare command substitution.
+	if strings.Contains(got, `"/Users/alice/repo$(touch /pwned)"`) {
+		t.Fatalf("project path interpolated unquoted (command injection):\n%s", got)
+	}
+	if !strings.Contains(got, `install -d -o alice -g alice '/Users/alice/repo$(touch /pwned)'`) {
+		t.Fatalf("project path not single-quoted:\n%s", got)
+	}
+}
+
+func TestShellQuote(t *testing.T) {
+	cases := map[string]string{
+		`/plain/path`: `'/plain/path'`,
+		`a$(b)`:       `'a$(b)'`,
+		"a`b`":        "'a`b`'",
+		`it's`:        `'it'\''s'`,
+	}
+	for in, want := range cases {
+		if got := shellQuote(in); got != want {
+			t.Errorf("shellQuote(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

@@ -1,4 +1,4 @@
-{ pkgs, claudeCodeOverrides ? {}, ... }:
+{ pkgs, ... }:
 
 let
   ccusage = pkgs.callPackage ./ccusage.nix { };
