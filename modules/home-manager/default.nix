@@ -125,12 +125,23 @@ in
           "Bash(uv run:*)"
         ];
       };
-      env = {
-        CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING = "1";
-      };
       effortLevel = "high";
+      # Required for `ultracode` effort level (multi-agent dynamic workflows).
+      enableWorkflows = true;
       interactiveMode = true;
       autoCompact = false;
+      # Flicker-free alt-screen TUI renderer (equivalent to /tui fullscreen).
+      tui = "fullscreen";
+      # Binary is managed by the Homebrew `claude-code@latest` cask; disable the
+      # built-in self-updater so it doesn't fight the cask-installed version.
+      autoUpdates = false;
+      # Commit trailer is added manually (see context below); don't auto-append
+      # a second `Co-authored-by: Claude` line.
+      includeCoAuthoredBy = false;
+      # File checkpoints for /rewind (undo of Claude's edits).
+      fileCheckpointingEnabled = true;
+      # Ring the terminal bell when Claude finishes / goes idle (Ghostty).
+      preferredNotifChannel = "terminal_bell";
       sandbox = {
         enabled = true;
         autoAllowBashIfSandboxed = true;

@@ -53,6 +53,7 @@ in
       nixfmt
       nodejs
       omnictl
+      opencode
       packer
       python3
       pyright

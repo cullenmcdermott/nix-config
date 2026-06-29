@@ -2,45 +2,35 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 
 let
   cfg = config.programs.sandbox;
-  outs = pkgs.callPackage ../../pkgs/sandbox { };
+  system = pkgs.stdenv.hostPlatform.system;
+  # The sandbox CLI is built by its own flake (referenced as the `sandbox`
+  # input). It is no longer vendored in this repo.
+  sandboxPkg = inputs.sandbox.packages.${system}.default;
+  # Standalone statusline binary (extracted from the old embedded sandbox CLI).
+  claudeStatusline = pkgs.callPackage ../../pkgs/claude-statusline { };
 in
 {
   options.programs.sandbox = {
-    enable = lib.mkEnableOption "sandbox — per-project Lima VM wrapper for AI coding agents";
+    enable = lib.mkEnableOption "sandbox — run AI coding agents in remote Kubernetes sessions";
     package = lib.mkOption {
       type = lib.types.package;
-      default = outs.sandbox;
-      description = "The sandbox host binary.";
-    };
-    vmBinariesPackage = lib.mkOption {
-      type = lib.types.package;
-      default = outs.sandboxVmBinaries;
-      description = ''
-        Cross-compiled Linux/aarch64 binaries for the sandbox VM.
-        Contains sandbox-claude (wrapper) and claude-statusline.
-        Mounted into the VM at /var/sandbox/bin/.
-      '';
+      default = sandboxPkg;
+      description = "The sandbox CLI binary.";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [
-      cfg.package
-      pkgs.lima
-      pkgs.mutagen
-    ];
-    # Point at sandbox-claude inside the combined VM binaries package.
-    # The sandbox host binary mounts filepath.Dir(this) into /var/sandbox/bin/,
-    # which exposes every binary in the package (sandbox-claude, claude-statusline).
-    home.sessionVariables.SANDBOX_CLAUDE_WRAPPER = "${cfg.vmBinariesPackage}/bin/sandbox-claude";
+    home.packages = [ cfg.package ];
 
-    # Use the Go statusline binary on the host too — same binary that runs
-    # inside the VM, compiled natively for the host platform.
-    programs.claude-code-nix.statusLine.package = lib.mkDefault outs.claudeStatusline;
+    # Use the Go statusline binary for Claude Code on the host. This is a
+    # separate, self-contained binary (pkgs/claude-statusline) and does not
+    # depend on the sandbox CLI.
+    programs.claude-code-nix.statusLine.package = lib.mkDefault claudeStatusline;
   };
 }
