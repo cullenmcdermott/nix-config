@@ -231,11 +231,11 @@
     "flox-agentic": {
       "flake": false,
       "locked": {
-        "lastModified": 1776443187,
-        "narHash": "sha256-+prUM8xsydY7eNozDwf/dmhny/ZBU+obbgQJBkmoPx0=",
+        "lastModified": 1782432304,
+        "narHash": "sha256-N1sBsQPlQaU6ES1poT7pN4/6ZOEeePcgs8IfiEvFoeU=",
         "owner": "flox",
         "repo": "flox-agentic",
-        "rev": "5f851be895cf90ccc40f177d3f78693b5b18e2d8",
+        "rev": "84ba858ad58d204c5b93d1d7fce17ae75d147925",
         "type": "github"
       },
       "original": {
@@ -273,11 +273,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782233665,
-        "narHash": "sha256-h/xOtrByoA/Ak1lWHn0O1lVZz4qWYbwOSLQ8YSwQO0I=",
+        "lastModified": 1782749631,
+        "narHash": "sha256-slFTUgDy0KTPA4LBAmC/9SngDq8GCPdX+ZR0yQHHN1E=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "062581938b4a378a82dfbb294b494808157153a1",
+        "rev": "5d72a29fc36ac21adae6ae35568fe5ee6700850f",
         "type": "github"
       },
       "original": {
@@ -424,11 +424,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1782118813,
-        "narHash": "sha256-BnbXO5s5EhV89lLXMAGCzPdEN5a6vNqvMk71obeTEUw=",
+        "lastModified": 1782666739,
+        "narHash": "sha256-2CYuaRDT7hcYnGW+3TTTy+fNnY4jQ6/mGk6ew035XP4=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b3c092d3c36d91e2f61f3dfb39a159f180a56659",
+        "rev": "534ee3d8beb1737b5342995f8837e2b2705ce0d8",
         "type": "github"
       },
       "original": {
@@ -500,11 +500,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782762042,
-        "narHash": "sha256-tpFO0IH5iFNH3+rO8n6EhFZMYTHz3/SZdCihyArkxSU=",
+        "lastModified": 1782783291,
+        "narHash": "sha256-W7d4HAGJLvrS3zVmL4bMQs0w2VoBobxnNtvml7q/T0U=",
         "ref": "refs/heads/main",
-        "rev": "e246f6439eaff1adb417302a93187b969bbed827",
-        "revCount": 39,
+        "rev": "bd0b9ba1a22129900cb47f5c563723bc61ed7a45",
+        "revCount": 43,
         "type": "git",
         "url": "file:///Users/cullen/git/sandbox"
       },
