@@ -289,6 +289,30 @@ let
   statusLineScriptText =
     if cfg.statusLine.scriptText != null then cfg.statusLine.scriptText else defaultStatusLineScript;
 
+  claudeConfigDir = config.programs.claude-code.configDir;
+
+  # Installs the Nix-generated settings.json as a regular writable file,
+  # deep-merging over any existing file so runtime keys survive rebuilds.
+  # Nix-declared keys win on conflict; jq's `*` merges objects but replaces
+  # arrays (so permissions.allow is fully owned by Nix).
+  mergeSettingsScript = pkgs.writeShellScript "claude-code-merge-settings" ''
+    set -euo pipefail
+    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.jq ]}
+    target="$1"
+    generated="$2"
+    if [ -L "$target" ]; then
+      rm "$target"
+    fi
+    if [ -f "$target" ]; then
+      tmp="$(mktemp "$target.merge.XXXXXX")"
+      jq --slurp '.[0] * .[1]' "$target" "$generated" > "$tmp"
+      mv "$tmp" "$target"
+    else
+      cp "$generated" "$target"
+    fi
+    chmod 0644 "$target"
+  '';
+
   # When a statusline package is set, use the binary directly; skip the script.
   useStatuslineBinary = cfg.statusLine.package != null;
 in
@@ -363,6 +387,22 @@ in
       description = "Default model to pass via --model to claude aliases. null omits the flag.";
     };
 
+    # --- Mutable settings.json ---
+
+    mutableSettings = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Install settings.json as a regular writable file instead of a
+        read-only Nix store symlink. Runtime commands that persist to user
+        settings (/effort, /config, "always allow" prompts) fail with EACCES
+        against the symlink. When enabled, activation deep-merges the
+        Nix-generated settings over the existing file: Nix-declared keys are
+        reasserted on every rebuild, while keys only ever set at runtime
+        survive between rebuilds.
+      '';
+    };
+
     # --- Extra Packages ---
 
     extraPackages = lib.mkOption {
@@ -425,7 +465,21 @@ in
           {
             text = builtins.toJSON cfg.lsp.servers;
           };
+
+      # Keep the upstream-generated settings.json out of the symlink tree;
+      # the activation script below installs it as a writable file instead.
+      # (enable=false still leaves .source readable for the script.)
+      "${claudeConfigDir}/settings.json" = lib.mkIf cfg.mutableSettings {
+        enable = lib.mkForce false;
+      };
     };
+
+    home.activation.claudeCodeMutableSettings = lib.mkIf cfg.mutableSettings (
+      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        run ${mergeSettingsScript} ${lib.escapeShellArg "${claudeConfigDir}/settings.json"} \
+          ${config.home.file."${claudeConfigDir}/settings.json".source}
+      ''
+    );
 
     # Shell aliases - inject --plugin-dir so LSP works without special invocation
     programs.zsh.shellAliases = lib.mkIf cfg.lsp.enable (

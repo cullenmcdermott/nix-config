@@ -15,6 +15,13 @@ in
       {
         nixpkgs.hostPlatform = "aarch64-darwin";
         nixpkgs.config.allowUnfree = true;
+        # nix-darwin's manual builder still passes `--toc-depth`, which
+        # nixpkgs-unstable's nixos-render-docs removed (use --sidebar-depth).
+        # Skip building the HTML manual until nix-darwin catches up. Also drop
+        # the uninstaller, whose own inner darwin-system rebuilds the same
+        # broken manual regardless of this setting.
+        documentation.enable = false;
+        system.tools.darwin-uninstaller.enable = false;
       }
       self.darwinModules.profiles.personalMac
       self.darwinModules.flox
