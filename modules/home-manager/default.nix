@@ -26,6 +26,19 @@ let
         bin = "google-chrome-stable";
         channel = "chrome";
       };
+  # Render an agent definition with the configured model tiers substituted for
+  # the @WEAK_MODEL@/@STRONG_MODEL@ placeholders in its frontmatter. Returns
+  # the content as a string — programs.claude-code.agents maps strings to
+  # home.file.text (a derivation or path would be linked unsubstituted).
+  tieredAgent =
+    path:
+    builtins.replaceStrings
+      [ "@WEAK_MODEL@" "@STRONG_MODEL@" ]
+      [
+        config.cullen.ai.models.anthropic.weak
+        config.cullen.ai.models.anthropic.strong
+      ]
+      (builtins.readFile path);
 in
 {
   imports = [
@@ -37,7 +50,10 @@ in
     ./claude-code.nix
     ./zwift-media.nix
     ./omp.nix
+    ./ai-models.nix
   ];
+
+  cullen.ai.enable = true;
 
   # HA-specific zsh init — depends on programs.claude-code-nix.homeAssistant
   # (claude-code.nix is imported above, so config is available here)
@@ -186,7 +202,10 @@ in
       - `watchexec`: Run commands on file changes.
       - `delta`: Syntax-highlighting pager for git diffs.
       - `rg` (ripgrep), `fd`, `bat`, `jq`, `curl`, `gh` (GitHub CLI)
-    '';
+
+    ''
+    # Model-tier delegation policy — rendered from cullen.ai.models (ai-models.nix).
+    + config.cullen.ai.claudeDelegationPolicy;
 
     skills = {
       slack-gif-creator = "${claudeSkills}/slack-gif-creator";
@@ -194,19 +213,29 @@ in
       frontend-design = "${claudeSkills}/skills/frontend-design";
       llm-orchestrator = ./../../skills/llm-orchestrator;
       claude-code-config = ./../../skills/claude-code-config;
+      delegation = ./../../skills/delegation;
+      spec = ./../../skills/spec;
+      # Vendored OpenSpec-generated skills (see skills/openspec/README.md for
+      # the regeneration procedure). Paired with commands/opsx/ for /opsx:*.
+      openspec-propose = ./../../skills/openspec/openspec-propose;
+      openspec-apply-change = ./../../skills/openspec/openspec-apply-change;
+      openspec-archive-change = ./../../skills/openspec/openspec-archive-change;
+      openspec-explore = ./../../skills/openspec/openspec-explore;
+      openspec-sync-specs = ./../../skills/openspec/openspec-sync-specs;
     }
     // lib.optionalAttrs config.programs.claude-code-nix.homeAssistant.enable {
       home-assistant = ./../../skills/home-assistant;
     };
 
     agents = {
+      builder = tieredAgent ./../../agents/builder.md;
       external-reviewer = ./../../agents/external-reviewer.md;
       reviewer-architect = ./../../agents/reviewer-architect.md;
       reviewer-newcomer = ./../../agents/reviewer-newcomer.md;
-      reviewer-perf = ./../../agents/reviewer-perf.md;
+      reviewer-perf = tieredAgent ./../../agents/reviewer-perf.md;
       reviewer-security = ./../../agents/reviewer-security.md;
-      reviewer-stylist = ./../../agents/reviewer-stylist.md;
-      reviewer-tester = ./../../agents/reviewer-tester.md;
+      reviewer-stylist = tieredAgent ./../../agents/reviewer-stylist.md;
+      reviewer-tester = tieredAgent ./../../agents/reviewer-tester.md;
     };
 
     commandsDir = ./../../commands;
@@ -214,6 +243,8 @@ in
 
   programs.claude-code-nix = {
     enable = true;
+    # Passed as --model on every alias launch, so /model inside a session is
+    # session-only by design — this line always wins for new sessions.
     defaultModel = "claude-opus-4-8";
 
     mcpServers.playwright = {
@@ -303,6 +334,15 @@ in
     };
 
     extraPackages = [
+      # OpenSpec CLI — backs the vendored openspec-* skills and the `spec`
+      # wrapper skill. nixpkgs has 1.4.1; the store feature (planning repos
+      # outside the code repo) needs >= 1.5.0, which lands with nixpkgs PR
+      # #538904 — after it merges, a nixpkgs flake update picks it up from
+      # the binary cache. Building it from source locally does not work:
+      # pnpm's node worker threads hit an fd-reuse race with macOS guarded
+      # fds under the nix-daemon (EXC_GUARD SIGKILL), so we wait for Hydra.
+      pkgs.openspec
+
       (pkgs.writeShellScriptBin "mcp-server-playwright-wrapper" ''
         export PWMCP_PROFILES_DIR_FOR_TEST="$HOME/.pwmcp-profiles"
         exec ${pkgs.playwright-mcp}/bin/mcp-server-playwright \

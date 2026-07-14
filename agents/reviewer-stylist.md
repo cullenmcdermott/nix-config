@@ -1,7 +1,7 @@
 ---
 name: reviewer-stylist
 description: Style reviewer focusing on naming, idioms, clarity, and documentation gaps
-model: haiku
+model: @WEAK_MODEL@
 memory: user
 tools:
   - Read

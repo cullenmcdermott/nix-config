@@ -80,11 +80,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781761792,
-        "narHash": "sha256-rCPytmKNjctLloB6UgK5CRrHSwV4b0ygxtJLPPp8R14=",
+        "lastModified": 1783395956,
+        "narHash": "sha256-AAbexQvDoK+6GFJdhY6kqjA+6ECKRkidgWxkn4gMwAA=",
         "owner": "nix-darwin",
         "repo": "nix-darwin",
-        "rev": "a1fa429e945becaf60468600daf649be4ba0350c",
+        "rev": "d5bd9cd77aea4c0a8f49e7fd85545671a208ed15",
         "type": "github"
       },
       "original": {
@@ -273,11 +273,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783222121,
-        "narHash": "sha256-E/ElL373TO8lQ2aMvYyzN+k4xkVaUGoRqoa8AtM71tI=",
+        "lastModified": 1783744526,
+        "narHash": "sha256-yYVxW+uIbCx0Nt870fbErQbz+b2+3Gwpppe+JbIU+Co=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "a1645f40777620c4bd2b6d854b290c2fc354a266",
+        "rev": "2afec152df4e284d264f8489d16004c264aebf4c",
         "type": "github"
       },
       "original": {
@@ -500,11 +500,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783239176,
-        "narHash": "sha256-ObNW0XmmdlhkIHc1UaMB/lQsB2Gk4q3KBNFwmk8D9IQ=",
-        "ref": "refs/heads/runner/effort-capability",
-        "rev": "fc424a1e50f34f9db9c8fe25fa6392404a02e0a6",
-        "revCount": 86,
+        "lastModified": 1783796297,
+        "narHash": "sha256-laXptq6o5WRcwanE8JlIordT1ueokrjjyZTGyT6yvuY=",
+        "ref": "refs/heads/main",
+        "rev": "b68df9d7e1956d6c612e9ce1f3cfe815c9042f10",
+        "revCount": 145,
         "type": "git",
         "url": "file:///Users/cullen/git/sandbox"
       },
@@ -516,16 +516,16 @@
     "superpowers": {
       "flake": false,
       "locked": {
-        "lastModified": 1774985005,
-        "narHash": "sha256-HQtO9cZfPPIkHDj64NeQuG9p9WhSKBVkWGWhZkZjZoo=",
+        "lastModified": 1783029415,
+        "narHash": "sha256-kHdQ9e44doBk2yYW88tMSCqVG8ycYcvJSZlrIziXhpA=",
         "owner": "obra",
         "repo": "superpowers",
-        "rev": "1f20bef3f59b85ad7b52718f822e37c4478a3ff5",
+        "rev": "d884ae04edebef577e82ff7c4e143debd0bbec99",
         "type": "github"
       },
       "original": {
         "owner": "obra",
-        "ref": "v5.0.7",
+        "ref": "v6.1.1",
         "repo": "superpowers",
         "type": "github"
       }

@@ -1,7 +1,7 @@
 ---
 name: reviewer-tester
 description: Testing reviewer focusing on coverage, edge cases, testability, and mocking strategies
-model: sonnet
+model: @WEAK_MODEL@
 memory: user
 tools:
   - Read

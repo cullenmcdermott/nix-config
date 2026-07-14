@@ -9,30 +9,30 @@ let
   ompAgentDir = "${config.xdg.configHome}/omp/agent";
   omp = pkgs.callPackage ./packages/omp.nix { };
 
+  # Kept in lockstep with the Claude Code trim in flake-modules/modules.nix:
+  # discipline skills only; planning/process skills are superseded by the
+  # OpenSpec flow (skills/spec).
   superPowersSkillNames = [
-    "brainstorming"
     "dispatching-parallel-agents"
-    "executing-plans"
-    "finishing-a-development-branch"
-    "receiving-code-review"
-    "requesting-code-review"
     "subagent-driven-development"
     "systematic-debugging"
     "test-driven-development"
     "using-git-worktrees"
-    "using-superpowers"
     "verification-before-completion"
-    "writing-plans"
-    "writing-skills"
   ];
 
   # Build a single directory containing all skills (local + superpowers + flox-agentic)
   # so that home-manager can symlink it cleanly without path collisions.
   allSkills = pkgs.runCommand "omp-all-skills" { } ''
     mkdir -p $out
-    # Local skills from this repo
+    # Local skills from this repo (a skill dir = contains SKILL.md; skips
+    # container dirs like skills/openspec, whose children are copied below)
     for d in ${./../../skills}/*; do
-      [ -d "$d" ] && cp -r "$d" $out/
+      [ -f "$d/SKILL.md" ] && cp -r "$d" $out/ || true
+    done
+    # Vendored OpenSpec skills live one level down
+    for d in ${./../../skills}/openspec/openspec-*; do
+      [ -f "$d/SKILL.md" ] && cp -r "$d" $out/ || true
     done
     # Superpowers skills
     for skill in ${lib.concatStringsSep " " (map (s: lib.escapeShellArg s) superPowersSkillNames)}; do

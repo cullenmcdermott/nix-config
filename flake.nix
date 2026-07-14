@@ -36,7 +36,7 @@
     flox-agentic.url = "github:flox/flox-agentic";
     flox-agentic.flake = false;
 
-    superpowers.url = "github:obra/superpowers/v5.0.7";
+    superpowers.url = "github:obra/superpowers/v6.1.1";
     superpowers.flake = false;
 
     # The standalone sandbox CLI (remote-Kubernetes agent sessions). Local path

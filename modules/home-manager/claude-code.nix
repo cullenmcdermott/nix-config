@@ -384,7 +384,13 @@ in
     defaultModel = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Default model to pass via --model to claude aliases. null omits the flag.";
+      description = ''
+        Default model to pass via --model to claude aliases. null omits the flag.
+        Note: because the aliases pass --model on every launch, an in-session
+        /model change (even when Claude "saves it as default") only lasts for
+        that session — the next launch overrides it with this value. This is
+        intentional: this option is the source of truth for new sessions.
+      '';
     };
 
     # --- Mutable settings.json ---

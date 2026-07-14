@@ -1,7 +1,7 @@
 ---
 name: reviewer-perf
 description: Performance reviewer focusing on algorithmic complexity, memory usage, I/O patterns, and caching
-model: inherit
+model: @WEAK_MODEL@
 memory: user
 tools:
   - Read

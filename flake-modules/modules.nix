@@ -121,9 +121,11 @@ in
     agenticSkills = { config, lib, ... }: {
       options.cullen.agenticSkills.enable = lib.mkEnableOption "Flox and Superpowers agentic skills for Claude Code";
       config = lib.mkIf config.cullen.agenticSkills.enable {
-        programs.claude-code.agents = {
-          code-reviewer = "${inputs.superpowers}/agents/code-reviewer.md";
-        };
+        # Superpowers is intentionally trimmed to the discipline skills; the
+        # planning/process skills (brainstorming, writing-plans,
+        # executing-plans, using-superpowers, code-review pair, ...) are
+        # superseded by the OpenSpec flow (see skills/spec) and built-in
+        # /code-review. The v5 code-reviewer agent no longer ships in v6.
         programs.claude-code.skills = {
           flox-environments = "${inputs.flox-agentic}/flox-plugin/skills/flox-environments";
           flox-services = "${inputs.flox-agentic}/flox-plugin/skills/flox-services";
@@ -132,19 +134,11 @@ in
           flox-publish = "${inputs.flox-agentic}/flox-plugin/skills/flox-publish";
           flox-sharing = "${inputs.flox-agentic}/flox-plugin/skills/flox-sharing";
           flox-cuda = "${inputs.flox-agentic}/flox-plugin/skills/flox-cuda";
-          sp-brainstorming = "${inputs.superpowers}/skills/brainstorming";
           sp-using-git-worktrees = "${inputs.superpowers}/skills/using-git-worktrees";
-          sp-writing-plans = "${inputs.superpowers}/skills/writing-plans";
           sp-subagent-driven-development = "${inputs.superpowers}/skills/subagent-driven-development";
           sp-test-driven-development = "${inputs.superpowers}/skills/test-driven-development";
           sp-systematic-debugging = "${inputs.superpowers}/skills/systematic-debugging";
           sp-dispatching-parallel-agents = "${inputs.superpowers}/skills/dispatching-parallel-agents";
-          sp-requesting-code-review = "${inputs.superpowers}/skills/requesting-code-review";
-          sp-receiving-code-review = "${inputs.superpowers}/skills/receiving-code-review";
-          sp-executing-plans = "${inputs.superpowers}/skills/executing-plans";
-          sp-finishing-a-development-branch = "${inputs.superpowers}/skills/finishing-a-development-branch";
-          sp-using-superpowers = "${inputs.superpowers}/skills/using-superpowers";
-          sp-writing-skills = "${inputs.superpowers}/skills/writing-skills";
           sp-verification-before-completion = "${inputs.superpowers}/skills/verification-before-completion";
         };
       };
