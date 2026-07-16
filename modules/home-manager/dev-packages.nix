@@ -1,9 +1,16 @@
 {
   pkgs,
   lib,
+  inputs ? { },
   ...
 }:
 let
+  # See the nixpkgs-watchexec input in flake.nix — temporary pin until the
+  # ld64 fix reaches nixpkgs-unstable. Falls back to pkgs.watchexec for
+  # consumers whose inputs don't carry the pin (and once the pin is removed).
+  watchexec-pinned =
+    inputs.nixpkgs-watchexec.legacyPackages.${pkgs.stdenv.hostPlatform.system}.watchexec
+      or pkgs.watchexec;
   gdk = pkgs.google-cloud-sdk.withExtraComponents (
     with pkgs.google-cloud-sdk.components;
     [
@@ -74,7 +81,7 @@ in
       scc
       shellcheck
       skopeo
-      watchexec
+      watchexec-pinned
       yq-go
       statix
       talosctl

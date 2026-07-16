@@ -15,6 +15,12 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
+    # Temporary pin: watchexec fails to link on aarch64-darwin at current
+    # nixpkgs-unstable (ld64 hardening SIGTRAP; Hydra is broken too). Fix is
+    # NixOS/nixpkgs#536365, merged to staging-next 2026-07-15. Drop this input
+    # once watchexec builds again on nixpkgs-unstable.
+    nixpkgs-watchexec.url = "github:NixOS/nixpkgs/19a8a1e6d8b7315b6fd84e5a51977ce6f69d5a5b";
+
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
 
