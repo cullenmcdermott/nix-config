@@ -142,8 +142,32 @@ in
         ];
       };
       effortLevel = "high";
-      # Required for `ultracode` effort level (multi-agent dynamic workflows).
+      # Required for `ultracode` effort level (multi-agent dynamic workflows)
+      # and for the claude-security plugin below, which is workflow-driven.
       enableWorkflows = true;
+
+      # Marketplace plugins are declared here instead of being installed with
+      # `/plugin install`, so a rebuild reasserts them. `claude-plugins-official`
+      # is auto-registered on first *interactive* launch; declaring it makes a
+      # fresh machine work non-interactively too.
+      extraKnownMarketplaces = {
+        claude-plugins-official = {
+          source = {
+            source = "github";
+            repo = "anthropics/claude-plugins-official";
+          };
+        };
+      };
+      # Keys are `<plugin>@<marketplace>`. Plugin *contents* are fetched and
+      # auto-updated by Claude Code, not pinned by Nix — only the intent to
+      # have them enabled is declarative.
+      enabledPlugins = {
+        # `/claude-security` — on-demand multi-agent vulnerability scan of the
+        # repo or working diff, then reviewed patch suggestions. Public beta as
+        # of 2026-07-22. Needs enableWorkflows (above) plus python3 and git on
+        # PATH; python3 comes from dev-packages.nix. Tokens count against plan.
+        "claude-security@claude-plugins-official" = true;
+      };
       interactiveMode = true;
       autoCompact = false;
       # Flicker-free alt-screen TUI renderer (equivalent to /tui fullscreen).
@@ -173,6 +197,7 @@ in
       - **To search for packages**, use `nix search nixpkgs <query>`.
       - Do not assume a tool is available unless it is listed below or you have verified it exists on the system.
       - **LSP servers are Nix-managed.** Do not install LSP plugins from the Claude Code marketplace. All language server configuration is declarative via the `programs.claude-code-nix.lsp.servers` option.
+      - **Marketplace plugins are Nix-managed.** Do not run `/plugin install`; add the plugin to `programs.claude-code.settings.enabledPlugins` (and `extraKnownMarketplaces` if it is not from the official marketplace) and rebuild.
 
       ## Sandbox Awareness
       - If a command fails with unexpected "permission denied", TLS errors, or connection refused, it is likely a sandbox restriction. Retry the command outside the sandbox before investigating other causes.
@@ -245,7 +270,7 @@ in
     enable = true;
     # Passed as --model on every alias launch, so /model inside a session is
     # session-only by design — this line always wins for new sessions.
-    defaultModel = "claude-opus-4-8";
+    defaultModel = "claude-opus-5";
 
     mcpServers.playwright = {
       command = "mcp-server-playwright-wrapper";

@@ -19,18 +19,16 @@ let
     }
   ];
 
-  mkRule = description: button: to: {
+  mkRule = description: buttons: to: {
     inherit description;
-    manipulators = [
-      {
-        type = "basic";
-        from = {
-          pointing_button = button;
-        };
-        to = [ to ];
-        conditions = zwiftCondition;
-      }
-    ];
+    manipulators = map (button: {
+      type = "basic";
+      from = {
+        pointing_button = button;
+      };
+      to = [ to ];
+      conditions = zwiftCondition;
+    }) buttons;
   };
 
   # Seek by injecting JavaScript into Arc's active tab via AppleScript.
@@ -43,21 +41,34 @@ let
     offset:
     "osascript -e 'tell application \"Arc\" to tell front window to execute active tab javascript \"(function(){var v=document.getElementsByTagName(`video`)[0]; if(v){v.currentTime+=${offset}}})()\"'";
 
-  # Button codes are for the current controllers (Xbox layout / 8BitDo).
-  # Use Karabiner-EventViewer to find codes for other controllers.
+  # Button codes per controller (find codes for others with Karabiner-EventViewer):
+  #   8BitDo Micro: A=button1, B=button2, X=button4, Y=button5
+  #   Xbox:         A=button1, B=button2, X=button7, Y=button8
   karabinerConfig = {
     title = "Game Controller Media Controls";
     rules = [
-      (mkRule "Controller: A Button = Play/Pause" "button1" {
+      (mkRule "Controller: A Button = Play/Pause" [ "button1" ] {
         consumer_key_code = "play_or_pause";
       })
-      (mkRule "Controller: Y Button = Seek Forward ${toString cfg.seekForwardSeconds}s" "button8" {
-        shell_command = seekCommand (toString cfg.seekForwardSeconds);
-      })
-      (mkRule "Controller: X Button = Seek Back ${toString cfg.seekBackSeconds}s" "button7" {
-        shell_command = seekCommand "-${toString cfg.seekBackSeconds}";
-      })
-      (mkRule "Controller: B Button = Mute" "button2" {
+      (mkRule "Controller: Y Button = Seek Forward ${toString cfg.seekForwardSeconds}s"
+        [
+          "button5"
+          "button8"
+        ]
+        {
+          shell_command = seekCommand (toString cfg.seekForwardSeconds);
+        }
+      )
+      (mkRule "Controller: X Button = Seek Back ${toString cfg.seekBackSeconds}s"
+        [
+          "button4"
+          "button7"
+        ]
+        {
+          shell_command = seekCommand "-${toString cfg.seekBackSeconds}";
+        }
+      )
+      (mkRule "Controller: B Button = Mute" [ "button2" ] {
         consumer_key_code = "mute";
       })
     ];
