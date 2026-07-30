@@ -111,7 +111,7 @@
         };
       };
     in
-    # Verify agenticSkills closes over its own remote inputs (flox-agentic,
+    # Verify agenticSkills closes over its own remote inputs (flox-skills,
     # superpowers) without requiring them in consumer extraSpecialArgs.inputs.
     # forcedEval makes the check real — see homeManagerBase-contract above.
     pkgs.runCommand "homeManagerAgenticSkills-contract-check"

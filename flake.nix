@@ -39,8 +39,8 @@
 
     mac-app-util.url = "github:hraban/mac-app-util";
 
-    flox-agentic.url = "github:flox/flox-agentic";
-    flox-agentic.flake = false;
+    flox-skills.url = "github:flox/flox-skills/v1.0.0";
+    flox-skills.flake = false;
 
     superpowers.url = "github:obra/superpowers/v6.1.1";
     superpowers.flake = false;

@@ -21,7 +21,7 @@ let
     "verification-before-completion"
   ];
 
-  # Build a single directory containing all skills (local + superpowers + flox-agentic)
+  # Build a single directory containing all skills (local + superpowers)
   # so that home-manager can symlink it cleanly without path collisions.
   allSkills = pkgs.runCommand "omp-all-skills" { } ''
     mkdir -p $out

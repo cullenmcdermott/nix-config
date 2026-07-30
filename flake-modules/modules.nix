@@ -3,7 +3,7 @@
 # inputs.system-config.homeManagerModules.*.
 #
 # Optional modules close over this flake's own inputs so consumers don't need
-# to declare flox, dagger, flox-agentic, or superpowers as local inputs.
+# to declare flox, dagger, flox-skills, or superpowers as local inputs.
 { self, inputs, ... }:
 let
   # Factory for standalone home-manager configs (any non-NixOS / non-darwin
@@ -127,13 +127,12 @@ in
         # superseded by the OpenSpec flow (see skills/spec) and built-in
         # /code-review. The v5 code-reviewer agent no longer ships in v6.
         programs.claude-code.skills = {
-          flox-environments = "${inputs.flox-agentic}/flox-plugin/skills/flox-environments";
-          flox-services = "${inputs.flox-agentic}/flox-plugin/skills/flox-services";
-          flox-builds = "${inputs.flox-agentic}/flox-plugin/skills/flox-builds";
-          flox-containers = "${inputs.flox-agentic}/flox-plugin/skills/flox-containers";
-          flox-publish = "${inputs.flox-agentic}/flox-plugin/skills/flox-publish";
-          flox-sharing = "${inputs.flox-agentic}/flox-plugin/skills/flox-sharing";
-          flox-cuda = "${inputs.flox-agentic}/flox-plugin/skills/flox-cuda";
+          # flox-skills v1.0.0 collapsed the seven per-topic flox-agentic
+          # skills (environments/services/builds/containers/publish/sharing/
+          # cuda) into one `flox` skill with references/, plus `floxify` for
+          # onboarding an existing repo.
+          flox = "${inputs.flox-skills}/flox-plugin/skills/flox";
+          floxify = "${inputs.flox-skills}/flox-plugin/skills/floxify";
           sp-using-git-worktrees = "${inputs.superpowers}/skills/using-git-worktrees";
           sp-subagent-driven-development = "${inputs.superpowers}/skills/subagent-driven-development";
           sp-test-driven-development = "${inputs.superpowers}/skills/test-driven-development";
