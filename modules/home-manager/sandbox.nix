@@ -26,7 +26,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ cfg.package ];
+    home.packages = [
+      cfg.package
+      # Runtime dependency, not a build one: the sandbox CLI shells out to the
+      # `mutagen` binary (resolved via PATH) to sync the workspace into the
+      # remote session pod. Dropping it makes `sandbox sync`/`doctor` fail at
+      # runtime rather than at eval time — keep it here.
+      pkgs.mutagen
+    ];
 
     # Use the Go statusline binary for Claude Code on the host. This is a
     # separate, self-contained binary (pkgs/claude-statusline) and does not

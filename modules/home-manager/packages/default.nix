@@ -10,6 +10,6 @@ in
   home.packages = [
     ccusage
     depot-cli
-    pkgs.cursor-cli # Cursor CLI (cursor-agent binary) for multi-LLM orchestration
+    pkgs.syncthing
   ];
 }
