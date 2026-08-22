@@ -66,9 +66,24 @@
     append = true;
   };
   programs.zsh.syntaxHighlighting.enable = true;
-  programs.zsh.initContent = lib.mkBefore ''
-    ${builtins.readFile ./dotfiles/zshrc}
-  '';
+  programs.zsh.initContent = lib.mkMerge [
+    (lib.mkBefore ''
+      ${builtins.readFile ./dotfiles/zshrc}
+    '')
+    # Flox auto-activation: cd into a directory holding a .flox and its env
+    # activates; leave and it deactivates. Two other pieces live in
+    # ~/.config/flox/flox.toml, which flox owns and writes itself:
+    # features.auto_activate = true, and the per-directory allow/deny decisions
+    # that `flox activate allow` records.
+    #
+    # There is no hook-only install — the prompt hook ships with any in-place
+    # activation, so this activates the home environment (~/.flox) to get it.
+    # `-D` would be wrong here: it means the FloxHub env <user>/default, and
+    # this machine is not logged in to FloxHub.
+    (lib.mkAfter ''
+      eval "$(flox activate -d ~)"
+    '')
+  ];
   programs.zsh.shellAliases = {
     brew = "op plugin run -- brew";
     ls = "ls --color=auto -F";

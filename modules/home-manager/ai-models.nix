@@ -10,10 +10,23 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   cfg = config.cullen.ai;
+
+  # Codex has no plugin/hook mechanism under Nix management (its config.toml is
+  # runtime-owned, see below), so the ponytail skills are pinned and linked
+  # directly instead of going through the marketplace route Claude Code uses in
+  # default.nix. Bump rev+hash to update; the two harnesses track ponytail
+  # independently by design (Claude Code auto-updates its plugin copy).
+  ponytailSrc = pkgs.fetchFromGitHub {
+    owner = "DietrichGebert";
+    repo = "ponytail";
+    rev = "2ed6c52c9d7e5e56942508591085fd45dea277d3";
+    hash = "sha256-bGdXvzhWPwGdz3T2Yh2h6lf+3PBRFAfdBxP5pESmCHI=";
+  };
 
   # Shared policy text; only the dispatch mechanics differ per harness.
   mkDelegationPolicy =
@@ -48,6 +61,15 @@ let
     ## Verify Before Claiming
     Always verify state with actual commands before making claims. When
     debugging, form hypotheses and test them — do not state assumptions as fact.
+
+    ## Ponytail (always on)
+    Load the `ponytail` skill at the start of every coding task and keep it
+    active for the whole task: YAGNI, reuse what's already here, stdlib and
+    native platform features before dependencies, shortest working diff. It is
+    never a licence to skip understanding the problem, validation, error
+    handling, security, or accessibility. Use `ponytail-review` to check a diff
+    for over-engineering. This mirrors the always-on ponytail plugin in Claude
+    Code.
 
     ${mkDelegationPolicy {
       strong = cfg.models.openai.strong;
@@ -120,6 +142,12 @@ in
       # Same delegation skill as Claude Code (Codex uses the same open skill
       # format under ~/.codex/skills/).
       ".codex/skills/delegation".source = ./../../skills/delegation;
+      # Ponytail: the core ruleset skill (kept always-on by the directive in
+      # codexAgentsMd above) and the diff reviewer. The rest of the plugin's
+      # skills (-audit, -debt, -gain, -help) are Claude-Code-only on purpose;
+      # add them here the same way if they turn out to be useful under Codex.
+      ".codex/skills/ponytail".source = "${ponytailSrc}/skills/ponytail";
+      ".codex/skills/ponytail-review".source = "${ponytailSrc}/skills/ponytail-review";
     };
   };
 }
