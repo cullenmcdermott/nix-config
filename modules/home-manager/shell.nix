@@ -76,13 +76,11 @@
     # features.auto_activate = true, and the per-directory allow/deny decisions
     # that `flox activate allow` records.
     #
-    # There is no hook-only install — the prompt hook ships with any in-place
-    # activation, so this activates the home environment (~/.flox) to get it.
-    # `-D` would be wrong here: it means the FloxHub env <user>/default, and
-    # this machine is not logged in to FloxHub.
-    (lib.mkAfter ''
-      eval "$(flox activate -d ~)"
-    '')
+    # The prompt hook itself is installed directly by system-config's zsh init
+    # (a transcribed copy of what `flox activate` emits). We used to activate
+    # the home environment (~/.flox) here purely to get that hook, but that
+    # errors on every new shell whenever ~/.flox is missing or incomplete, and
+    # it is redundant now that the hook is installed on its own.
   ];
   programs.zsh.shellAliases = {
     brew = "op plugin run -- brew";
