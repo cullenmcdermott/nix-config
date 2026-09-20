@@ -3,11 +3,11 @@
   perSystem =
     { pkgs, ... }:
     {
-      formatter = pkgs.nixfmt-rfc-style;
+      formatter = pkgs.nixfmt;
 
       devShells.default = pkgs.mkShell {
         packages = [
-          pkgs.nixfmt-rfc-style
+          pkgs.nixfmt
           pkgs.nixd
           pkgs.statix
           pkgs.deadnix
@@ -19,7 +19,7 @@
   flake.checks.aarch64-darwin.macbook = self.darwinConfigurations."cullens-MacBook-Pro".system;
 
   # Contract checks: verify base modules work without consumer-provided optional inputs.
-  # These fail at build time if a base module accidentally requires an input that
+  # These fail at evaluation time if a base module accidentally requires an input that
   # downstream consumers would not normally have in their flake inputs.
   flake.checks.aarch64-darwin.darwinBase-contract =
     let
@@ -33,27 +33,24 @@
           username = "test";
         };
         modules = [
-          { nixpkgs.hostPlatform = "aarch64-darwin"; }
+          {
+            nixpkgs.hostPlatform = "aarch64-darwin";
+            system.stateVersion = 6;
+          }
           self.darwinModules.base
         ];
       };
     in
-    pkgs.runCommand "darwinBase-contract-check" { } ''
-      # Require that darwinModules.base does not reference consumer inputs
-      # by checking the nix.settings.experimental-features option.
-      # If base required inputs.dagger/flox, this would eval error before here.
-      echo "${
-        if
-          test.config.nix.settings.experimental-features == [
-            "nix-command"
-            "flakes"
-          ]
-        then
-          "PASS: darwinModules.base has nix-command flakes"
-        else
-          "FAIL: darwinModules.base eval was not clean"
-      }" > $out
-    '';
+    assert
+      test.config.nix.settings.experimental-features == [
+        "nix-command"
+        "flakes"
+      ];
+    pkgs.runCommand "darwinBase-contract-check"
+      { forcedEval = builtins.unsafeDiscardStringContext test.system.drvPath; }
+      ''
+        echo "PASS: darwinModules.base evaluated without consumer inputs ($forcedEval)" > $out
+      '';
 
   flake.checks.aarch64-darwin.homeManagerBase-contract =
     let
@@ -68,7 +65,7 @@
           self.homeManagerModules.base
           {
             home.username = "test";
-            home.homeDirectory = "/Users/test";
+            home.homeDirectory = "/custom/test";
             programs.home-manager.enable = true;
           }
         ];
@@ -77,6 +74,7 @@
         };
       };
     in
+    assert hm.config.home.homeDirectory == "/custom/test";
     # forcedEval instantiates the full activation derivation at eval time —
     # without it, `hm` is never demanded (laziness) and the check is vacuous.
     pkgs.runCommand "homeManagerBase-contract-check"

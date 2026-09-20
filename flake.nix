@@ -45,10 +45,8 @@
     superpowers.url = "github:obra/superpowers/v6.1.1";
     superpowers.flake = false;
 
-    # The standalone sandbox CLI (remote-Kubernetes agent sessions). Local path
-    # for now — not yet pushed to a remote. Swap to a tagged github: URL once it
-    # is published, e.g. "github:cullenmcdermott/sandbox/v0.1.0".
-    sandbox.url = "git+file:///Users/cullen/git/sandbox";
+    # Remote source at the same revision as the former local checkout input.
+    sandbox.url = "git+https://github.com/cullenmcdermott/sandbox.git?rev=5d6ff7aaca357d9d29aa046c87a9441c869bfcc4";
     sandbox.inputs.nixpkgs.follows = "nixpkgs";
   };
 

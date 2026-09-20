@@ -45,6 +45,7 @@ in
     nixGc = ../modules/darwin/nix-gc.nix;
     homebrewBase = ../modules/darwin/homebrew-base.nix;
     homebrewPersonal = ../modules/darwin/homebrew-personal.nix;
+    linuxBuilder = ../modules/darwin/linux-builder.nix;
 
     flox =
       {

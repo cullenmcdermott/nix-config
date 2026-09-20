@@ -71,16 +71,18 @@ echo 'Activating home-manager configuration ($HM_CONFIG)...'
 nix run home-manager -- switch -b backup --flake \"$CONFIG_REPO#$HM_CONFIG\"
 
 echo 'Setting zsh as default shell...'
-sudo chsh -s \$(which zsh) \"$USERNAME\"
+# Use the distro zsh: chsh only accepts shells listed in /etc/shells, and the
+# Nix-profile zsh that \$(which zsh) resolves to is not listed there.
+sudo chsh -s /usr/bin/zsh \"$USERNAME\"
 
-for rc in ~/.bashrc ~/.zshrc; do
-  touch \"\$rc\"
-  echo '. ~/.nix-profile/etc/profile.d/nix.sh' >> \"\$rc\"
-  echo 'export SSH_ASKPASS=\$(which ksshaskpass 2>/dev/null)' >> \"\$rc\"
-  echo 'export GIT_ASKPASS=\$(which ksshaskpass 2>/dev/null)' >> \"\$rc\"
-done
-
-git config --global core.askpass \"\$(which ksshaskpass)\"
+# Only bash needs bootstrapping: it is not managed by home-manager, so the Nix
+# profile has to be sourced explicitly. zsh gets the Nix environment from the
+# generated ~/.config/zsh/.zshenv and SSH_ASKPASS/GIT_ASKPASS from
+# home.sessionVariables — never append to those, home-manager rewrites them on
+# every switch (and its zshrc lives in ~/.config/zsh, not ~/.zshrc).
+if ! grep -qF 'profile.d/nix.sh' ~/.bashrc 2>/dev/null; then
+  echo '. ~/.nix-profile/etc/profile.d/nix.sh' >> ~/.bashrc
+fi
 
 echo 'Setup complete.'
 SETUP_EOF

@@ -16,7 +16,8 @@ standalone home-manager configs for Linux machines, containers, and the sandbox 
 | `hosts/cullens-macbook-pro/` | The macOS `darwinConfiguration` |
 | `modules/darwin/` | nix-darwin modules (defaults, homebrew, GC) |
 | `modules/home-manager/` | home-manager modules, profiles, dotfiles |
-| `pkgs/sandbox/` | The `sandbox` Go CLI (per-project Lima VMs) |
+| `pkgs/claude-statusline/` | The native Claude statusline binary |
+| `sandbox` flake input | The remotely pinned CLI for Kubernetes agent sessions |
 | `distrobox-setup.sh` | Bootstrap a distrobox container's home-manager |
 
 ## macOS host
@@ -44,6 +45,35 @@ sudo nix run nix-darwin -- switch --flake ~/src/system-config#cullens-MacBook-Pr
 # subsequent rebuilds: just `nixswitch`
 ```
 
+The sandbox CLI is pinned to a GitHub commit; no separate local checkout is
+required. Access to its repository is required when fetching it.
+
+For the first build, set `cullen.linuxBuilder.tuned = false` in the host config
+so the stock Linux builder can come from the binary cache. Once that builder
+is running, restore `true` and rebuild to enable the tuned VM.
+
+## Shared coding agents
+
+`modules/home-manager/ai-models.nix` shares the Nix-declared Claude skill
+catalog (including Flox/Superpowers), global instructions, and MCP definitions
+with Codex and OpenCode. Add skills through `programs.claude-code.skills` and
+servers through `programs.claude-code-nix.mcpServers`. Ponytail uses one pinned
+source across all three; its always-on instruction replaces the Claude plugin.
+Claude-specific agents, commands, LSP plugins, and provider-supplied tools remain
+harness-specific. MCP authentication is separate in each harness.
+
+Codex defaults to “approve for me”: `approval_policy = "on-request"`,
+`approvals_reviewer = "auto_review"`, and `sandbox_mode = "workspace-write"`.
+Activation merges those settings into writable TOML, preserving runtime model,
+trust, UI settings, and unrelated MCP entries. OpenCode's generated
+`opencode.json` is merged with its existing runtime `opencode.jsonc`.
+
+The shared `delegation` skill calls `codex exec`, `claude --print`, or
+`opencode run` directly for implementation and peer review. Child sessions need
+an explicit task/context handoff and use their own harness permissions; they
+must never be used to bypass a parent's denial. Blocked work returns to the
+parent's approval process. No delegation service or wrapper is required.
+
 ## Portable Linux / standalone home-manager
 
 Non-darwin machines use standalone home-manager configs produced by the
@@ -65,6 +95,9 @@ Defined `homeConfigurations`:
 
 > google-chrome has no aarch64-linux build, so the workstation profile
 > transparently falls back to chromium on that platform.
+
+Darwin rebuild aliases are only installed on macOS. Shell startup does not
+activate a home Flox environment; activate project environments explicitly.
 
 ### distrobox
 

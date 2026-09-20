@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Discover installed and authenticated LLM CLI tools.
+"""Discover installed LLM CLI tools (does not check authentication).
 
-Checks for: claude, agent (Cursor CLI), llm, gemini, aider.
+Checks for: codex, opencode, claude, cursor-agent, llm, gemini, aider.
 Returns JSON with availability status.
 """
 
@@ -13,6 +13,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 KNOWN_CLIS = {
+    "codex": {
+        "command": "codex",
+        "version_flag": "--version",
+        "description": "Codex CLI",
+    },
+    "opencode": {
+        "command": "opencode",
+        "version_flag": "--version",
+        "description": "OpenCode CLI",
+    },
     "claude": {
         "command": "claude",
         "version_flag": "--version",

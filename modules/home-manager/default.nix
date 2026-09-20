@@ -157,14 +157,6 @@ in
             repo = "anthropics/claude-plugins-official";
           };
         };
-        # Single-plugin marketplace: the ponytail repo is its own marketplace,
-        # so the marketplace name and the plugin name are both `ponytail`.
-        ponytail = {
-          source = {
-            source = "github";
-            repo = "DietrichGebert/ponytail";
-          };
-        };
       };
       # Keys are `<plugin>@<marketplace>`. Plugin *contents* are fetched and
       # auto-updated by Claude Code, not pinned by Nix — only the intent to
@@ -175,14 +167,8 @@ in
         # of 2026-07-22. Needs enableWorkflows (above) plus python3 and git on
         # PATH; python3 comes from dev-packages.nix. Tokens count against plan.
         "claude-security@claude-plugins-official" = true;
-        # `/ponytail [lite|full|ultra|off]` — "lazy senior dev" ruleset (YAGNI,
-        # stdlib first, shortest working diff), plus /ponytail-review,
-        # -audit, -debt, -gain. Its SessionStart/SubagentStart hooks inject the
-        # ruleset into every session *and* every subagent; mode defaults to
-        # `full` because PONYTAIL_DEFAULT_MODE is deliberately left unset. The
-        # hooks shell out to `node`, which comes from dev-packages.nix. The
-        # same ruleset is mirrored to Codex in ai-models.nix.
-        "ponytail@ponytail" = true;
+        # Portable ponytail skills are pinned for every harness in ai-models.nix.
+        "ponytail@ponytail" = false;
       };
       interactiveMode = true;
       autoCompact = false;
@@ -224,7 +210,7 @@ in
       - **Marketplace plugins are Nix-managed.** Do not run `/plugin install`; add the plugin to `programs.claude-code.settings.enabledPlugins` (and `extraKnownMarketplaces` if it is not from the official marketplace) and rebuild.
 
       ## Sandbox Awareness
-      - If a command fails with unexpected "permission denied", TLS errors, or connection refused, it is likely a sandbox restriction. Retry the command outside the sandbox before investigating other causes.
+      - If a command fails with permission, TLS, or connection errors, check whether the sandbox caused it. Request any necessary escalation through the current harness; do not bypass a denial using another harness.
 
       ## Verify Before Claiming
       - Always verify state with actual commands before making claims. Do not assert that code isn't pushed, tags don't exist, or services aren't running without checking first. When debugging, form hypotheses and test them with commands — do not state assumptions as fact.
@@ -257,13 +243,14 @@ in
     + config.cullen.ai.claudeDelegationPolicy;
 
     skills = {
-      slack-gif-creator = "${claudeSkills}/slack-gif-creator";
-      skill-creator = "${claudeSkills}/skill-creator";
+      slack-gif-creator = "${claudeSkills}/skills/slack-gif-creator";
+      skill-creator = "${claudeSkills}/skills/skill-creator";
       frontend-design = "${claudeSkills}/skills/frontend-design";
       llm-orchestrator = ./../../skills/llm-orchestrator;
       claude-code-config = ./../../skills/claude-code-config;
       delegation = ./../../skills/delegation;
       spec = ./../../skills/spec;
+      converge = ./../../skills/converge;
       # Vendored OpenSpec-generated skills (see skills/openspec/README.md for
       # the regeneration procedure). Paired with commands/opsx/ for /opsx:*.
       openspec-propose = ./../../skills/openspec/openspec-propose;

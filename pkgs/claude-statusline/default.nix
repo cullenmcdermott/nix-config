@@ -16,6 +16,7 @@ buildGoModule {
     fileset = lib.fileset.unions [
       ./go.mod
       ./main.go
+      ./main_test.go
     ];
   };
 

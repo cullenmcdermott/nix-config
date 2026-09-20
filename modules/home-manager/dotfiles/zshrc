@@ -15,23 +15,23 @@ toggle-audio () {
   fi
 }
 
-# Cached kubectl completion (regenerate with: kubectl completion zsh > ~/.cache/kubectl-completion.zsh)
-if [[ -f ~/.cache/kubectl-completion.zsh ]]; then
-  source ~/.cache/kubectl-completion.zsh
-else
+# Cached kubectl completion (regenerate with: rm ~/.cache/kubectl-completion.zsh)
+# Only generate when the tool is installed, and remove the cache if generation
+# fails so an empty file is not sourced forever on hosts without kubectl.
+if [[ ! -f ~/.cache/kubectl-completion.zsh ]] && (( $+commands[kubectl] )); then
   mkdir -p ~/.cache
-  kubectl completion zsh > ~/.cache/kubectl-completion.zsh 2>/dev/null && source ~/.cache/kubectl-completion.zsh
+  kubectl completion zsh > ~/.cache/kubectl-completion.zsh 2>/dev/null || rm -f ~/.cache/kubectl-completion.zsh
 fi
-compdef kubecolor=kubectl
+[[ -f ~/.cache/kubectl-completion.zsh ]] && source ~/.cache/kubectl-completion.zsh
+(( $+functions[_kubectl] )) && compdef kubecolor=kubectl
 
-# Cached dagger completion (regenerate with: dagger completion zsh > ~/.cache/dagger-completion.zsh)
-if [[ -f ~/.cache/dagger-completion.zsh ]]; then
-  source ~/.cache/dagger-completion.zsh
-else
+# Cached dagger completion (regenerate with: rm ~/.cache/dagger-completion.zsh)
+if [[ ! -f ~/.cache/dagger-completion.zsh ]] && (( $+commands[dagger] )); then
   mkdir -p ~/.cache
-  dagger completion zsh > ~/.cache/dagger-completion.zsh 2>/dev/null && source ~/.cache/dagger-completion.zsh
+  dagger completion zsh > ~/.cache/dagger-completion.zsh 2>/dev/null || rm -f ~/.cache/dagger-completion.zsh
 fi
-compdef _dagger dagger
+[[ -f ~/.cache/dagger-completion.zsh ]] && source ~/.cache/dagger-completion.zsh
+(( $+functions[_dagger] )) && compdef _dagger dagger
 
 # Source ~/.env if it exists (set -a auto-exports all variables)
 [[ -f ~/.env ]] && { set -a; source ~/.env; set +a; }

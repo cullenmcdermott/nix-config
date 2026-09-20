@@ -151,15 +151,28 @@ let
         printf "''${ICON_MODEL}''${BLUE}''${BOLD}%s''${RESET}%b''${SEGD}%s/''${ORANGE}%s''${RESET} %b%b\n" \
             "$model" "$git_segment" "$current_display" "$total_display" "$context_bar" "$cost_segment"
 
-        CACHE_FILE="/tmp/claude-statusline-usage-cache.json"
+        # Skip caching when a private per-user directory is unavailable.
+        CACHE_FILE=""
+        if [ -n "''${XDG_CACHE_HOME:-}" ]; then
+            CACHE_DIR="$XDG_CACHE_HOME/claude-statusline"
+        elif [ -n "''${HOME:-}" ]; then
+            CACHE_DIR="$HOME/.cache/claude-statusline"
+        else
+            CACHE_DIR=""
+        fi
+        if [ -n "$CACHE_DIR" ] && \
+            ${pkgs.coreutils}/bin/mkdir -p -m 0700 "$CACHE_DIR" && \
+            ${pkgs.coreutils}/bin/chmod 0700 "$CACHE_DIR"; then
+            CACHE_FILE="$CACHE_DIR/usage-cache.json"
+        fi
         CACHE_TTL=60
 
         is_cache_valid() {
-            if [ ! -f "$CACHE_FILE" ]; then
+            if [ -z "$CACHE_FILE" ] || [ ! -f "$CACHE_FILE" ]; then
                 return 1
             fi
-            local now=$(date +%s)
-            local cache_mtime=$(date -r "$CACHE_FILE" +%s 2>/dev/null || echo 0)
+            local now=$(${pkgs.coreutils}/bin/date +%s)
+            local cache_mtime=$(${pkgs.coreutils}/bin/date -r "$CACHE_FILE" +%s 2>/dev/null || echo 0)
             local age=$((now - cache_mtime))
             [ $age -lt $CACHE_TTL ]
         }
@@ -180,10 +193,15 @@ let
             if [ $? -eq 0 ] && [ -n "$response" ]; then
                 local has_data=$(echo "$response" | ${pkgs.jq}/bin/jq -r '.five_hour // empty' 2>/dev/null)
                 if [ -n "$has_data" ]; then
-                    echo "$response" > "$CACHE_FILE"
+                    if [ -n "$CACHE_FILE" ]; then
+                        (umask 077; echo "$response" > "$CACHE_FILE")
+                    fi
+                    echo "$response"
                     return 0
                 else
-                    rm -f "$CACHE_FILE"
+                    if [ -n "$CACHE_FILE" ]; then
+                        rm -f "$CACHE_FILE"
+                    fi
                     return 1
                 fi
             fi
@@ -254,9 +272,7 @@ let
         if is_cache_valid; then
             usage_data=$(cat "$CACHE_FILE")
         else
-            if fetch_usage_data; then
-                usage_data=$(cat "$CACHE_FILE")
-            fi
+            usage_data=$(fetch_usage_data) || usage_data=""
         fi
 
         # If we have usage data, display lines 2 and 3
@@ -297,7 +313,12 @@ let
   # arrays (so permissions.allow is fully owned by Nix).
   mergeSettingsScript = pkgs.writeShellScript "claude-code-merge-settings" ''
     set -euo pipefail
-    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.jq ]}
+    export PATH=${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.jq
+      ]
+    }
     target="$1"
     generated="$2"
     if [ -L "$target" ]; then
@@ -305,12 +326,36 @@ let
     fi
     if [ -f "$target" ]; then
       tmp="$(mktemp "$target.merge.XXXXXX")"
+      trap 'rm -f "$tmp"' EXIT
       jq --slurp '.[0] * .[1]' "$target" "$generated" > "$tmp"
       mv "$tmp" "$target"
     else
       cp "$generated" "$target"
     fi
     chmod 0644 "$target"
+  '';
+
+  # Claude Code only reads user-scope MCP servers from ~/.claude.json (which it
+  # also writes at runtime), so merge them in at activation instead of writing a
+  # file it ignores. ponytail: last-writer-wins if Claude Code is running during
+  # a switch; restart the session if a server goes missing.
+  mergeMcpScript = pkgs.writeShellScript "claude-code-merge-mcp" ''
+    set -euo pipefail
+    export PATH=${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.jq
+      ]
+    }
+    target="$1"
+    servers="$2"
+    [ -f "$target" ] || echo '{}' > "$target"
+    tmp="$(mktemp "$target.merge.XXXXXX")"
+    trap 'rm -f "$tmp"' EXIT
+    jq --slurp '.[0] + { mcpServers: ((.[0].mcpServers // {}) + .[1]) }' \
+      "$target" "$servers" > "$tmp"
+    mv "$tmp" "$target"
+    chmod 0600 "$target"
   '';
 
   # When a statusline package is set, use the binary directly; skip the script.
@@ -372,10 +417,11 @@ in
       type = lib.types.attrsOf lib.types.anything;
       default = { };
       description = ''
-        MCP server definitions. Written to ~/.claude/mcp.json which Claude Code
-        auto-reads. Use this instead of upstream programs.claude-code.mcpServers
-        since the upstream approach wraps the Nix binary (which is shadowed by
-        the auto-updater binary).
+        MCP server definitions, merged into ~/.claude.json (user scope) at
+        activation — the only place Claude Code reads user-scope servers from.
+        Use this instead of upstream programs.claude-code.mcpServers since the
+        upstream approach wraps the Nix binary (which is shadowed by the
+        auto-updater binary).
       '';
     };
 
@@ -451,11 +497,6 @@ in
         executable = true;
       };
 
-      # MCP server configuration (auto-read by Claude Code)
-      ".claude/mcp.json" = lib.mkIf (cfg.mcpServers != { }) {
-        text = builtins.toJSON { mcpServers = cfg.mcpServers; };
-      };
-
       # LSP plugin manifest
       ".claude/custom-plugins/lsp-servers/.claude-plugin/plugin.json" = lib.mkIf cfg.lsp.enable {
         text = builtins.toJSON {
@@ -484,6 +525,13 @@ in
       lib.hm.dag.entryAfter [ "linkGeneration" ] ''
         run ${mergeSettingsScript} ${lib.escapeShellArg "${claudeConfigDir}/settings.json"} \
           ${config.home.file."${claudeConfigDir}/settings.json".source}
+      ''
+    );
+
+    home.activation.claudeCodeMcpServers = lib.mkIf (cfg.mcpServers != { }) (
+      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        run ${mergeMcpScript} ${lib.escapeShellArg "${config.home.homeDirectory}/.claude.json"} \
+          ${pkgs.writeText "claude-mcp-servers.json" (builtins.toJSON cfg.mcpServers)}
       ''
     );
 

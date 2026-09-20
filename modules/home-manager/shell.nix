@@ -66,28 +66,22 @@
     append = true;
   };
   programs.zsh.syntaxHighlighting.enable = true;
-  programs.zsh.initContent = lib.mkMerge [
-    (lib.mkBefore ''
-      ${builtins.readFile ./dotfiles/zshrc}
-    '')
-    # Flox auto-activation: cd into a directory holding a .flox and its env
-    # activates; leave and it deactivates. Two other pieces live in
-    # ~/.config/flox/flox.toml, which flox owns and writes itself:
-    # features.auto_activate = true, and the per-directory allow/deny decisions
-    # that `flox activate allow` records.
-    #
-    # The prompt hook itself is installed directly by system-config's zsh init
-    # (a transcribed copy of what `flox activate` emits). We used to activate
-    # the home environment (~/.flox) here purely to get that hook, but that
-    # errors on every new shell whenever ~/.flox is missing or incomplete, and
-    # it is redundant now that the hook is installed on its own.
-  ];
+  # Normal (mkOrder 1000) priority: home-manager emits this *after* its own
+  # `autoload -U compinit && compinit`, which the compdef calls in the file
+  # require. lib.mkBefore placed it above compinit, where compdef is undefined.
+  programs.zsh.initContent = builtins.readFile ./dotfiles/zshrc;
+  # Single-user Nix installs (the distrobox container) only put the profile on
+  # PATH via nix.sh. home-manager owns ~/.zshenv, so source it from envExtra
+  # rather than appending to a Nix-managed rc file. No-op when the file is
+  # absent (NixOS / multi-user installs).
+  programs.zsh.envExtra = lib.optionalString pkgs.stdenv.isLinux ''
+    if [[ -e $HOME/.nix-profile/etc/profile.d/nix.sh ]]; then
+      . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+    fi
+  '';
   programs.zsh.shellAliases = {
-    brew = "op plugin run -- brew";
     ls = "ls --color=auto -F";
     vim = "nvim";
-    nixswitch = "sudo darwin-rebuild switch --flake ~/src/system-config/.#";
-    nixup = "pushd ~/src/system-config && nix flake update && sudo darwin-rebuild switch --flake ~/src/system-config/.#; popd";
     k = "kubecolor";
     ga = "git add";
     gb = "git branch";
@@ -105,6 +99,13 @@
     gst = "git status";
     gcl = "git clone";
     grv = "git remote -v";
+  }
+  // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    # 1Password shell plugins, Homebrew and darwin-rebuild are macOS-only; the
+    # Linux hosts switch with `home-manager switch --flake <repo>#<name>`.
+    brew = "op plugin run -- brew";
+    nixswitch = "sudo darwin-rebuild switch --flake ~/src/system-config/.#";
+    nixup = "pushd ~/src/system-config && nix flake update && sudo darwin-rebuild switch --flake ~/src/system-config/.#; popd";
   };
   programs.zsh.plugins = [ ];
   programs.zsh.oh-my-zsh.enable = false;
@@ -118,6 +119,13 @@
   home.sessionVariables = {
     PAGER = "less";
     EDITOR = "nvim";
+  }
+  // lib.optionalAttrs pkgs.stdenv.isLinux {
+    # Graphical askpass for ssh/git prompts on the Linux boxes (Plasma) and in
+    # the distrobox container. Absolute store path so it resolves before the
+    # profile is on PATH; the package itself is in dev-packages.nix.
+    SSH_ASKPASS = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
+    GIT_ASKPASS = "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
   };
   home.sessionPath = [
     "$HOME/.local/bin"

@@ -3,7 +3,7 @@ _: {
     automatic = true;
     options = "--delete-older-than 14d";
   };
-  launchd.daemons.nix-gc.serviceConfig.StartCalendarInterval = [
+  nix.gc.interval = [
     {
       Weekday = 6;
       Hour = 10;

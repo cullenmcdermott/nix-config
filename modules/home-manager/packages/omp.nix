@@ -15,12 +15,6 @@ let
   hashes = {
     # aarch64-darwin — update with: nix hash convert --hash-algo sha256 --to sri $(nix-prefetch-url https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-arm64 | tail -1)
     "aarch64-darwin" = "sha256-MI9jvHJFljVnP+Dd4yMskNSEN1ilTeEhLXleUAuFvfg=";
-    # x86_64-darwin — not yet fetched
-    "x86_64-darwin" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-    # x86_64-linux — not yet fetched
-    "x86_64-linux" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-    # aarch64-linux — not yet fetched
-    "aarch64-linux" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   };
 
   src = pkgs.fetchurl {
@@ -28,11 +22,6 @@ let
       {
         "aarch64-darwin" =
           "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-arm64";
-        "x86_64-darwin" =
-          "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-darwin-x64";
-        "x86_64-linux" = "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-linux-x64";
-        "aarch64-linux" =
-          "https://github.com/can1357/oh-my-pi/releases/download/v${version}/omp-linux-arm64";
       }
       .${pkgs.stdenv.hostPlatform.system}
         or (throw "Unsupported platform: ${pkgs.stdenv.hostPlatform.system}");
@@ -60,12 +49,7 @@ pkgs.stdenv.mkDerivation {
     description = "AI coding agent for the terminal (enhanced fork of pi-coding-agent)";
     homepage = "https://github.com/can1357/oh-my-pi";
     license = licenses.asl20;
-    platforms = [
-      "aarch64-darwin"
-      "x86_64-darwin"
-      "x86_64-linux"
-      "aarch64-linux"
-    ];
+    platforms = builtins.attrNames hashes;
     mainProgram = "omp";
   };
 }

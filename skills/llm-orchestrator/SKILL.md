@@ -12,7 +12,7 @@ This skill provides shared infrastructure for multi-LLM orchestration workflows.
 ## Available Scripts
 
 ### `scripts/discover_llm_clis.py`
-Detect installed and authenticated LLM CLI tools. Returns JSON with availability status for each supported CLI.
+Detect installed LLM CLI tools, including Codex, OpenCode, and Claude Code. Returns JSON with installation status; authentication and permissions must be checked separately. Use the `delegation` skill for dispatch and escalation rules.
 
 **Usage:** `uv run scripts/discover_llm_clis.py`
 

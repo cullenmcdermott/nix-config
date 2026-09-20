@@ -271,9 +271,24 @@ func gitBranch(dir string) string {
 
 // ── Usage API ────────────────────────────────────────────────────────────────
 
-const usageCacheFile = "/tmp/claude-statusline-usage-cache.json"
+// Skip caching if a private per-user directory is unavailable.
+func usageCachePath() string {
+	root, err := os.UserCacheDir()
+	if err != nil {
+		return ""
+	}
+	dir := filepath.Join(root, "claude-statusline")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return ""
+	}
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "usage-cache.json")
+}
 
 func getUsage() *usageData {
+	usageCacheFile := usageCachePath()
 	// Try cached data first.
 	if data, err := os.ReadFile(usageCacheFile); err == nil {
 		if fi, err := os.Stat(usageCacheFile); err == nil {
@@ -322,7 +337,9 @@ func getUsage() *usageData {
 		return nil
 	}
 
-	_ = os.WriteFile(usageCacheFile, body, 0o644)
+	if usageCacheFile != "" {
+		_ = os.WriteFile(usageCacheFile, body, 0o600)
+	}
 	return &u
 }
 

@@ -194,8 +194,8 @@ in
     home.activation.ompConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       # omp writes runtime YAML caches from our nix-managed JSON files.
       # Delete them on every switch so the JSON files remain authoritative.
-      rm -f "${config.xdg.configHome}/omp/agent/config.yml"
-      rm -f "${config.xdg.configHome}/omp/agent/models.yml"
+      run rm -f "${config.xdg.configHome}/omp/agent/config.yml"
+      run rm -f "${config.xdg.configHome}/omp/agent/models.yml"
     '';
 
     xdg.configFile = {

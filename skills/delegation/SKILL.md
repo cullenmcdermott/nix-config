@@ -1,61 +1,108 @@
 ---
 name: delegation
-description: Tiered-model orchestration — a strong model plans, decomposes, and reviews while weak-model workers implement. Load before dispatching implementation work when acting as the orchestrator (see the "Orchestrate, Don't Implement" policy in global context).
+description: Delegate bounded implementation, investigation, or peer review work from Codex, Claude Code, or OpenCode to any of those harnesses using their native CLIs. Load before dispatching another agent; preserve the parent's task scope and permission boundaries.
 ---
 
 # Delegation
 
-You are the tech lead. Workers own keystrokes; you own correctness. This skill covers the dispatch mechanics and the review loop. The concrete model names for "strong" and "weak" tiers are defined in your global context (CLAUDE.md / AGENTS.md), not here.
+Any of the three harnesses can request work from any other, including itself.
+Use the native CLI through the parent's shell tool; no bridge server is needed.
+Follow the model tiers in the current AGENTS.md / CLAUDE.md when specified.
+The parent owns design, scope, integration, and final verification. A delegated
+worker implements its assigned task directly and does not delegate again unless
+the parent explicitly authorizes it. Handle trivial work locally.
 
-## 1. Decompose
+## Prepare the handoff
 
-Break the work into tasks that are independently implementable and verifiable. Each task must fit in a worker's context without your conversation history — workers see only the prompt you give them.
+- Give one bounded task per invocation: goal, repository root, files to read and
+  change, design decisions, constraints, and acceptance commands.
+- Include relevant conversation decisions and permission restrictions explicitly.
+  New CLI sessions do not inherit the conversation, in-memory tools, approvals,
+  or sandbox configuration. They load their own configured skills, tools, and
+  project instructions; verify required capabilities are available.
+- Launch in the intended repository or isolated worktree. Record `git status`
+  and the existing diff so another agent's changes are distinguishable from the
+  user's work. Parallel writers need disjoint files or separate worktrees.
+- For a peer review, specify the base commit or exact diff and request findings
+  with file/line evidence. Explicitly prohibit edits, commits, and delegation.
 
-For multi-task work, the plan artifact comes from the spec workflow — an
-OpenSpec change's `tasks.md` (see the `spec` skill), not a bespoke plan doc.
-Then use the existing skills rather than reinventing them:
-- `sp-subagent-driven-development` — executing the tasks one-by-one via
-  subagents (point it at the change's `tasks.md` as the plan)
-- `sp-dispatching-parallel-agents` — when 2+ tasks are independent
+## Dispatch with native CLIs
 
-## 2. Dispatch
+Check `codex exec --help`, `claude --help`, or `opencode run --help` if flags
+or installed versions differ. Use configured models unless task instructions
+specify one. Codex accepts `-m MODEL` and
+`-c model_reasoning_effort=medium` (low for mechanical work); Claude accepts
+`--model MODEL`; OpenCode accepts `--model PROVIDER/MODEL`.
 
-### In Claude Code
-- **Implementation** → the `builder` agent (pinned to the weak model). One task per dispatch.
-- **Codebase exploration/search** → the `Explore` agent.
-- Independent tasks: dispatch in parallel (single message, multiple Agent calls). Tasks touching the same files: sequential, or use worktree isolation.
-- In Workflow scripts, pass `effort: 'low'` for mechanical stages and reserve high effort for verify/judge stages.
+Use a quoted heredoc or a file written by the filesystem tool for task text.
+Never interpolate an untrusted task into shell code or use `eval`.
+For example, from the intended repository root:
 
-### In Codex
-- Dispatch via non-interactive exec with the weak model, one task per invocation:
-  ```
-  codex exec -m <weak-model> -c model_reasoning_effort=low "<task prompt>"
-  ```
-  Use `model_reasoning_effort=low` for mechanical work, `medium` for normal implementation.
+```sh
+agent_task_dir=$(mktemp -d)
+cat > "$agent_task_dir/task.md" <<'TASK'
+You are an implementation worker. Do not delegate further.
+Goal: implement the parent-specified change described below.
+Read the repository instructions first. Preserve existing user changes.
+Allowed files: [exact paths]. Approach: [design decision].
+Constraints: [scope, network/write limits, applicable parent restrictions].
+Acceptance: [commands and expected behavior].
+If permissions block work, stop and report the blocked action to the parent.
+Do not commit or publish. Report changed files and verification results.
+TASK
+```
 
-## 3. Write the task prompt
+Replace the bracketed handoff details, then choose **one** invocation:
 
-Workers have none of your context. Every dispatch includes:
+```sh
+# Codex: prompt from stdin; optional model override follows local tier policy.
+codex exec -C "$PWD" - < "$agent_task_dir/task.md"
 
-1. **Goal** — one sentence, what done looks like
-2. **Files** — exact paths to read and to change
-3. **Approach** — the design decision you already made (workers execute, they don't choose)
-4. **Constraints** — style, APIs to use/avoid, what NOT to touch
-5. **Acceptance** — the commands that must pass, expected behavior
+# Claude Code: print mode reads the prompt from stdin.
+# Requests requiring an unavailable interactive approver are denied.
+claude --print --permission-prompts none < "$agent_task_dir/task.md"
 
-## 4. Review loop
+# OpenCode: attach the prompt file, keeping shell arguments literal.
+opencode run --dir "$PWD" --file "$agent_task_dir/task.md" -- 'Complete the task in the attached task.md.'
+```
 
-For every worker result, before accepting:
+For an independent peer review, write this kind of task to a separate file and
+use the same dispatch commands (Codex additionally supports `-s read-only`):
 
-1. Read the actual diff (`git diff`) — not the worker's summary of it.
-2. Check scope: nothing changed beyond the task.
-3. Run the verification yourself (tests, build, lint). Worker claims are not evidence — see `sp-verification-before-completion`.
-4. Accept, or re-dispatch with a corrected prompt that names the specific defect.
+```text
+You are a peer reviewer. Do not edit files, commit, or delegate.
+Review [exact paths/diff against BASE] for correctness and regressions.
+Intended behavior: [requirements]. Constraints: [parent restrictions].
+Read the actual diff and relevant callers. Return actionable findings with
+file/line evidence, severity, and suggested corrections; say if none are found.
+Report any checks you could not perform. Do not request expanded permissions.
+```
 
-**Escalation:** if a worker fails the same task twice, implement it yourself. Don't loop a third time.
+Keep output and exit status, and remove the temporary task directory when done.
+Do not resume an unrelated session or attach to a different server just to
+reuse its credentials or approvals.
 
-## When NOT to delegate
+## Permissions and escalation
 
-- Trivial changes (roughly: one file, <30 lines) — dispatch overhead exceeds the task.
-- Architectural decisions, final verification, git commits, anything destructive — always yours.
-- You are already the weak tier (check your model identity) — just implement.
+Permission settings belong to each harness; similar defaults are not equivalent
+enforcement. The child must stay within the parent's authorized scope and
+restrictions. Preserve the enclosing sandbox and apply supported restrictions
+when necessary; a prompt alone is not a sandbox. If required boundaries cannot
+be enforced, keep that work in the parent or use an appropriately isolated child.
+
+Do not add bypass flags, auto-allow overrides, broader write roots, or disable
+nesting guards to get a child running. Do not retry a denied action through
+another harness. A blocked child reports the action and reason; the parent
+handles any needed escalation through its normal approval mechanism. Approval
+for a child launch does not approve unrelated actions inside the child. If a
+CLI is unavailable or unauthenticated, report that limitation; do not install
+packages or change credentials as part of delegation.
+
+## Accept the result
+
+Read the actual diff against the pre-dispatch state, check scope, and run the
+relevant verification yourself. A worker's success message is not evidence.
+Treat peer review findings as claims to check. Send a focused correction when
+needed; after two failed attempts at the same task, finish locally or report
+the concrete blocker. The parent retains commits, publishing, and destructive
+operations unless the user explicitly assigned them to the child.
