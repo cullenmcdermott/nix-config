@@ -80,6 +80,7 @@
     fi
   '';
   programs.zsh.shellAliases = {
+    cdx = "codex";
     ls = "ls --color=auto -F";
     vim = "nvim";
     k = "kubecolor";
