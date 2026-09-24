@@ -44,10 +44,6 @@
 
     superpowers.url = "github:obra/superpowers/v6.1.1";
     superpowers.flake = false;
-
-    # Remote source at the same revision as the former local checkout input.
-    sandbox.url = "git+https://github.com/cullenmcdermott/sandbox.git?rev=5d6ff7aaca357d9d29aa046c87a9441c869bfcc4";
-    sandbox.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -61,7 +57,7 @@
       imports = [
         ./flake-modules/modules.nix
         ./flake-modules/per-system.nix
-        ./flake-modules/sandbox.nix
+        ./flake-modules/claude-statusline.nix
         ./hosts/cullens-macbook-pro
       ];
     };

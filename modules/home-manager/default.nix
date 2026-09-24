@@ -178,13 +178,11 @@ in
       # narration, stay short unless asked to expand. Engineering work is as
       # thorough as Default; error reports, security warnings, and
       # destructive-action confirmations are never abbreviated. Requires Claude
-      # Code >= 2.1.237, so bump the `claude-code@latest` cask before this takes
-      # effect. Applies to the main conversation only — subagents keep their own
-      # system prompt — and only from the next session or `/clear`.
+      # Code >= 2.1.237. Applies to the main conversation only — subagents keep
+      # their own system prompt — and only from the next session or `/clear`.
       outputStyle = "Concise";
-      # Binary is managed by the Homebrew `claude-code@latest` cask; disable the
-      # built-in self-updater so it doesn't fight the cask-installed version.
-      autoUpdates = false;
+      # Binary comes from the native installer (~/.local/bin/claude), which
+      # keeps itself up to date.
       # Commit trailer is added manually (see context below); don't auto-append
       # a second `Co-authored-by: Claude` line.
       includeCoAuthoredBy = false;
@@ -281,7 +279,7 @@ in
     enable = true;
     # Passed as --model on every alias launch, so /model inside a session is
     # session-only by design — this line always wins for new sessions.
-    defaultModel = "claude-opus-5";
+    defaultModel = "claude-opus-5-5";
 
     mcpServers.playwright = {
       command = "mcp-server-playwright-wrapper";

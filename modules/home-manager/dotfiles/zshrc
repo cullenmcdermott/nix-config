@@ -7,6 +7,16 @@ function squish {
   git rebase -i $(git merge-base -a HEAD $BRANCH)
 }
 
+# git commit -v with an AI-drafted subject pre-filled in the editor
+gcai () {
+  git diff --cached --quiet && { echo "No staged changes."; return 1; }
+  local out=$(mktemp)
+  git diff --cached --no-ext-diff | codex exec --model gpt-6-luna --sandbox read-only --ephemeral -o "$out" \
+    'Write one short, simple commit subject for the staged diff on stdin. Output only the subject.' >/dev/null 2>&1
+  git commit -v -e -m "$(<"$out")" "$@"
+  rm -f "$out"
+}
+
 toggle-audio () {
   if [[ "$(SwitchAudioSource -c)" == "Shure MV7" ]]; then
     SwitchAudioSource -s 'CalDigit TS4 Audio - Rear'

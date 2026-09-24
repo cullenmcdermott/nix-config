@@ -47,14 +47,16 @@ in
             self.homeManagerModules.full
             self.homeManagerModules.agenticSkills
             self.homeManagerModules.omp
-            self.homeManagerModules.sandbox
             inputs.mac-app-util.homeManagerModules.default
-            (_: {
-              cullen.agenticSkills.enable = true;
-              cullen.omp.enable = true;
-              programs.zwift-media.enable = true;
-              programs.sandbox.enable = true;
-            })
+            (
+              { pkgs, ... }:
+              {
+                cullen.agenticSkills.enable = true;
+                cullen.omp.enable = true;
+                programs.zwift-media.enable = true;
+                programs.claude-code-nix.statusLine.package = pkgs.callPackage ../../pkgs/claude-statusline { };
+              }
+            )
             (_: {
               # Personal-laptop-only: Home Assistant integrations
               # (registers home-assistant skill + ha-claude launcher + statusline badge)
