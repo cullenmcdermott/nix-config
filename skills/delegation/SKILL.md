@@ -26,13 +26,49 @@ the parent explicitly authorizes it. Handle trivial work locally.
 - For a peer review, specify the base commit or exact diff and request findings
   with file/line evidence. Explicitly prohibit edits, commits, and delegation.
 
+## Same harness: prefer native subagents
+
+When the worker would run in the same harness as the parent, use that
+harness's own subagent mechanism instead of shelling out to its CLI. A native
+subagent inherits the session's sandbox and approval flow, and its report
+comes back without temp files. Use the CLIs below for cross-harness work or
+when you need a fully independent process.
+
+Claude Code has these subagents for delegation:
+
+| Agent | Tier | Use for |
+|---|---|---|
+| `builder` | weak | Implementing a decided, well-specified change |
+| `reviewer-architect` | strong | Design fit, coupling, API contracts |
+| `reviewer-security` | strong | Exploitable vulnerabilities in a change |
+| `reviewer-tester` | weak | Missing or weak tests for changed behavior |
+| `reviewer-perf` | weak | Measurable performance regressions |
+| `reviewer-stylist` | weak | Naming, idioms, consistency with surrounding code |
+| `reviewer-newcomer` | haiku | What's confusing to someone new to the code |
+| `external-reviewer` | weak | Cross-model review through Codex/OpenCode |
+
+Pick the one or two review lenses that fit the change's risk (auth code →
+security; hot path → perf) and run them in parallel. Running every lens on
+every change costs more and buries the real findings under noise. For a
+general correctness pass, the built-in `/code-review` is usually the better
+tool; add lenses for depth.
+
+Check which CLIs are installed with `command -v codex claude opencode`. This
+doesn't prove a CLI is authenticated or reachable from the sandbox, so treat a
+failed dispatch as unavailable.
+
 ## Dispatch with native CLIs
 
 Check `codex exec --help`, `claude --help`, or `opencode run --help` if flags
 or installed versions differ. Use configured models unless task instructions
-specify one. Codex accepts `-m MODEL` and
-`-c model_reasoning_effort=medium` (low for mechanical work); Claude accepts
-`--model MODEL`; OpenCode accepts `--model PROVIDER/MODEL`.
+specify one. Match reasoning effort to the task: low for mechanical edits,
+medium for ordinary implementation, high for review or tricky debugging.
+
+| CLI | Model | Effort | Final message only |
+|---|---|---|---|
+| Codex | `-m MODEL` | `-c model_reasoning_effort=medium` | `-o FILE` |
+| Claude | `--model MODEL` | `--effort medium` | stdout (`--output-format json` for metadata) |
+| OpenCode | `--model PROVIDER/MODEL` | `--variant high` | stdout (`--format json` for events) |
 
 Use a quoted heredoc or a file written by the filesystem tool for task text.
 Never interpolate an untrusted task into shell code or use `eval`.
@@ -67,7 +103,9 @@ opencode run --dir "$PWD" --file "$agent_task_dir/task.md" -- 'Complete the task
 ```
 
 For an independent peer review, write this kind of task to a separate file and
-use the same dispatch commands (Codex additionally supports `-s read-only`):
+use the same dispatch commands. Prefer a different model family from the
+parent, since that's where independent value comes from. Codex additionally
+supports `-s read-only`:
 
 ```text
 You are a peer reviewer. Do not edit files, commit, or delegate.

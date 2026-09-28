@@ -42,10 +42,13 @@ format.
    This replaces ad-hoc plan documents — there is no separate "write a plan"
    step.
 3. **Apply** — `/opsx:apply` (openspec-apply-change skill) implements
-   `tasks.md`. As the strong-tier orchestrator, do NOT implement task-by-task
-   yourself: load `delegation` and dispatch tasks to `builder` workers
-   (or follow `sp-subagent-driven-development`, pointing it at the change's
-   `tasks.md` as the plan). Disciplines during apply:
+   `tasks.md`. When you're the orchestrator, keep your context for review and
+   integration: load `delegation` and hand substantial tasks to `builder`
+   workers (or follow `sp-subagent-driven-development`, pointing it at the
+   change's `tasks.md` as the plan); do small glue edits yourself. If you are
+   already a delegated worker, just implement. To run the change unattended
+   across sessions instead, harden `tasks.md` with the `converge` skill.
+   Disciplines during apply:
    - `sp-test-driven-development` for each task with testable behavior
    - `sp-systematic-debugging` when something breaks
    - `sp-using-git-worktrees` if the work needs isolation

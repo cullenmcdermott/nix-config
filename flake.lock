@@ -274,11 +274,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790265244,
-        "narHash": "sha256-PFNTZbWRxWk5/JreN2mB8e2ED3s/KiwGuBjl0Vg9pbw=",
+        "lastModified": 1790365885,
+        "narHash": "sha256-iQ0ebhiVo64NktTnwft9hNxlFu4j5cvljVxyJaEVIP4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "e3b0881f91f42bea70bcc516220880cce9daf122",
+        "rev": "7b4c5ec4bedaf1e062bbc1bcaeddbc6bd242aa1b",
         "type": "github"
       },
       "original": {
@@ -441,11 +441,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1790238896,
-        "narHash": "sha256-ym4BG18Pu2awiJIehla1Lo9xiB2QYRcCzW3SB74gEBY=",
+        "lastModified": 1790510107,
+        "narHash": "sha256-EVMNYv7hYDDD9TGVT/hIyTYgpiXA8y3m5xIEIxuGNU0=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "34ca302a9572963c02e385c056be37c85ff51b77",
+        "rev": "3181085bfd08663b6b9e60bc7a8395c2aaa741bd",
         "type": "github"
       },
       "original": {
@@ -490,6 +490,7 @@
         "nix-homebrew": "nix-homebrew",
         "nixpkgs": "nixpkgs_6",
         "nixpkgs-watchexec": "nixpkgs-watchexec",
+        "sparkctl": "sparkctl",
         "superpowers": "superpowers"
       }
     },
@@ -508,6 +509,26 @@
         "ref": "nightly",
         "repo": "rust-analyzer",
         "type": "github"
+      }
+    },
+    "sparkctl": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790550163,
+        "narHash": "sha256-WYhLSF4V2GAVibeS9Q54ySsvPZONnD2YtHAGCdPAwxc=",
+        "ref": "refs/heads/main",
+        "rev": "a15b6a8aea543e09de4c4b1900525c259ae8103d",
+        "revCount": 126,
+        "type": "git",
+        "url": "ssh://git@github.com/cullenmcdermott/sparkctl"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@github.com/cullenmcdermott/sparkctl"
       }
     },
     "superpowers": {

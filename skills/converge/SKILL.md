@@ -78,6 +78,10 @@ Complete when EVERY box below is ticked AND all pass (from repo root):
   an item ineligible. Never untick a box. One /goal session at a time — a dirty
   tree at start is the prior session's partial work on the top eligible item;
   continue it, don't discard or restart elsewhere.
+- The Definition of Done, every Exit line, and the tests they run are frozen:
+  the driver may add tests but never weakens, skips, or deletes existing ones or
+  edits a gate command. If a criterion is genuinely wrong, emit `GOAL BLOCKED`
+  and let a human fix the spec.
 
 ## Session Log (append one line per session; newest last)
 - (empty)
@@ -112,7 +116,10 @@ Complete when EVERY box below is ticked AND all pass (from repo root):
 > (branch off the default branch); honor the file's Rules and the repo's sandbox
 > caveats. A dirty tree at start is the prior session's partial work on the top
 > eligible item — continue it, don't discard or restart elsewhere. Never tick a
-> box whose Exit Criteria you did not run and see pass.
+> box whose Exit Criteria you did not run and see pass. Run gate and exit
+> commands exactly as written; never edit them, or weaken/skip/delete the tests
+> they exercise, to get a pass — if one is wrong, output
+> `GOAL BLOCKED — <item>: criterion needs human review` and STOP.
 
 ## Output
 

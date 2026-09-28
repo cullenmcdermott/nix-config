@@ -42,6 +42,26 @@ let
 
   ompSessionDir = "${config.xdg.stateHome}/omp/sessions";
 
+  # omp resolves the `spark` provider's apiKey through this once per process.
+  # sparkctl on the DGX Spark only listens on loopback, so first make sure an
+  # SSH tunnel (over the tailnet) to it is up; the tunnel outlives omp.
+  sparkToken = pkgs.writeShellApplication {
+    name = "spark-token";
+    runtimeInputs = [ pkgs.curl ];
+    text = ''
+      : "''${SPARKCTL_TOKEN:?export a sparkctl inference token (sparkctl token create --scopes inference)}"
+      port=''${SPARKCTL_LOCAL_PORT:-7070}
+      if ! curl -s -m 3 -o /dev/null "http://127.0.0.1:$port/"; then
+        # PATH's ssh, not nixpkgs': the latter rejects colima's ssh_config options.
+        # stdio must not reach omp's pipe, or omp waits on the backgrounded ssh.
+        ssh -fN -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ConnectTimeout=5 \
+          -E "''${TMPDIR:-/tmp}/spark-tunnel.log" -L "$port:127.0.0.1:7070" \
+          "''${SPARKCTL_SSH:-cmdev@spark-72b9.tail22636.ts.net}" </dev/null >/dev/null
+      fi
+      printf %s "$SPARKCTL_TOKEN"
+    '';
+  };
+
   ompAgentsMd = ''
     ## Environment
     This is a Nix-managed system (nix-darwin + home-manager). All packages are declaratively managed.
@@ -205,6 +225,16 @@ in
       "omp/agent/keybindings.json".text = builtins.toJSON ompKeybindings;
       "omp/agent/presets.json".text = builtins.toJSON ompPresets;
       "omp/agent/AGENTS.md".text = ompAgentsMd;
+      # Migrated to models.yml by omp on start. Models come from sparkctl's
+      # /v1/models at runtime, so whatever the Spark serves shows up as spark/<id>.
+      "omp/agent/models.json".text = builtins.toJSON {
+        providers.spark = {
+          baseUrl = "http://127.0.0.1:7070/v1";
+          api = "openai-completions";
+          apiKey = "!${lib.getExe sparkToken}";
+          discovery.type = "openai-models-list";
+        };
+      };
 
       "omp/agent/themes" = {
         source = ./omp/themes;

@@ -35,6 +35,14 @@ your Convergence Gate and Checklist before emitting; fix every match.
    pass on cached output from a prior state. Prefer a fresh check, or include a
    drift/gen check (e.g. generated files match source) in the gate.
 
+5a. **Driver-editable gate.** A capable driver stuck on a failing criterion will
+   find the cheapest way to green: loosen an assertion, add a skip, mark a test
+   flaky, or "fix" the gate command. Freeze them explicitly in the Rules and the
+   driver prompt (tests may be added, never weakened), route a wrong criterion
+   to `GOAL BLOCKED`, and where possible make the gate check that the frozen
+   tests still exist (e.g. an `rg -c` count floor, or a checksum of the test
+   file for items that shouldn't touch it).
+
 ## Undefined states that loop forever (never-halt)
 
 6. **"All boxes ticked but a gate command fails."** A later item regressed an
@@ -94,7 +102,8 @@ your Convergence Gate and Checklist before emitting; fix every match.
 
 A sound spec has: tick-only monotonic state in one file; deterministic
 top-eligible ordering via `*(blockers:)*`; per-item exit criteria that are
-existence-checked, error-safe commands; a gate-first driver; explicit
+existence-checked, error-safe commands that the driver may not edit; a
+gate-first driver; explicit
 `GOAL COMPLETE` / `GOAL BLOCKED` sentinels; and rules covering regression-repair,
 note-vs-state eligibility, and single-session concurrency. If all of those hold,
 it converges cleanly and halts the instant the file + commands agree it's done.

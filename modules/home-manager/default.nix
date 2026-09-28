@@ -137,7 +137,6 @@ in
           "Bash(yq:*)"
           "Bash(delta:*)"
           "Bash(hyperfine:*)"
-          "Bash(cursor-agent:*)"
           "Bash(uv run:*)"
         ];
       };
@@ -157,6 +156,12 @@ in
             repo = "anthropics/claude-plugins-official";
           };
         };
+        impeccable = {
+          source = {
+            source = "github";
+            repo = "pbakaus/impeccable";
+          };
+        };
       };
       # Keys are `<plugin>@<marketplace>`. Plugin *contents* are fetched and
       # auto-updated by Claude Code, not pinned by Nix — only the intent to
@@ -169,6 +174,9 @@ in
         "claude-security@claude-plugins-official" = true;
         # Portable ponytail skills are pinned for every harness in ai-models.nix.
         "ponytail@ponytail" = false;
+        # `/impeccable` — frontend design vocabulary, audits, and anti-pattern
+        # checks (https://impeccable.style).
+        "impeccable@impeccable" = true;
       };
       interactiveMode = true;
       autoCompact = false;
@@ -244,11 +252,12 @@ in
       slack-gif-creator = "${claudeSkills}/skills/slack-gif-creator";
       skill-creator = "${claudeSkills}/skills/skill-creator";
       frontend-design = "${claudeSkills}/skills/frontend-design";
-      llm-orchestrator = ./../../skills/llm-orchestrator;
       claude-code-config = ./../../skills/claude-code-config;
       delegation = ./../../skills/delegation;
       spec = ./../../skills/spec;
       converge = ./../../skills/converge;
+      handover = ./../../skills/handover;
+      second-opinion = ./../../skills/second-opinion;
       # Vendored OpenSpec-generated skills (see skills/openspec/README.md for
       # the regeneration procedure). Paired with commands/opsx/ for /opsx:*.
       openspec-propose = ./../../skills/openspec/openspec-propose;
@@ -261,17 +270,19 @@ in
       home-assistant = ./../../skills/home-assistant;
     };
 
-    agents = {
-      builder = tieredAgent ./../../agents/builder.md;
-      external-reviewer = ./../../agents/external-reviewer.md;
-      reviewer-architect = ./../../agents/reviewer-architect.md;
-      reviewer-newcomer = ./../../agents/reviewer-newcomer.md;
-      reviewer-perf = tieredAgent ./../../agents/reviewer-perf.md;
-      reviewer-security = ./../../agents/reviewer-security.md;
-      reviewer-stylist = tieredAgent ./../../agents/reviewer-stylist.md;
-      reviewer-tester = tieredAgent ./../../agents/reviewer-tester.md;
-    };
+    agents = lib.genAttrs [
+      "builder"
+      "external-reviewer"
+      "reviewer-architect"
+      "reviewer-newcomer"
+      "reviewer-perf"
+      "reviewer-security"
+      "reviewer-stylist"
+      "reviewer-tester"
+    ] (name: tieredAgent ./../../agents/${name}.md);
 
+    # Only the vendored OpenSpec /opsx:* commands live here; custom
+    # user-invoked workflows are skills with `disable-model-invocation`.
     commandsDir = ./../../commands;
   };
 

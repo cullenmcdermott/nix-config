@@ -44,6 +44,10 @@
 
     superpowers.url = "github:obra/superpowers/v6.1.1";
     superpowers.flake = false;
+
+    # Private repo, so fetched over SSH rather than github: (which needs a token).
+    sparkctl.url = "git+ssh://git@github.com/cullenmcdermott/sparkctl";
+    sparkctl.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
