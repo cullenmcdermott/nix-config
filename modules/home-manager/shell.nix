@@ -81,6 +81,7 @@
   '';
   programs.zsh.shellAliases = {
     cdx = "codex";
+    fixdns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
     ls = "ls --color=auto -F";
     vim = "nvim";
     k = "kubecolor";

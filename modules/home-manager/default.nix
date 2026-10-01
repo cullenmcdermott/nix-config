@@ -54,6 +54,7 @@ in
   ];
 
   cullen.ai.enable = true;
+  cullen.ai.models.anthropic.weak = "claude-sonnet-5-5";
 
   # HA-specific zsh init — depends on programs.claude-code-nix.homeAssistant
   # (claude-code.nix is imported above, so config is available here)
