@@ -70,6 +70,16 @@ in
                 type = "http";
                 url = "https://fs-mcp.labs.onshape.app/mcp";
               };
+              # money-tracker's read-only MCP server (stdio). Runs the binary
+              # `just build` puts in the checkout; the first call opens the
+              # app's Pocket ID login in the browser.
+              programs.claude-code-nix.mcpServers.money = {
+                command = "/Users/${username}/git/money-tracker/bin/money-tracker";
+                args = [
+                  "mcp"
+                  "https://money.cullen.rocks"
+                ];
+              };
             })
           ];
         };

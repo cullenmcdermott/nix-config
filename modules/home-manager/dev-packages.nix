@@ -51,6 +51,7 @@ in
       kubie
       kubecolor
       kubectl
+      kubectl-cnpg
       kubelogin-oidc
       kubernetes-helm
       krew
