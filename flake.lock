@@ -274,11 +274,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790989254,
-        "narHash": "sha256-ZN+riaeFuE+DZ5zfqJiXlM12jLwZzeIXiNkU1YeHMXI=",
+        "lastModified": 1792000010,
+        "narHash": "sha256-4jtkwQlReQdXsKJJfB9yT7nIf0TlwgZOk2XtxjUgDS8=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "acd21c5a3420a9d5fd0ed06299b10828267ef9ba",
+        "rev": "5a9d300bd619c03857521b50c8877a19dbad7078",
         "type": "github"
       },
       "original": {
@@ -441,11 +441,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1790769526,
-        "narHash": "sha256-5AIVFLRcx8YAwbFTVPTs7YhwJH7JyHfAQsvXmpovcXI=",
+        "lastModified": 1791637130,
+        "narHash": "sha256-TuvwvSjJrpqyIYdjhQ7Wu+ADVfeOpO2Um21/V7TOubw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c9fe7d12cd78d1adcd12dd15e24432dde5b155a0",
+        "rev": "ca1659429c950a11a565b5764e37a1b704e17ec8",
         "type": "github"
       },
       "original": {
@@ -518,11 +518,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790896603,
-        "narHash": "sha256-10Y8CFrG4xAeeerMYyBiSktswG9HRBSXPv5Vwyr4hgI=",
+        "lastModified": 1791244581,
+        "narHash": "sha256-wFt8Co5/KP7ZQNcNJL+lCOu6a4AIUV6BBJ1rLXnrOVU=",
         "ref": "refs/heads/main",
-        "rev": "3f28f443253b1ae92f4646fd3efd7d19ff8e412f",
-        "revCount": 140,
+        "rev": "3214bb51611070e513a41923becd4eb07e8e79cb",
+        "revCount": 150,
         "type": "git",
         "url": "ssh://git@github.com/cullenmcdermott/sparkctl"
       },
