@@ -1,8 +1,8 @@
 // claude-statusline renders a starship-style status line for Claude Code.
 //
 // Claude pipes JSON session data to stdin; this binary parses it and writes
-// ANSI-formatted output to stdout.  It is a static Go binary with zero
-// runtime dependencies — the same build works on macOS hosts and Linux VMs.
+// ANSI-formatted output to stdout.  Stdlib only; shells out to git and, on
+// macOS, security(1) for the OAuth token.
 //
 // Line 1: model ─ branch ─ tokens/total  ctx-bar  · $cost
 // Line 2: 5h usage bar · weekly usage bar
@@ -200,52 +200,39 @@ func fmtTokens(n int) string {
 	}
 }
 
-// contextBar renders a 10-wide bar with percentage label.
-// Thresholds: green < 40%, yellow 40–75%, red ≥ 75%.
+// contextBar: green < 40%, yellow 40–75%, red ≥ 75%, with a percentage label.
 func contextBar(pct float64) string {
-	const width = 10
-	pi := int(math.Round(pct))
-	filled := clamp(pi*width/100, 0, width)
-
+	pct = math.Round(pct)
 	color := cGreen
 	switch {
-	case pi >= 75:
+	case pct >= 75:
 		color = cRed
-	case pi >= 40:
+	case pct >= 40:
 		color = cYellow
 	}
-
-	return fmt.Sprintf("%s%.0f%% %s%s%s",
-		color, pct,
-		strings.Repeat("●", filled),
-		strings.Repeat("○", width-filled),
-		cReset,
-	)
+	return fmt.Sprintf("%s%.0f%% %s", color, pct, bar(pct, color))
 }
 
-// usageBar renders a 10-wide bar WITHOUT the percentage label.
-// Thresholds: green < 50%, orange 50–70%, yellow 70–90%, red ≥ 90%.
+// usageBar: green < 50%, orange 50–70%, yellow 70–90%, red ≥ 90%, no label.
 func usageBar(pct float64) string {
-	const width = 10
-	pi := int(math.Round(pct))
-	filled := clamp(pi*width/100, 0, width)
-
+	pct = math.Round(pct)
 	color := cGreen
 	switch {
-	case pi >= 90:
+	case pct >= 90:
 		color = cRed
-	case pi >= 70:
+	case pct >= 70:
 		color = cYellow
-	case pi >= 50:
+	case pct >= 50:
 		color = cOrange
 	}
+	return bar(pct, color)
+}
 
-	return fmt.Sprintf("%s%s%s%s",
-		color,
-		strings.Repeat("●", filled),
-		strings.Repeat("○", width-filled),
-		cReset,
-	)
+// bar renders a 10-wide ●/○ bar in color.
+func bar(pct float64, color string) string {
+	const width = 10
+	filled := clamp(int(math.Round(pct))*width/100, 0, width)
+	return color + strings.Repeat("●", filled) + strings.Repeat("○", width-filled) + cReset
 }
 
 func clamp(v, lo, hi int) int {
@@ -288,26 +275,46 @@ func usageCachePath() string {
 }
 
 func getUsage() *usageData {
-	usageCacheFile := usageCachePath()
-	// Try cached data first.
-	if data, err := os.ReadFile(usageCacheFile); err == nil {
-		if fi, err := os.Stat(usageCacheFile); err == nil {
-			if time.Since(fi.ModTime()) < usageCacheTTL {
-				var u usageData
-				if json.Unmarshal(data, &u) == nil {
-					return &u
+	cacheFile := usageCachePath()
+	var cached *usageData
+	if fi, err := os.Stat(cacheFile); err == nil {
+		if data, err := os.ReadFile(cacheFile); err == nil {
+			var u usageData
+			if json.Unmarshal(data, &u) == nil {
+				cached = &u
+				if time.Since(fi.ModTime()) < usageCacheTTL {
+					return cached
 				}
 			}
 		}
 	}
 
-	// Fetch fresh data.
+	body := fetchUsage()
+	if body == nil {
+		// Serve stale data and bump its mtime so a failing API (429, offline,
+		// expired token) is retried once per TTL instead of on every render.
+		if cached != nil {
+			now := time.Now()
+			_ = os.Chtimes(cacheFile, now, now)
+		}
+		return cached
+	}
+	var u usageData
+	if json.Unmarshal(body, &u) != nil {
+		return cached
+	}
+	if cacheFile != "" {
+		_ = os.WriteFile(cacheFile, body, 0o600)
+	}
+	return &u
+}
+
+// fetchUsage returns the raw usage API response, or nil on any failure.
+func fetchUsage() []byte {
 	token := accessToken()
 	if token == "" {
 		return nil
 	}
-
-	client := &http.Client{Timeout: 3 * time.Second}
 	req, err := http.NewRequest("GET", "https://api.anthropic.com/api/oauth/usage", nil)
 	if err != nil {
 		return nil
@@ -315,117 +322,55 @@ func getUsage() *usageData {
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("anthropic-beta", "oauth-2025-04-20")
 
-	resp, err := client.Do(req)
+	resp, err := (&http.Client{Timeout: 3 * time.Second}).Do(req)
 	if err != nil {
 		return nil
 	}
 	defer func() { _ = resp.Body.Close() }()
-
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil
 	}
-
-	// Validate that the response has usage data before caching.
+	// Only accept responses that actually carry usage data.
 	var raw map[string]json.RawMessage
 	if json.Unmarshal(body, &raw) != nil || raw["five_hour"] == nil {
 		return nil
 	}
-
-	var u usageData
-	if json.Unmarshal(body, &u) != nil {
-		return nil
-	}
-
-	if usageCacheFile != "" {
-		_ = os.WriteFile(usageCacheFile, body, 0o600)
-	}
-	return &u
+	return body
 }
 
-// accessToken returns a Claude OAuth access token for the usage API.
-// It tries, in order:
-//  1. ~/.claude/.credentials.json (works on all platforms, including VMs)
-//  2. macOS Keychain (host only)
+// accessToken returns Claude Code's OAuth access token, read from
+// ~/.claude/.credentials.json (Linux) or the macOS Keychain. Both hold
+// {"claudeAiOauth":{"accessToken":"..."}}.
 func accessToken() string {
-	// 1. Credentials file — written by `claude login` / `claude setup-token`.
+	var data []byte
 	if home, err := os.UserHomeDir(); err == nil {
-		path := filepath.Join(home, ".claude", ".credentials.json")
-		if data, err := os.ReadFile(path); err == nil {
-			if tok := parseCredentialsJSON(data); tok != "" {
-				return tok
-			}
-		}
+		data, _ = os.ReadFile(filepath.Join(home, ".claude", ".credentials.json"))
 	}
-
-	// 2. macOS Keychain — Claude Code stores OAuth tokens here on macOS.
-	if runtime.GOOS == "darwin" {
-		cmd := exec.Command("security", "find-generic-password",
-			"-s", "Claude Code-credentials", "-w")
-		if out, err := cmd.Output(); err == nil {
-			var wrapper struct {
-				ClaudeAiOauth struct {
-					AccessToken string `json:"accessToken"`
-				} `json:"claudeAiOauth"`
-			}
-			if json.Unmarshal(out, &wrapper) == nil && wrapper.ClaudeAiOauth.AccessToken != "" {
-				return wrapper.ClaudeAiOauth.AccessToken
-			}
-		}
+	if data == nil && runtime.GOOS == "darwin" {
+		data, _ = exec.Command("security", "find-generic-password",
+			"-s", "Claude Code-credentials", "-w").Output()
 	}
-
-	return ""
-}
-
-// parseCredentialsJSON extracts the access token from a credentials JSON blob.
-// Supports both {"access_token":"..."} and {"claudeAiOauth":{"accessToken":"..."}} shapes.
-func parseCredentialsJSON(data []byte) string {
-	// Shape 1: {"access_token":"..."}
-	var flat struct {
-		AccessToken string `json:"access_token"`
-		Token       string `json:"token"`
-	}
-	if json.Unmarshal(data, &flat) == nil {
-		if flat.AccessToken != "" {
-			return flat.AccessToken
-		}
-		if flat.Token != "" {
-			return flat.Token
-		}
-	}
-	// Shape 2: {"claudeAiOauth":{"accessToken":"..."}}
-	var nested struct {
+	var creds struct {
 		ClaudeAiOauth struct {
 			AccessToken string `json:"accessToken"`
 		} `json:"claudeAiOauth"`
 	}
-	if json.Unmarshal(data, &nested) == nil && nested.ClaudeAiOauth.AccessToken != "" {
-		return nested.ClaudeAiOauth.AccessToken
-	}
-	return ""
+	_ = json.Unmarshal(data, &creds)
+	return creds.ClaudeAiOauth.AccessToken
 }
 
 // ── Time formatting ──────────────────────────────────────────────────────────
 
-// fmtReset parses an ISO 8601 / RFC 3339 timestamp and returns a local
-// human-readable string like "May 11 03:04 PM".
+// fmtReset formats an RFC 3339 timestamp (fractional seconds allowed) in
+// local time, e.g. "May 11 03:04 PM".
 func fmtReset(s string) string {
-	if s == "" || s == "null" || s == "N/A" {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
 		return "N/A"
 	}
-	for _, layout := range []string{
-		time.RFC3339,
-		time.RFC3339Nano,
-		"2006-01-02T15:04:05Z",
-		"2006-01-02T15:04:05-07:00",
-	} {
-		if t, err := time.Parse(layout, s); err == nil {
-			return t.Local().Format("Jan 02 03:04 PM")
-		}
-	}
-	// Maybe it's a Unix epoch (seconds).
-	if epoch, err := strconv.ParseFloat(s, 64); err == nil {
-		return time.Unix(int64(epoch), 0).Local().Format("Jan 02 03:04 PM")
-	}
-	return "N/A"
+	return t.Local().Format("Jan 02 03:04 PM")
 }

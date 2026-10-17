@@ -55,7 +55,6 @@ in
                 cullen.omp.enable = true;
                 programs.zwift-media.enable = true;
                 home.packages = [ inputs.sparkctl.packages.${pkgs.stdenv.hostPlatform.system}.default ];
-                programs.claude-code-nix.statusLine.package = pkgs.callPackage ../../pkgs/claude-statusline { };
               }
             )
             (_: {
