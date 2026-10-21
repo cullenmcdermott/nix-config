@@ -180,7 +180,10 @@ in
         "impeccable@impeccable" = true;
       };
       interactiveMode = true;
-      autoCompact = false;
+      autoCompactEnabled = true;
+      # Compact at ~367K (400K minus output reserve and buffer) instead of
+      # ~967K on 1M-context models.
+      autoCompactWindow = 400000;
       # Flicker-free alt-screen TUI renderer (equivalent to /tui fullscreen).
       tui = "fullscreen";
       # Built-in output style: lead with the result, skip preamble and
