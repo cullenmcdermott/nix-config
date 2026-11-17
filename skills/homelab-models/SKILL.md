@@ -11,14 +11,29 @@ handoff rules (one bounded task per run, task text in a file, parent verifies).
 
 ```sh
 omp --list-models homelab   # what's served now; also refreshes omp's model cache
-omp -p --no-session --no-skills --no-lsp --tools read,bash,edit,write \
-  --model homelab/glm-5.3-flash --cwd "$PWD" @"$agent_task_dir/task.md"
+out="$agent_task_dir/worker"
+timeout 1200 omp -p --mode json --no-session --no-skills --no-lsp \
+  --tools read,bash,edit,write --model homelab/glm-5.3-flash \
+  --cwd "$PWD" @"$agent_task_dir/task.md" > "$out.jsonl" 2> "$out.err"
+echo "exit=$?"   # 124 = timed out
+# Final report = text of the last assistant message:
+jq -rs '[.[] | select(.type=="message_end" and .message.role=="assistant")
+         | select(any(.message.content[]?; .type=="text"))] | last // empty
+        | .message.content[] | select(.type=="text") | .text' "$out.jsonl"
 ```
 
 - The tool list keeps the worker lean (about 9K prompt tokens instead of 26K)
   and leaves out omp's `task` tool, so it can't delegate further.
 - At most 3 omp workers at once: the server runs 4 sequences and shares its
   KV cache with other users. Parallel writers each get their own worktree.
+- Start parallel workers at least 15s apart. Simultaneous starts collide on
+  omp's SQLite credential store and crash with `SQLiteError`.
+- Run with `--mode json` and `timeout`, and record each worker's exit code.
+  Text mode writes nothing until the end, so a running, hung, or silently
+  dead worker all look like an empty file. Judge liveness by the `.jsonl`
+  line count, not `ps` (the sandbox hides earlier processes): no growth for
+  about 5 minutes means hung. A nonzero exit is a failure, and so is an
+  empty report even with exit 0.
 - Run it inside the parent's sandbox. The endpoint and omp's state dirs are
   already allowed; never run omp with the sandbox disabled to get it working.
 - "No API key" or an unknown model usually means a cold model cache: run
