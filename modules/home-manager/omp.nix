@@ -40,28 +40,6 @@ let
     done
   '';
 
-  ompSessionDir = "${config.xdg.stateHome}/omp/sessions";
-
-  # omp resolves the `spark` provider's apiKey through this once per process.
-  # sparkctl on the DGX Spark only listens on loopback, so first make sure an
-  # SSH tunnel (over the tailnet) to it is up; the tunnel outlives omp.
-  sparkToken = pkgs.writeShellApplication {
-    name = "spark-token";
-    runtimeInputs = [ pkgs.curl ];
-    text = ''
-      : "''${SPARKCTL_TOKEN:?export a sparkctl inference token (sparkctl token create --scopes inference)}"
-      port=''${SPARKCTL_LOCAL_PORT:-7070}
-      if ! curl -s -m 3 -o /dev/null "http://127.0.0.1:$port/"; then
-        # PATH's ssh, not nixpkgs': the latter rejects colima's ssh_config options.
-        # stdio must not reach omp's pipe, or omp waits on the backgrounded ssh.
-        ssh -fN -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ConnectTimeout=5 \
-          -E "''${TMPDIR:-/tmp}/spark-tunnel.log" -L "$port:127.0.0.1:7070" \
-          "''${SPARKCTL_SSH:-cmdev@spark-72b9.tail22636.ts.net}" </dev/null >/dev/null
-      fi
-      printf %s "$SPARKCTL_TOKEN"
-    '';
-  };
-
   ompAgentsMd = ''
     ## Environment
     This is a Nix-managed system (nix-darwin + home-manager). All packages are declaratively managed.
@@ -103,19 +81,47 @@ let
   # Settings for omp — note: omp uses nested style (theme.dark) instead of flat "theme".
   # pi-web-access is NOT needed — omp has built-in web_search, fetch, and browser tools.
   ompSettings = {
-    sessionDir = ompSessionDir;
     theme = {
       dark = "tokyonight-storm";
     };
     enableInstallTelemetry = false;
     enableSkillCommands = true;
     defaultThinkingLevel = "high";
-    defaultProvider = "github-copilot";
-    defaultModel = "claude-sonnet-4-6";
+    defaultProvider = "homelab";
+    defaultModel = "glm-5.3-flash";
     enabledModels = [
+      "homelab/*"
       "github-copilot/*"
     ];
+    setupVersion = 1; # omp writes this on first run if missing
   };
+
+  # Homelab vLLM (GLM on the Sparks). Models come from /v1/models at runtime;
+  # discovery is cached, so run `omp --list-models homelab` after a model is
+  # added. Later: baseUrl https://llm.cullen.rocks/v1 with a per-user key.
+  ompModels = {
+    providers.homelab = {
+      baseUrl = "https://gb10.cullen.rocks/v1";
+      api = "openai-completions";
+      apiKey = "HOMELAB_LLM_API_KEY"; # env var name; set in ~/.env
+      discovery.type = "openai-models-list";
+      # omp ignores vLLM's max_model_len. The KV pool (~664K tokens) is shared
+      # by up to 4 sequences, so cap a session at 200K.
+      modelOverrides."glm-5.3-flash" = {
+        reasoning = true;
+        contextWindow = 200000;
+      };
+    };
+  };
+
+  # When these exist, omp keeps its DBs, sessions and logs there instead of
+  # ~/.config/omp, so Claude Code's sandbox can allow them without allowing
+  # omp's config/extensions dir (code there runs unsandboxed later).
+  ompStateDirs = map (d: "${d}/omp") [
+    config.xdg.dataHome
+    config.xdg.stateHome
+    config.xdg.cacheHome
+  ];
 
   ompKeybindings = {
     app.session.new = [ "ctrl+shift+n" ];
@@ -211,30 +217,40 @@ in
       PI_TELEMETRY = lib.mkDefault "0";
     };
 
+    # Plain writable files (JSON is valid YAML), regenerated every switch so Nix
+    # stays authoritative. Shipping settings.json/models.json instead makes omp
+    # migrate them on first run, which fails inside Claude Code's sandbox.
     home.activation.ompConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      # omp writes runtime YAML caches from our nix-managed JSON files.
-      # Delete them on every switch so the JSON files remain authoritative.
-      run rm -f "${config.xdg.configHome}/omp/agent/config.yml"
-      run rm -f "${config.xdg.configHome}/omp/agent/models.yml"
+      run mkdir -p ${lib.escapeShellArgs ompStateDirs}
+      run install -m644 ${pkgs.writeText "omp-config.yml" (builtins.toJSON ompSettings)} "${ompAgentDir}/config.yml"
+      run install -m644 ${pkgs.writeText "omp-models.yml" (builtins.toJSON ompModels)} "${ompAgentDir}/models.yml"
+      run rm -f "${ompAgentDir}/settings.json.bak"
     '';
+
+    # Homelab workers for Claude Code (mirrored to Codex/OpenCode). Lives here,
+    # not in the shared modules, so hosts without omp (work laptop) don't get it.
+    programs.claude-code.skills.homelab-models = ./../../skills/homelab-models;
+    programs.claude-code.context = ''
+      ## Homelab models
+      Local tier (homelab GPUs, free, via omp): worker = homelab/glm-5.3-flash.
+      Use it when the user asks for GLM or a local/homelab model; see the
+      `homelab-models` skill.
+    '';
+
+    # Lets Claude Code run omp workers inside its sandbox.
+    programs.claude-code.settings.sandbox = {
+      network.allowedDomains = [
+        "gb10.cullen.rocks"
+        "llm.cullen.rocks"
+      ];
+      filesystem.allowWrite = ompStateDirs;
+    };
 
     xdg.configFile = {
 
-      # omp reads settings from $PI_CODING_AGENT_DIR/settings.json
-      "omp/agent/settings.json".text = builtins.toJSON ompSettings;
       "omp/agent/keybindings.json".text = builtins.toJSON ompKeybindings;
       "omp/agent/presets.json".text = builtins.toJSON ompPresets;
       "omp/agent/AGENTS.md".text = ompAgentsMd;
-      # Migrated to models.yml by omp on start. Models come from sparkctl's
-      # /v1/models at runtime, so whatever the Spark serves shows up as spark/<id>.
-      "omp/agent/models.json".text = builtins.toJSON {
-        providers.spark = {
-          baseUrl = "http://127.0.0.1:7070/v1";
-          api = "openai-completions";
-          apiKey = "!${lib.getExe sparkToken}";
-          discovery.type = "openai-models-list";
-        };
-      };
 
       "omp/agent/themes" = {
         source = ./omp/themes;
